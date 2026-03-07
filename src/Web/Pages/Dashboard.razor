@@ -1,0 +1,59 @@
+@page "/"
+@page "/index.html"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject AuthService AuthService
+
+<div class="view-header">
+    <h2>Bienvenido, @username</h2>
+    <p class="view-subtitle">Panel de control</p>
+</div>
+
+<div class="stats-grid">
+    <StatCard Icon="@SvgIcons.Users" Value="@totalUsers" Label="Usuarios activos" Variant="primary" />
+    <StatCard Icon="@SvgIcons.Check" Value="@systemStatus" Label="Estado del sistema" Variant="info" />
+</div>
+
+<div class="template-message">
+    <div class="template-message-icon">@SvgIcons.Code</div>
+    <h3>Este es tu template base</h3>
+    <p>Usa <strong>Claude Code</strong> para personalizarlo y agregar las funcionalidades que necesites.
+    Podes agregar nuevas paginas, conectar APIs, crear formularios y mucho mas.</p>
+    <div class="template-suggestions">
+        <span class="suggestion-tag">Agregar tablas de datos</span>
+        <span class="suggestion-tag">Conectar una API externa</span>
+        <span class="suggestion-tag">Crear formularios CRUD</span>
+        <span class="suggestion-tag">Agregar graficos</span>
+        <span class="suggestion-tag">Implementar notificaciones</span>
+    </div>
+</div>
+
+@code {
+    private string username = "usuario";
+    private string totalUsers = "--";
+    private string systemStatus = "--";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await AuthService.GetUserAsync();
+        if (user is not null)
+        {
+            username = user.Username;
+        }
+
+        try
+        {
+            var stats = await Api.GetDashboardStatsAsync();
+            if (stats is not null)
+            {
+                totalUsers = stats.TotalUsers.ToString();
+                systemStatus = stats.SystemStatus;
+            }
+        }
+        catch
+        {
+            totalUsers = "1";
+            systemStatus = "Activo";
+        }
+    }
+}

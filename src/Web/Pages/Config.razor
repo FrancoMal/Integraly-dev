@@ -1,0 +1,52 @@
+@page "/config"
+@attribute [Authorize]
+@inject AuthService AuthService
+
+<div class="view-header">
+    <h2>Configuracion</h2>
+    <p class="view-subtitle">Informacion del sistema</p>
+</div>
+
+<div class="config-grid">
+    <div class="card">
+        <div class="card-header">
+            <h3>Informacion del sistema</h3>
+        </div>
+        <div class="card-body">
+            <table class="info-table">
+                <tr><td class="info-label">Version</td><td class="info-value">1.0.0</td></tr>
+                <tr><td class="info-label">Entorno</td><td class="info-value">Produccion</td></tr>
+                <tr><td class="info-label">Nombre de la app</td><td class="info-value">Tu Marca</td></tr>
+                <tr><td class="info-label">Framework</td><td class="info-value">Blazor WASM</td></tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3>Usuario actual</h3>
+        </div>
+        <div class="card-body">
+            <table class="info-table">
+                <tr><td class="info-label">Nombre</td><td class="info-value">@username</td></tr>
+                <tr><td class="info-label">Rol</td><td class="info-value">@role</td></tr>
+                <tr><td class="info-label">Sesion</td><td class="info-value"><span class="status-badge status-active">Activa</span></td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string username = "usuario";
+    private string role = "user";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await AuthService.GetUserAsync();
+        if (user is not null)
+        {
+            username = user.Username;
+            role = user.Role;
+        }
+    }
+}

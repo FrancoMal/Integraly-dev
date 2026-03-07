@@ -1,0 +1,97 @@
+@inherits LayoutComponentBase
+@inject AuthService AuthService
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<aside class="sidebar @(sidebarOpen ? "open" : "")" id="sidebar">
+    <div class="sidebar-brand">
+        <span class="sidebar-brand-icon">@SvgIcons.Brand</span>
+        <span class="sidebar-brand-text">Tu Marca</span>
+    </div>
+    <nav class="sidebar-nav" role="navigation" aria-label="Menu principal">
+        <NavItem Href="/" Label="Dashboard" Icon="@SvgIcons.Dashboard"
+                 IsActive="@IsActive("/")" OnClick="@(() => NavigateTo("/"))" />
+        <NavItem Href="/config" Label="Configuracion" Icon="@SvgIcons.Settings"
+                 IsActive="@IsActive("/config")" OnClick="@(() => NavigateTo("/config"))" />
+    </nav>
+    <div class="sidebar-user">
+        <div class="sidebar-user-avatar">@SvgIcons.User</div>
+        <div class="sidebar-user-info">
+            <span class="sidebar-user-name">@username</span>
+            <span class="sidebar-user-role">@role</span>
+        </div>
+        <button class="sidebar-logout-btn" @onclick="Logout" title="Cerrar sesion">
+            @SvgIcons.Logout
+        </button>
+    </div>
+</aside>
+
+<main class="main-wrapper">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Abrir menu">
+                @SvgIcons.Menu
+            </button>
+            <h1 class="topbar-title">Tu Marca</h1>
+        </div>
+        <div class="topbar-actions">
+            <button class="topbar-btn" @onclick="Refresh" title="Actualizar">
+                @SvgIcons.Refresh
+            </button>
+        </div>
+    </header>
+    <div class="content">
+        @Body
+    </div>
+</main>
+
+@if (sidebarOpen)
+{
+    <div class="sidebar-overlay visible" @onclick="CloseSidebar"></div>
+}
+
+<ToastContainer />
+
+@code {
+    private bool sidebarOpen;
+    private string username = "usuario";
+    private string role = "user";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = await AuthService.GetUserAsync();
+        if (user is not null)
+        {
+            username = user.Username;
+            role = user.Role;
+        }
+    }
+
+    private bool IsActive(string href)
+    {
+        var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        if (href == "/")
+            return string.IsNullOrEmpty(relativePath) || relativePath == "/" || relativePath.Equals("index.html", StringComparison.OrdinalIgnoreCase);
+        return relativePath.StartsWith(href.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NavigateTo(string url)
+    {
+        CloseSidebar();
+        Navigation.NavigateTo(url);
+    }
+
+    private void ToggleSidebar() => sidebarOpen = !sidebarOpen;
+    private void CloseSidebar() => sidebarOpen = false;
+
+    private void Refresh()
+    {
+        Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login", forceLoad: true);
+    }
+}

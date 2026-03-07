@@ -1,6 +1,6 @@
 /* ============================================================
    Tu Marca - Dashboard Stylesheet
-   Generic template UI - sidebar, dashboard, login, settings
+   Blazor WASM - Migrated from vanilla JS
    ============================================================ */
 
 /* --- CSS Variables / Design Tokens --- */
@@ -696,90 +696,6 @@ button {
 
 .status-active {
   background: var(--primary-bg);
-  color: var(--primary-dark);
-}
-
-/* ============================================================
-   TERMINAL
-   ============================================================ */
-.terminal-wrapper {
-  background: #1a1a2e;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  box-shadow: var(--shadow-md);
-}
-
-.terminal-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 1rem;
-  background: #232340;
-}
-
-.terminal-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.terminal-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
-.terminal-dot--red { background: #ff5f57; }
-.terminal-dot--yellow { background: #febc2e; }
-.terminal-dot--green { background: #28c840; }
-
-.terminal-title {
-  font-size: 0.8rem;
-  color: var(--sidebar-text);
-  margin-left: 0.5rem;
-  font-family: 'Courier New', monospace;
-}
-
-.terminal-toolbar-right .topbar-btn {
-  color: var(--sidebar-text);
-}
-
-.terminal-toolbar-right .topbar-btn:hover {
-  color: #ffffff;
-  background: rgba(255,255,255,0.1);
-}
-
-.terminal-iframe {
-  width: 100%;
-  height: calc(100vh - 220px);
-  min-height: 400px;
-  border: none;
-  display: block;
-}
-
-.terminal-info {
-  margin-top: 1rem;
-  padding: 1rem 1.25rem;
-  background: var(--card-bg);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-}
-
-.terminal-info p {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.terminal-info p:last-child {
-  margin-bottom: 0;
-}
-
-.terminal-info code {
-  background: #f1f5f9;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
-  font-size: 0.82rem;
   color: var(--primary-dark);
 }
 
