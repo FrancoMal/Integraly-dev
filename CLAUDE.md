@@ -78,8 +78,9 @@ Hace SOLO lo que el usuario pidio. No agregues cosas "por las dudas" o "porque s
 ```
 ai-coding-environment/
 |
-|-- docker-compose.yml        <- Orquesta todos los servicios
-|-- .env.example              <- Variables de entorno (copiar a .env)
+|-- docker-compose.yml              <- Levanta SOLO el workspace
+|-- docker-compose.services.yml     <- Servicios del proyecto (se corre desde dentro del workspace)
+|-- .env.example                    <- Variables de entorno (copiar a .env)
 |
 |-- src/Api/                  <- Backend (API REST)
 |   |-- Program.cs            <- Punto de entrada de la API
@@ -92,20 +93,43 @@ ai-coding-environment/
 |   |-- appsettings.json      <- Configuracion (JWT, connection string)
 |   '-- Api.csproj            <- Dependencias del proyecto
 |
+|-- src/Web/                  <- Frontend (Blazor WebAssembly)
+|   |-- Program.cs            <- Punto de entrada, registro de servicios
+|   |-- App.razor             <- Router y autenticacion
+|   |-- _Imports.razor        <- Usings globales
+|   |-- Web.csproj            <- Dependencias del proyecto Blazor
+|   |-- Dockerfile            <- Build multi-stage (SDK + nginx)
+|   |-- Pages/                <- Paginas de la app
+|   |   |-- Login.razor       <- Pagina de login
+|   |   |-- Dashboard.razor   <- Pagina principal del dashboard
+|   |   '-- Config.razor      <- Pagina de configuracion
+|   |-- Layout/               <- Layouts de la app
+|   |   |-- MainLayout.razor  <- Layout principal (sidebar + topbar)
+|   |   '-- LoginLayout.razor <- Layout de login
+|   |-- Shared/               <- Componentes reutilizables
+|   |   |-- NavItem.razor     <- Item de navegacion del sidebar
+|   |   |-- StatCard.razor    <- Tarjeta de estadistica
+|   |   |-- ToastContainer.razor <- Notificaciones toast
+|   |   |-- SvgIcons.razor    <- Iconos SVG centralizados
+|   |   '-- RedirectToLogin.razor <- Redireccion a login
+|   |-- Models/               <- Modelos de datos del frontend
+|   |   |-- LoginRequest.cs   <- Modelo de login
+|   |   |-- AuthResponse.cs   <- Respuesta de autenticacion
+|   |   |-- UserDto.cs        <- Datos del usuario
+|   |   '-- DashboardStats.cs <- Estadisticas del dashboard
+|   |-- Services/             <- Servicios del frontend
+|   |   |-- AuthService.cs    <- Manejo de sesion y login (JWT + localStorage)
+|   |   |-- JwtAuthStateProvider.cs <- Proveedor de estado de autenticacion
+|   |   |-- ApiClient.cs      <- Cliente HTTP con Bearer token
+|   |   '-- ToastService.cs   <- Servicio de notificaciones
+|   '-- wwwroot/              <- Archivos estaticos
+|       |-- index.html        <- Pagina host de Blazor
+|       '-- css/app.css       <- Estilos visuales
+|
 |-- db/
 |   '-- init.sql              <- Script que crea las tablas iniciales
 |
-|-- web/                      <- Frontend (lo que ve el usuario en el browser)
-|   |-- index.html            <- Pagina principal del dashboard
-|   |-- login.html            <- Pagina de login
-|   |-- css/dashboard.css     <- Estilos visuales
-|   '-- js/
-|       |-- auth.js           <- Manejo de sesion y login
-|       |-- api.js            <- Conexion con la API
-|       '-- dashboard.js      <- Logica del dashboard (Dashboard + Configuracion)
-|
-|-- workspace/
-|   '-- Dockerfile            <- Container con herramientas de desarrollo
+|-- Dockerfile.workspace      <- Como se construye el container de trabajo (Ubuntu + herramientas AI)
 |
 |-- nginx/
 |   '-- nginx.conf            <- Configuracion del servidor web
@@ -115,33 +139,43 @@ ai-coding-environment/
 
 ### Servicios Docker
 
+El proyecto usa dos docker-compose separados:
+
+**docker-compose.yml** (se levanta primero desde el host):
+| Servicio | Que hace | Puerto |
+|----------|----------|--------|
+| workspace | Ubuntu con herramientas AI y Docker CLI. Terminal web accesible en localhost:7681 | 7681 |
+
+**docker-compose.services.yml** (se levanta desde DENTRO del workspace):
 | Servicio | Que hace | Puerto |
 |----------|----------|--------|
 | sqlserver | Base de datos SQL Server Express | 1433 |
 | api | Backend .NET 8 con autenticacion JWT | interno |
-| web | Nginx - sirve el frontend y hace de intermediario | 8080 |
-| workspace | Ubuntu con herramientas (git, node, python, claude code). Accesible via terminal web en /terminal | interno |
+| web | Blazor WASM + Nginx - sirve el frontend y hace de intermediario | 8080 |
 
 ### Como se conectan
 
 ```
 Usuario (browser)
     |
+    |-- localhost:7681   -> Terminal web del workspace (directo)
+    |
     v
   Nginx (:8080)
-    |-- /            -> Archivos del frontend (web/)
+    |-- /            -> Blazor WASM (archivos compilados en src/Web/)
+    |-- /_framework/ -> Runtime de Blazor (DLLs, WASM)
     |-- /api/        -> Backend .NET (api:80)
-    '-- /terminal    -> Terminal web del workspace (workspace:7681)
-                        (no visible en el dashboard, acceso directo por URL)
+    '-- /terminal    -> Redirige a la terminal web del workspace
 ```
 
 ### Tecnologias
 
 - **Backend**: .NET 8 + C# + Entity Framework Core
 - **Base de datos**: SQL Server 2022 Express
-- **Frontend**: HTML + CSS + JavaScript puro (sin frameworks)
+- **Frontend**: Blazor WebAssembly (.NET 8) + CSS
 - **Servidor web**: Nginx
-- **Workspace**: Ubuntu 22.04, Node.js 20, Python 3, Git, FFmpeg, Claude Code
+- **Workspace**: Ubuntu 22.04, Node.js 20, Python 3, Git, FFmpeg, Docker CLI
+- **Agentes AI**: Claude Code, OpenCode, Codex CLI (OpenAI), Gemini CLI (Google)
 - **Terminal web**: ttyd
 - **Autenticacion**: JWT (JSON Web Tokens)
 - **Contenedores**: Docker + Docker Compose
@@ -152,20 +186,23 @@ Usuario (browser)
 
 ### Agregar una nueva pagina al dashboard
 
-1. En `web/js/dashboard.js`:
-   - Agregar un icono nuevo en el objeto `Icons`
-   - Agregar un item de navegacion en `renderShell()`
-   - Agregar un case en `navigateTo()`
-   - Crear la funcion `renderNuevaPagina()`
+1. Crear el archivo `.razor` en `src/Web/Pages/NuevaPagina.razor`:
+   - Agregar `@page "/ruta"` y `@attribute [Authorize]`
+   - Inyectar servicios necesarios (`@inject ApiClient Api`)
+   - Implementar la UI con HTML y logica en el bloque `@code {}`
 
-2. Si necesita datos del backend, crear el endpoint en la API:
+2. Agregar la navegacion en `src/Web/Layout/MainLayout.razor`:
+   - Agregar un `<NavItem>` en la seccion `sidebar-nav`
+   - Agregar el icono en `src/Web/Shared/SvgIcons.razor` si hace falta
+
+3. Si necesita datos del backend, crear el endpoint en la API:
    - Crear el modelo en `src/Api/Models/`
    - Agregar la tabla en `db/init.sql`
    - Agregar el DbSet en `src/Api/Data/AppDbContext.cs`
    - Crear el controller en `src/Api/Controllers/`
-   - Agregar la funcion en `web/js/api.js`
+   - Agregar la funcion en `src/Web/Services/ApiClient.cs`
 
-3. Si necesita estilos nuevos, agregarlos en `web/css/dashboard.css`
+4. Si necesita estilos nuevos, agregarlos en `src/Web/wwwroot/css/app.css`
 
 ### Agregar una nueva tabla a la base de datos
 
@@ -177,14 +214,14 @@ Usuario (browser)
 ### Cambiar el nombre de la marca
 
 Buscar "Tu Marca" en estos archivos y reemplazar:
-- `web/index.html` (titulo)
-- `web/login.html` (titulo y encabezado)
-- `web/js/dashboard.js` (sidebar y topbar)
+- `src/Web/wwwroot/index.html` (titulo)
+- `src/Web/Pages/Login.razor` (encabezado del login)
+- `src/Web/Layout/MainLayout.razor` (sidebar y topbar)
 
 ### Agregar un nuevo servicio Docker
 
 1. Crear una carpeta con su `Dockerfile`
-2. Agregarlo en `docker-compose.yml` dentro de `services:`
+2. Agregarlo en `docker-compose.services.yml` dentro de `services:`
 3. Si necesita ser accesible desde el browser, agregar la ruta en `nginx/nginx.conf`
 
 ---
@@ -204,14 +241,23 @@ Buscar "Tu Marca" en estos archivos y reemplazar:
 # 1. Copiar variables de entorno
 cp .env.example .env
 
-# 2. (Opcional) Poner tu API key de Anthropic en .env
-#    Esto habilita Claude Code en la terminal
+# 2. (Opcional) Poner tus API keys en .env
+#    ANTHROPIC_API_KEY -> Claude Code
+#    OPENAI_API_KEY    -> Codex CLI
+#    GEMINI_API_KEY    -> Gemini CLI
 
-# 3. Levantar todo
-docker-compose up --build -d
+# 3. Levantar el workspace
+docker compose up --build -d
 
-# 4. Abrir en el browser
-# http://localhost:8080
+# 4. Entrar al workspace
+docker exec -it aicoding-workspace bash
+
+# 5. Desde DENTRO del workspace, levantar los servicios
+docker compose -f docker-compose.services.yml up --build -d
+
+# 6. Abrir en el browser
+# Dashboard: http://localhost:8080
+# Terminal:  http://localhost:7681
 ```
 
 ---
