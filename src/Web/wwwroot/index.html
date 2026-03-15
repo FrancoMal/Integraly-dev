@@ -61,6 +61,19 @@
                 root.setProperty('--sidebar-active', '#' + Math.min(255,r2+25).toString(16).padStart(2,'0') + Math.min(255,g2+25).toString(16).padStart(2,'0') + Math.min(255,b2+25).toString(16).padStart(2,'0'));
             }
         };
+
+        window.updatePageTitle = function(brandName) {
+            var pageName = '';
+            var path = window.location.pathname.replace(/^\//, '').split('?')[0];
+            var titles = {
+                '': 'Dashboard', 'publicaciones': 'Publicaciones', 'ordenes': 'Ordenes',
+                'productos': 'Productos', 'usuarios': 'Usuarios', 'roles': 'Roles',
+                'integraciones': 'Integraciones', 'procesos': 'Procesos',
+                'auditoria': 'Auditoria', 'config': 'Configuracion', 'perfil': 'Perfil'
+            };
+            pageName = titles[path] || 'Dashboard';
+            document.title = brandName + ' - ' + pageName;
+        };
     </script>
 </body>
 </html>

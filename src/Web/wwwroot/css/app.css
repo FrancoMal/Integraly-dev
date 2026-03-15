@@ -1261,6 +1261,47 @@ button {
   object-fit: contain;
 }
 
+/* Collapsible config sections */
+.config-collapsible {
+  cursor: pointer;
+  user-select: none;
+}
+
+.config-collapsible:hover {
+  opacity: 0.85;
+}
+
+.config-section-chevron {
+  margin-left: auto;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  transition: transform 0.25s ease;
+}
+
+.config-section-chevron svg {
+  width: 18px;
+  height: 18px;
+}
+
+.config-section-chevron.open {
+  transform: rotate(90deg);
+}
+
+.config-section-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+  opacity: 0;
+}
+
+.config-section-body.expanded {
+  max-height: 5000px;
+  opacity: 1;
+}
+
 /* Config stat card with usage bar */
 .config-stat-card {
   flex-wrap: wrap;

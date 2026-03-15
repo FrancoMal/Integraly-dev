@@ -209,6 +209,7 @@
             {
                 BrandSettings.LoadFromSettings(settings);
                 await JS.InvokeVoidAsync("applyBrandColors", BrandSettings.PrimaryColor, BrandSettings.SidebarBgColor);
+                await JS.InvokeVoidAsync("updatePageTitle", BrandSettings.BrandName);
             }
         }
         catch { }
@@ -228,6 +229,7 @@
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         CheckRoutePermission();
+        _ = InvokeAsync(async () => await JS.InvokeVoidAsync("updatePageTitle", BrandSettings.BrandName));
     }
 
     private void CheckRoutePermission()
@@ -272,6 +274,7 @@
         await InvokeAsync(async () =>
         {
             await JS.InvokeVoidAsync("applyBrandColors", BrandSettings.PrimaryColor, BrandSettings.SidebarBgColor);
+            await JS.InvokeVoidAsync("updatePageTitle", BrandSettings.BrandName);
             StateHasChanged();
         });
     }
