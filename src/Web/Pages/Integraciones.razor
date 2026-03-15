@@ -1423,7 +1423,7 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("navigator.clipboard.writeText", meliAuthUrl);
+            await JS.InvokeVoidAsync("copyToClipboard", meliAuthUrl);
             urlCopied = true;
             waitingForCode = true;
             showConnectMenu = false;
