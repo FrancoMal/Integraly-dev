@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -115,6 +117,210 @@ public class SystemController : ControllerBase
         catch { }
 
         return Ok(new { Server = serverInfo, SqlServer = sqlInfo, Tables = tableCounts });
+    }
+
+    [HttpGet("host-info")]
+    public async Task<IActionResult> GetHostInfo()
+    {
+        var host = new
+        {
+            Hostname = ReadHostFile("/host_proc/sys/kernel/hostname")?.Trim() ?? Environment.MachineName,
+            TotalRamGb = 0.0,
+            UsedRamGb = 0.0,
+            RamUsagePercent = 0.0,
+            CpuCount = 0,
+            CpuModel = "",
+            Uptime = "",
+            DiskTotalGb = 0.0,
+            DiskUsedGb = 0.0,
+            DiskFreeGb = 0.0,
+            DiskUsagePercent = 0.0,
+            LoadAverage = ""
+        };
+
+        // Parse RAM from /host_proc/meminfo
+        double totalRamKb = 0, availableRamKb = 0;
+        try
+        {
+            var meminfo = ReadHostFile("/host_proc/meminfo") ?? "";
+            foreach (var line in meminfo.Split('\n'))
+            {
+                if (line.StartsWith("MemTotal:"))
+                    totalRamKb = ParseMemValue(line);
+                else if (line.StartsWith("MemAvailable:"))
+                    availableRamKb = ParseMemValue(line);
+            }
+        }
+        catch { }
+
+        double totalRamGb = Math.Round(totalRamKb / 1024.0 / 1024.0, 2);
+        double usedRamGb = Math.Round((totalRamKb - availableRamKb) / 1024.0 / 1024.0, 2);
+        double ramPercent = totalRamKb > 0 ? Math.Round((totalRamKb - availableRamKb) / totalRamKb * 100, 1) : 0;
+
+        // Parse CPU from /host_proc/cpuinfo
+        int cpuCount = 0;
+        string cpuModel = "";
+        try
+        {
+            var cpuinfo = ReadHostFile("/host_proc/cpuinfo") ?? "";
+            foreach (var line in cpuinfo.Split('\n'))
+            {
+                if (line.StartsWith("processor"))
+                    cpuCount++;
+                else if (line.StartsWith("model name") && string.IsNullOrEmpty(cpuModel))
+                {
+                    var parts = line.Split(':', 2);
+                    if (parts.Length == 2) cpuModel = parts[1].Trim();
+                }
+            }
+        }
+        catch { }
+
+        // Parse uptime from /host_proc/uptime
+        string uptimeStr = "";
+        try
+        {
+            var uptimeContent = ReadHostFile("/host_proc/uptime") ?? "";
+            var uptimeSeconds = double.Parse(uptimeContent.Split(' ')[0], System.Globalization.CultureInfo.InvariantCulture);
+            uptimeStr = FormatUptime(TimeSpan.FromSeconds(uptimeSeconds));
+        }
+        catch { }
+
+        // Parse load average from /host_proc/loadavg
+        string loadAvg = "";
+        try
+        {
+            var loadContent = ReadHostFile("/host_proc/loadavg") ?? "";
+            var parts = loadContent.Trim().Split(' ');
+            if (parts.Length >= 3)
+                loadAvg = $"{parts[0]} {parts[1]} {parts[2]}";
+        }
+        catch { }
+
+        // Disk info using DriveInfo for "/"
+        double diskTotalGb = 0, diskUsedGb = 0, diskFreeGb = 0, diskPercent = 0;
+        try
+        {
+            var drive = new DriveInfo("/");
+            diskTotalGb = Math.Round(drive.TotalSize / 1024.0 / 1024.0 / 1024.0, 2);
+            diskFreeGb = Math.Round(drive.AvailableFreeSpace / 1024.0 / 1024.0 / 1024.0, 2);
+            diskUsedGb = Math.Round(diskTotalGb - diskFreeGb, 2);
+            diskPercent = diskTotalGb > 0 ? Math.Round(diskUsedGb / diskTotalGb * 100, 1) : 0;
+        }
+        catch { }
+
+        // Docker containers via unix socket
+        var containers = new List<object>();
+        try
+        {
+            var handler = new SocketsHttpHandler
+            {
+                ConnectCallback = async (context, cancellationToken) =>
+                {
+                    var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                    var endpoint = new UnixDomainSocketEndPoint("/var/run/docker.sock");
+                    await socket.ConnectAsync(endpoint, cancellationToken);
+                    return new NetworkStream(socket, ownsSocket: true);
+                }
+            };
+
+            using var dockerClient = new HttpClient(handler);
+            dockerClient.BaseAddress = new Uri("http://localhost");
+
+            var response = await dockerClient.GetAsync("/containers/json?all=true");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                var dockerContainers = JsonSerializer.Deserialize<JsonElement>(json);
+
+                if (dockerContainers.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var c in dockerContainers.EnumerateArray())
+                    {
+                        // Get container name
+                        var name = "";
+                        if (c.TryGetProperty("Names", out var names) && names.ValueKind == JsonValueKind.Array)
+                        {
+                            var firstName = names.EnumerateArray().FirstOrDefault().GetString() ?? "";
+                            name = firstName.TrimStart('/');
+                        }
+
+                        // Filter only project containers
+                        if (!name.StartsWith("aicoding-", StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        var image = c.TryGetProperty("Image", out var img) ? img.GetString() ?? "" : "";
+                        var status = c.TryGetProperty("Status", out var st) ? st.GetString() ?? "" : "";
+                        var state = c.TryGetProperty("State", out var stt) ? stt.GetString() ?? "" : "";
+
+                        // Parse ports
+                        var portsStr = "";
+                        if (c.TryGetProperty("Ports", out var ports) && ports.ValueKind == JsonValueKind.Array)
+                        {
+                            var portList = new List<string>();
+                            foreach (var p in ports.EnumerateArray())
+                            {
+                                var privatePort = p.TryGetProperty("PrivatePort", out var pp) ? pp.GetInt32().ToString() : "";
+                                var publicPort = p.TryGetProperty("PublicPort", out var pub) ? pub.GetInt32().ToString() : "";
+                                var type = p.TryGetProperty("Type", out var tp) ? tp.GetString() ?? "" : "";
+
+                                if (!string.IsNullOrEmpty(publicPort))
+                                    portList.Add($"{publicPort}->{privatePort}/{type}");
+                                else if (!string.IsNullOrEmpty(privatePort))
+                                    portList.Add($"{privatePort}/{type}");
+                            }
+                            portsStr = string.Join(", ", portList.Distinct());
+                        }
+
+                        containers.Add(new
+                        {
+                            Name = name,
+                            Image = image,
+                            Status = status,
+                            State = state,
+                            Ports = portsStr
+                        });
+                    }
+                }
+            }
+        }
+        catch { }
+
+        return Ok(new
+        {
+            Host = new
+            {
+                Hostname = ReadHostFile("/host_proc/sys/kernel/hostname")?.Trim() ?? Environment.MachineName,
+                TotalRamGb = totalRamGb,
+                UsedRamGb = usedRamGb,
+                RamUsagePercent = ramPercent,
+                CpuCount = cpuCount,
+                CpuModel = cpuModel,
+                Uptime = uptimeStr,
+                DiskTotalGb = diskTotalGb,
+                DiskUsedGb = diskUsedGb,
+                DiskFreeGb = diskFreeGb,
+                DiskUsagePercent = diskPercent,
+                LoadAverage = loadAvg
+            },
+            Containers = containers
+        });
+    }
+
+    private static string? ReadHostFile(string path)
+    {
+        try { return System.IO.File.ReadAllText(path); }
+        catch { return null; }
+    }
+
+    private static double ParseMemValue(string line)
+    {
+        // Line format: "MemTotal:       16384000 kB"
+        var parts = line.Split(':', 2);
+        if (parts.Length < 2) return 0;
+        var valuePart = parts[1].Trim().Split(' ')[0];
+        return double.TryParse(valuePart, System.Globalization.NumberStyles.Any,
+            System.Globalization.CultureInfo.InvariantCulture, out var val) ? val : 0;
     }
 
     private static string FormatUptime(TimeSpan uptime)

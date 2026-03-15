@@ -5,7 +5,7 @@
 
 <div class="view-header">
     <h2>Configuracion</h2>
-    <p class="view-subtitle">Informacion del sistema y base de datos</p>
+    <p class="view-subtitle">Informacion del sistema, servidor y contenedores</p>
 </div>
 
 @if (loading)
@@ -15,232 +15,330 @@
         <span>Cargando informacion del sistema...</span>
     </div>
 }
-else if (systemInfo is null)
-{
-    <div class="alert alert-danger">No se pudo obtener la informacion del sistema.</div>
-}
 else
 {
-    <!-- Stat cards row -->
-    <div class="config-stats-row">
-        <div class="config-stat-card">
-            <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
-                @SvgIcons.Server
-            </div>
-            <div class="config-stat-info">
-                <span class="config-stat-value">@systemInfo.Server.ServerUptime</span>
-                <span class="config-stat-label">Tiempo activo</span>
-            </div>
+    <!-- ========== SERVIDOR FISICO ========== -->
+    @if (hostInfo is not null)
+    {
+        <div class="config-section-title">
+            @SvgIcons.Server
+            <span>Servidor fisico</span>
+            <span class="config-section-subtitle">@hostInfo.Host.Hostname</span>
         </div>
-        <div class="config-stat-card">
-            <div class="config-stat-icon" style="background: #dcfce7; color: #16a34a;">
-                @SvgIcons.Database
-            </div>
-            <div class="config-stat-info">
-                <span class="config-stat-value">@(systemInfo.SqlServer?.DatabaseSizeMb ?? 0) MB</span>
-                <span class="config-stat-label">Tamano de la base</span>
-            </div>
-        </div>
-        <div class="config-stat-card">
-            <div class="config-stat-icon" style="background: #fef3c7; color: #d97706;">
-                @SvgIcons.Memory
-            </div>
-            <div class="config-stat-info">
-                <span class="config-stat-value">@systemInfo.Server.WorkingMemoryMb MB</span>
-                <span class="config-stat-label">Memoria API</span>
-            </div>
-        </div>
-        <div class="config-stat-card">
-            <div class="config-stat-icon" style="background: #f3e8ff; color: #9333ea;">
-                @SvgIcons.Table
-            </div>
-            <div class="config-stat-info">
-                <span class="config-stat-value">@(systemInfo.SqlServer?.TableCount ?? 0)</span>
-                <span class="config-stat-label">Tablas</span>
-            </div>
-        </div>
-    </div>
 
-    <div class="config-grid">
-        <!-- Servidor -->
-        <div class="card">
-            <div class="card-header">
-                <h3>Servidor</h3>
-                <span class="status-badge status-active">Online</span>
+        <div class="config-stats-row">
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
+                    @SvgIcons.Memory
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.UsedRamGb / @hostInfo.Host.TotalRamGb GB</span>
+                    <span class="config-stat-label">RAM (@hostInfo.Host.RamUsagePercent%)</span>
+                </div>
+                <div class="config-usage-bar">
+                    <div class="config-usage-fill @GetUsageClass(hostInfo.Host.RamUsagePercent)" style="width: @hostInfo.Host.RamUsagePercent%"></div>
+                </div>
             </div>
-            <div class="card-body">
-                <table class="info-table">
-                    <tr>
-                        <td class="info-label">Maquina</td>
-                        <td class="info-value">@systemInfo.Server.MachineName</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Sistema operativo</td>
-                        <td class="info-value">@systemInfo.Server.OsDescription</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Arquitectura</td>
-                        <td class="info-value">@systemInfo.Server.OsArchitecture</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Procesadores</td>
-                        <td class="info-value">@systemInfo.Server.ProcessorCount nucleos</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">.NET</td>
-                        <td class="info-value">@systemInfo.Server.DotnetVersion</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Entorno</td>
-                        <td class="info-value">
-                            <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")">
-                                @systemInfo.Server.Environment
-                            </span>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Memoria en uso</td>
-                        <td class="info-value">@systemInfo.Server.WorkingMemoryMb MB</td>
-                    </tr>
-                    <tr>
-                        <td class="info-label">Tiempo activo</td>
-                        <td class="info-value">@systemInfo.Server.ServerUptime</td>
-                    </tr>
-                </table>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #dcfce7; color: #16a34a;">
+                    @SvgIcons.Server
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.CpuCount nucleos</span>
+                    <span class="config-stat-label">CPU - Load: @hostInfo.Host.LoadAverage</span>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #fef3c7; color: #d97706;">
+                    @SvgIcons.Database
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.DiskUsedGb / @hostInfo.Host.DiskTotalGb GB</span>
+                    <span class="config-stat-label">Disco (@hostInfo.Host.DiskUsagePercent%)</span>
+                </div>
+                <div class="config-usage-bar">
+                    <div class="config-usage-fill @GetUsageClass(hostInfo.Host.DiskUsagePercent)" style="width: @hostInfo.Host.DiskUsagePercent%"></div>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #f3e8ff; color: #9333ea;">
+                    @SvgIcons.History
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.Uptime</span>
+                    <span class="config-stat-label">Tiempo activo del servidor</span>
+                </div>
             </div>
         </div>
 
-        <!-- SQL Server -->
-        <div class="card">
-            <div class="card-header">
-                <h3>SQL Server</h3>
-                @if (systemInfo.SqlServer?.Error is null)
-                {
-                    <span class="status-badge status-active">Conectado</span>
-                }
-                else
-                {
-                    <span class="status-badge status-inactive">Error</span>
-                }
+        <!-- Detalle CPU -->
+        @if (!string.IsNullOrEmpty(hostInfo.Host.CpuModel))
+        {
+            <div class="config-cpu-detail">
+                <span class="info-label">Procesador:</span> @hostInfo.Host.CpuModel
             </div>
-            <div class="card-body">
-                @if (systemInfo.SqlServer?.Error is not null)
-                {
-                    <div class="alert alert-danger">@systemInfo.SqlServer.Error</div>
-                }
-                else if (systemInfo.SqlServer is not null)
-                {
-                    <table class="info-table">
-                        <tr>
-                            <td class="info-label">Servidor</td>
-                            <td class="info-value">@systemInfo.SqlServer.ServerName</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Version</td>
-                            <td class="info-value">@systemInfo.SqlServer.Version</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Edicion</td>
-                            <td class="info-value">@systemInfo.SqlServer.Edition</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Nivel</td>
-                            <td class="info-value">@systemInfo.SqlServer.ProductLevel</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Base de datos</td>
-                            <td class="info-value"><strong>@systemInfo.SqlServer.DatabaseName</strong></td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Tamano</td>
-                            <td class="info-value">@systemInfo.SqlServer.DatabaseSizeMb MB</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Collation</td>
-                            <td class="info-value">@systemInfo.SqlServer.Collation</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Conexiones max</td>
-                            <td class="info-value">@systemInfo.SqlServer.MaxConnections.ToString("N0")</td>
-                        </tr>
-                        <tr>
-                            <td class="info-label">Creada</td>
-                            <td class="info-value">@(systemInfo.SqlServer.DatabaseCreated?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
-                        </tr>
-                    </table>
-                }
-            </div>
-        </div>
+        }
 
-        <!-- Usuario actual -->
-        <div class="card">
-            <div class="card-header">
-                <h3>Usuario actual</h3>
+        <!-- Containers Docker -->
+        @if (hostInfo.Containers is not null && hostInfo.Containers.Count > 0)
+        {
+            <div class="config-section-title" style="margin-top: 1.5rem;">
+                @SvgIcons.Box
+                <span>Contenedores Docker</span>
+                <span class="config-section-subtitle">@hostInfo.Containers.Count contenedores</span>
             </div>
-            <div class="card-body">
-                <table class="info-table">
-                    <tr><td class="info-label">Nombre</td><td class="info-value">@username</td></tr>
-                    <tr><td class="info-label">Rol</td><td class="info-value">@role</td></tr>
-                    <tr>
-                        <td class="info-label">Sesion</td>
-                        <td class="info-value"><span class="status-badge status-active">Activa</span></td>
-                    </tr>
-                </table>
-            </div>
-        </div>
 
-        <!-- Tablas -->
-        <div class="card">
-            <div class="card-header">
-                <h3>Tablas de la base de datos</h3>
-                <span class="config-table-count">@(systemInfo.Tables?.Count ?? 0) tablas</span>
-            </div>
-            <div class="card-body config-tables-body">
-                @if (systemInfo.Tables is not null && systemInfo.Tables.Count > 0)
-                {
+            <div class="card">
+                <div class="card-body config-tables-body">
                     <table class="config-tables-list">
                         <thead>
                             <tr>
-                                <th>Tabla</th>
-                                <th style="text-align: right;">Registros</th>
+                                <th>Nombre</th>
+                                <th>Imagen</th>
+                                <th>Estado</th>
+                                <th>Status</th>
+                                <th>Puertos</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var table in systemInfo.Tables)
+                            @foreach (var container in hostInfo.Containers)
                             {
                                 <tr>
-                                    <td>@table.Name</td>
-                                    <td style="text-align: right; font-weight: 600;">@table.Rows.ToString("N0")</td>
+                                    <td><strong>@container.Name</strong></td>
+                                    <td class="text-muted" style="font-size: 0.8rem;">@TruncateImage(container.Image)</td>
+                                    <td>
+                                        <span class="status-badge @(container.State == "running" ? "status-active" : "status-inactive")">
+                                            @(container.State == "running" ? "Corriendo" : container.State == "exited" ? "Detenido" : container.State)
+                                        </span>
+                                    </td>
+                                    <td class="text-muted" style="font-size: 0.8rem;">@container.Status</td>
+                                    <td style="font-size: 0.8rem;">@(string.IsNullOrEmpty(container.Ports) ? "-" : container.Ports)</td>
                                 </tr>
                             }
-                            <tr class="config-tables-total">
-                                <td><strong>Total</strong></td>
-                                <td style="text-align: right;"><strong>@systemInfo.Tables.Sum(t => t.Rows).ToString("N0")</strong></td>
-                            </tr>
                         </tbody>
                     </table>
-                }
-                else
-                {
-                    <p class="text-muted">No se encontraron tablas.</p>
-                }
+                </div>
+            </div>
+        }
+    }
+
+    <!-- ========== ENTORNO DE LA API ========== -->
+    @if (systemInfo is not null)
+    {
+        <div class="config-section-title" style="margin-top: 2rem;">
+            @SvgIcons.Code
+            <span>Entorno de la API</span>
+            <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")" style="margin-left: 0.5rem;">
+                @systemInfo.Server.Environment
+            </span>
+        </div>
+
+        <div class="config-stats-row">
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
+                    @SvgIcons.Server
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@systemInfo.Server.ServerUptime</span>
+                    <span class="config-stat-label">Tiempo activo API</span>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #dcfce7; color: #16a34a;">
+                    @SvgIcons.Database
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@(systemInfo.SqlServer?.DatabaseSizeMb ?? 0) MB</span>
+                    <span class="config-stat-label">Tamano de la base</span>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #fef3c7; color: #d97706;">
+                    @SvgIcons.Memory
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@systemInfo.Server.WorkingMemoryMb MB</span>
+                    <span class="config-stat-label">Memoria API</span>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #f3e8ff; color: #9333ea;">
+                    @SvgIcons.Table
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@(systemInfo.SqlServer?.TableCount ?? 0)</span>
+                    <span class="config-stat-label">Tablas</span>
+                </div>
             </div>
         </div>
-    </div>
+
+        <div class="config-grid">
+            <!-- API Container -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>API Container</h3>
+                    <span class="status-badge status-active">Online</span>
+                </div>
+                <div class="card-body">
+                    <table class="info-table">
+                        <tr>
+                            <td class="info-label">Container</td>
+                            <td class="info-value">@systemInfo.Server.MachineName</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">Sistema operativo</td>
+                            <td class="info-value">@systemInfo.Server.OsDescription</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">Arquitectura</td>
+                            <td class="info-value">@systemInfo.Server.OsArchitecture</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">Procesadores</td>
+                            <td class="info-value">@systemInfo.Server.ProcessorCount nucleos</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">.NET</td>
+                            <td class="info-value">@systemInfo.Server.DotnetVersion</td>
+                        </tr>
+                        <tr>
+                            <td class="info-label">Memoria en uso</td>
+                            <td class="info-value">@systemInfo.Server.WorkingMemoryMb MB</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SQL Server -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>SQL Server</h3>
+                    @if (systemInfo.SqlServer?.Error is null)
+                    {
+                        <span class="status-badge status-active">Conectado</span>
+                    }
+                    else
+                    {
+                        <span class="status-badge status-inactive">Error</span>
+                    }
+                </div>
+                <div class="card-body">
+                    @if (systemInfo.SqlServer?.Error is not null)
+                    {
+                        <div class="alert alert-danger">@systemInfo.SqlServer.Error</div>
+                    }
+                    else if (systemInfo.SqlServer is not null)
+                    {
+                        <table class="info-table">
+                            <tr>
+                                <td class="info-label">Servidor</td>
+                                <td class="info-value">@systemInfo.SqlServer.ServerName</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Version</td>
+                                <td class="info-value">@systemInfo.SqlServer.Version</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Edicion</td>
+                                <td class="info-value">@systemInfo.SqlServer.Edition</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Base de datos</td>
+                                <td class="info-value"><strong>@systemInfo.SqlServer.DatabaseName</strong></td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Tamano</td>
+                                <td class="info-value">@systemInfo.SqlServer.DatabaseSizeMb MB</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Collation</td>
+                                <td class="info-value">@systemInfo.SqlServer.Collation</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Conexiones max</td>
+                                <td class="info-value">@systemInfo.SqlServer.MaxConnections.ToString("N0")</td>
+                            </tr>
+                            <tr>
+                                <td class="info-label">Creada</td>
+                                <td class="info-value">@(systemInfo.SqlServer.DatabaseCreated?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                            </tr>
+                        </table>
+                    }
+                </div>
+            </div>
+
+            <!-- Usuario actual -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Usuario actual</h3>
+                </div>
+                <div class="card-body">
+                    <table class="info-table">
+                        <tr><td class="info-label">Nombre</td><td class="info-value">@username</td></tr>
+                        <tr><td class="info-label">Rol</td><td class="info-value">@role</td></tr>
+                        <tr>
+                            <td class="info-label">Sesion</td>
+                            <td class="info-value"><span class="status-badge status-active">Activa</span></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tablas -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Tablas de la base de datos</h3>
+                    <span class="config-table-count">@(systemInfo.Tables?.Count ?? 0) tablas</span>
+                </div>
+                <div class="card-body config-tables-body">
+                    @if (systemInfo.Tables is not null && systemInfo.Tables.Count > 0)
+                    {
+                        <table class="config-tables-list">
+                            <thead>
+                                <tr>
+                                    <th>Tabla</th>
+                                    <th style="text-align: right;">Registros</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var table in systemInfo.Tables)
+                                {
+                                    <tr>
+                                        <td>@table.Name</td>
+                                        <td style="text-align: right; font-weight: 600;">@table.Rows.ToString("N0")</td>
+                                    </tr>
+                                }
+                                <tr class="config-tables-total">
+                                    <td><strong>Total</strong></td>
+                                    <td style="text-align: right;"><strong>@systemInfo.Tables.Sum(t => t.Rows).ToString("N0")</strong></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No se encontraron tablas.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
     private string username = "usuario";
     private string role = "user";
     private SystemInfoDto? systemInfo;
+    private HostInfoDto? hostInfo;
     private bool loading = true;
 
     protected override async Task OnInitializedAsync()
     {
         var userTask = AuthService.GetUserAsync();
         var sysTask = Api.GetSystemInfoAsync();
+        var hostTask = Api.GetHostInfoAsync();
 
-        await Task.WhenAll(userTask, sysTask);
+        await Task.WhenAll(userTask, sysTask, hostTask);
 
         var user = userTask.Result;
         if (user is not null)
@@ -250,6 +348,26 @@ else
         }
 
         systemInfo = sysTask.Result;
+        hostInfo = hostTask.Result;
         loading = false;
+    }
+
+    private string GetUsageClass(double percent)
+    {
+        if (percent >= 90) return "usage-critical";
+        if (percent >= 70) return "usage-warning";
+        return "usage-ok";
+    }
+
+    private string TruncateImage(string image)
+    {
+        if (string.IsNullOrEmpty(image)) return "-";
+        // Show only last part of image name
+        var parts = image.Split('/');
+        var name = parts[^1];
+        // Truncate hash-like image IDs
+        if (name.StartsWith("sha256:"))
+            return name[..19] + "...";
+        return name.Length > 40 ? name[..37] + "..." : name;
     }
 }

@@ -29,6 +29,12 @@ public class ApiClient
         return await GetAsync<SystemInfoDto>("/api/system/info");
     }
 
+    public async Task<HostInfoDto?> GetHostInfoAsync()
+    {
+        try { return await _http.GetFromJsonAsync<HostInfoDto>("api/system/host-info"); }
+        catch { return null; }
+    }
+
     public async Task<UserDto?> GetMeAsync()
     {
         return await GetAsync<UserDto>("/api/auth/me");

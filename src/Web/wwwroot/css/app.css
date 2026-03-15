@@ -1014,6 +1014,73 @@ button {
   font-weight: 500;
 }
 
+/* Config section titles */
+.config-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  margin-top: 0.5rem;
+}
+
+.config-section-title svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+}
+
+.config-section-subtitle {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 0.25rem;
+}
+
+/* Usage bars */
+.config-usage-bar {
+  width: 100%;
+  height: 6px;
+  background: #e5e7eb;
+  border-radius: 3px;
+  margin-top: 0.5rem;
+  overflow: hidden;
+}
+
+.config-usage-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.usage-ok { background: #10b981; }
+.usage-warning { background: #f59e0b; }
+.usage-critical { background: #ef4444; }
+
+/* CPU detail */
+.config-cpu-detail {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 1rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.config-cpu-detail .info-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Config stat card with usage bar */
+.config-stat-card {
+  flex-wrap: wrap;
+}
+
 /* ============================================================
    INFO TABLE (key-value pairs)
    ============================================================ */
