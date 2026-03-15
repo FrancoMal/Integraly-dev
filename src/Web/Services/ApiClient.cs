@@ -536,6 +536,18 @@ public class ApiClient
         return await response.Content.ReadFromJsonAsync<PublishItemResponse>();
     }
 
+    // --- Settings ---
+    public async Task<Dictionary<string, string>?> GetSettingsAsync()
+    {
+        return await GetAsync<Dictionary<string, string>>("/api/settings");
+    }
+
+    public async Task<bool> UpdateSettingAsync(string key, string value)
+    {
+        var result = await PutAsync<object>($"/api/settings/{key}", new { Value = value });
+        return result != null;
+    }
+
     // --- HTTP helpers ---
     private async Task<T?> GetAsync<T>(string url)
     {

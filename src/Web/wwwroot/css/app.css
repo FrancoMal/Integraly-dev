@@ -1076,6 +1076,68 @@ button {
   color: var(--text-primary);
 }
 
+/* Brand config section */
+.config-brand-section {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.config-brand-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: var(--sidebar-bg);
+  border-radius: 10px;
+  min-width: 200px;
+}
+
+.config-brand-icon {
+  width: 32px;
+  height: 32px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+}
+
+.config-brand-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.config-brand-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: white;
+}
+
+.config-brand-edit {
+  flex: 1;
+  min-width: 250px;
+}
+
+.config-brand-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.config-brand-input-row .form-input {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.config-brand-input-row .btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 /* Config stat card with usage bar */
 .config-stat-card {
   flex-wrap: wrap;

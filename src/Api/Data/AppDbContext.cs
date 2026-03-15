@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<ScheduledProcess> ScheduledProcesses => Set<ScheduledProcess>();
     public DbSet<ProcessExecutionLog> ProcessExecutionLogs => Set<ProcessExecutionLog>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
+    public DbSet<AppSetting> AppSettings => Set<AppSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +47,8 @@ public class AppDbContext : DbContext
                   .HasForeignKey(rp => rp.RoleId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+
+        modelBuilder.Entity<AppSetting>().HasKey(a => a.Key);
 
         modelBuilder.Entity<Integration>(entity =>
         {

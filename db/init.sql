@@ -424,3 +424,21 @@ BEGIN
     (2, 'productos'), (2, 'config');
 END
 GO
+
+-- App Settings table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AppSettings' AND xtype='U')
+BEGIN
+    CREATE TABLE AppSettings (
+        [Key] NVARCHAR(100) PRIMARY KEY,
+        [Value] NVARCHAR(MAX) NOT NULL,
+        UpdatedAt DATETIME2 DEFAULT GETDATE()
+    );
+END
+GO
+
+-- Seed default brand name
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BrandName')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BrandName', 'Tu Marca');
+END
+GO

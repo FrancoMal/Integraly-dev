@@ -2,137 +2,56 @@
 @attribute [Authorize]
 @inject AuthService AuthService
 @inject ApiClient Api
-
-<div class="view-header">
-    <h2>Configuracion</h2>
-    <p class="view-subtitle">Informacion del sistema, servidor y contenedores</p>
-</div>
+@inject ToastService Toast
 
 @if (loading)
 {
     <div class="loading-container">
         <div class="spinner"></div>
-        <span>Cargando informacion del sistema...</span>
+        <span>Cargando configuracion...</span>
     </div>
 }
 else
 {
-    <!-- ========== SERVIDOR FISICO ========== -->
-    @if (hostInfo is not null)
-    {
-        <div class="config-section-title">
-            @SvgIcons.Server
-            <span>Servidor fisico</span>
-            <span class="config-section-subtitle">@hostInfo.Host.Hostname</span>
-        </div>
-
-        <div class="config-stats-row">
-            <div class="config-stat-card">
-                <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
-                    @SvgIcons.Memory
-                </div>
-                <div class="config-stat-info">
-                    <span class="config-stat-value">@hostInfo.Host.UsedRamGb / @hostInfo.Host.TotalRamGb GB</span>
-                    <span class="config-stat-label">RAM (@hostInfo.Host.RamUsagePercent%)</span>
-                </div>
-                <div class="config-usage-bar">
-                    <div class="config-usage-fill @GetUsageClass(hostInfo.Host.RamUsagePercent)" style="width: @hostInfo.Host.RamUsagePercent%"></div>
-                </div>
-            </div>
-            <div class="config-stat-card">
-                <div class="config-stat-icon" style="background: #dcfce7; color: #16a34a;">
-                    @SvgIcons.Server
-                </div>
-                <div class="config-stat-info">
-                    <span class="config-stat-value">@hostInfo.Host.CpuCount nucleos</span>
-                    <span class="config-stat-label">CPU - Load: @hostInfo.Host.LoadAverage</span>
-                </div>
-            </div>
-            <div class="config-stat-card">
-                <div class="config-stat-icon" style="background: #fef3c7; color: #d97706;">
-                    @SvgIcons.Database
-                </div>
-                <div class="config-stat-info">
-                    <span class="config-stat-value">@hostInfo.Host.DiskUsedGb / @hostInfo.Host.DiskTotalGb GB</span>
-                    <span class="config-stat-label">Disco (@hostInfo.Host.DiskUsagePercent%)</span>
-                </div>
-                <div class="config-usage-bar">
-                    <div class="config-usage-fill @GetUsageClass(hostInfo.Host.DiskUsagePercent)" style="width: @hostInfo.Host.DiskUsagePercent%"></div>
-                </div>
-            </div>
-            <div class="config-stat-card">
-                <div class="config-stat-icon" style="background: #f3e8ff; color: #9333ea;">
-                    @SvgIcons.History
-                </div>
-                <div class="config-stat-info">
-                    <span class="config-stat-value">@hostInfo.Host.Uptime</span>
-                    <span class="config-stat-label">Tiempo activo del servidor</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Detalle CPU -->
-        @if (!string.IsNullOrEmpty(hostInfo.Host.CpuModel))
+    <!-- ========== SECCION 1: CONFIGURACION DE ENTORNO ========== -->
+    <div class="config-section-title">
+        @SvgIcons.Settings
+        <span>Configuracion de Entorno</span>
+        @if (systemInfo is not null)
         {
-            <div class="config-cpu-detail">
-                <span class="info-label">Procesador:</span> @hostInfo.Host.CpuModel
-            </div>
-        }
-
-        <!-- Containers Docker -->
-        @if (hostInfo.Containers is not null && hostInfo.Containers.Count > 0)
-        {
-            <div class="config-section-title" style="margin-top: 1.5rem;">
-                @SvgIcons.Box
-                <span>Contenedores Docker</span>
-                <span class="config-section-subtitle">@hostInfo.Containers.Count contenedores</span>
-            </div>
-
-            <div class="card">
-                <div class="card-body config-tables-body">
-                    <table class="config-tables-list">
-                        <thead>
-                            <tr>
-                                <th>Nombre</th>
-                                <th>Imagen</th>
-                                <th>Estado</th>
-                                <th>Status</th>
-                                <th>Puertos</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var container in hostInfo.Containers)
-                            {
-                                <tr>
-                                    <td><strong>@container.Name</strong></td>
-                                    <td class="text-muted" style="font-size: 0.8rem;">@TruncateImage(container.Image)</td>
-                                    <td>
-                                        <span class="status-badge @(container.State == "running" ? "status-active" : "status-inactive")">
-                                            @(container.State == "running" ? "Corriendo" : container.State == "exited" ? "Detenido" : container.State)
-                                        </span>
-                                    </td>
-                                    <td class="text-muted" style="font-size: 0.8rem;">@container.Status</td>
-                                    <td style="font-size: 0.8rem;">@(string.IsNullOrEmpty(container.Ports) ? "-" : container.Ports)</td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        }
-    }
-
-    <!-- ========== ENTORNO DE LA API ========== -->
-    @if (systemInfo is not null)
-    {
-        <div class="config-section-title" style="margin-top: 2rem;">
-            @SvgIcons.Code
-            <span>Entorno de la API</span>
             <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")" style="margin-left: 0.5rem;">
                 @systemInfo.Server.Environment
             </span>
-        </div>
+        }
+    </div>
 
+    <!-- Brand / Nombre de empresa -->
+    <div class="card" style="margin-bottom: 1.5rem;">
+        <div class="card-body">
+            <div class="config-brand-section">
+                <div class="config-brand-preview">
+                    <span class="config-brand-icon">@SvgIcons.Brand</span>
+                    <span class="config-brand-name">@brandName</span>
+                </div>
+                <div class="config-brand-edit">
+                    <label class="info-label" style="margin-bottom: 0.5rem; display: block;">Nombre de la empresa o marca</label>
+                    <div class="config-brand-input-row">
+                        <input type="text" class="form-input" @bind="brandNameInput" @bind:event="oninput" placeholder="Nombre de tu empresa..." />
+                        <button class="btn btn-primary btn-sm" @onclick="SaveBrandName" disabled="@(savingBrand || brandNameInput == brandName)">
+                            @(savingBrand ? "Guardando..." : "Guardar")
+                        </button>
+                    </div>
+                    <span class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem; display: block;">
+                        Este nombre aparece en el sidebar, topbar y login.
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info del entorno -->
+    @if (systemInfo is not null)
+    {
         <div class="config-stats-row">
             <div class="config-stat-card">
                 <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
@@ -326,6 +245,111 @@ else
             </div>
         </div>
     }
+
+    <!-- ========== SECCION 2: SERVIDOR FISICO ========== -->
+    @if (hostInfo is not null)
+    {
+        <div class="config-section-title" style="margin-top: 2rem;">
+            @SvgIcons.Server
+            <span>Servidor fisico</span>
+            <span class="config-section-subtitle">@hostInfo.Host.Hostname</span>
+        </div>
+
+        <div class="config-stats-row">
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
+                    @SvgIcons.Memory
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.UsedRamGb / @hostInfo.Host.TotalRamGb GB</span>
+                    <span class="config-stat-label">RAM (@hostInfo.Host.RamUsagePercent%)</span>
+                </div>
+                <div class="config-usage-bar">
+                    <div class="config-usage-fill @GetUsageClass(hostInfo.Host.RamUsagePercent)" style="width: @hostInfo.Host.RamUsagePercent%"></div>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #dcfce7; color: #16a34a;">
+                    @SvgIcons.Server
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.CpuCount nucleos</span>
+                    <span class="config-stat-label">CPU - Load: @hostInfo.Host.LoadAverage</span>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #fef3c7; color: #d97706;">
+                    @SvgIcons.Database
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.DiskUsedGb / @hostInfo.Host.DiskTotalGb GB</span>
+                    <span class="config-stat-label">Disco (@hostInfo.Host.DiskUsagePercent%)</span>
+                </div>
+                <div class="config-usage-bar">
+                    <div class="config-usage-fill @GetUsageClass(hostInfo.Host.DiskUsagePercent)" style="width: @hostInfo.Host.DiskUsagePercent%"></div>
+                </div>
+            </div>
+            <div class="config-stat-card">
+                <div class="config-stat-icon" style="background: #f3e8ff; color: #9333ea;">
+                    @SvgIcons.History
+                </div>
+                <div class="config-stat-info">
+                    <span class="config-stat-value">@hostInfo.Host.Uptime</span>
+                    <span class="config-stat-label">Tiempo activo del servidor</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detalle CPU -->
+        @if (!string.IsNullOrEmpty(hostInfo.Host.CpuModel))
+        {
+            <div class="config-cpu-detail">
+                <span class="info-label">Procesador:</span> @hostInfo.Host.CpuModel
+            </div>
+        }
+
+        <!-- Containers Docker -->
+        @if (hostInfo.Containers is not null && hostInfo.Containers.Count > 0)
+        {
+            <div class="config-section-title" style="margin-top: 1.5rem;">
+                @SvgIcons.Box
+                <span>Contenedores Docker</span>
+                <span class="config-section-subtitle">@hostInfo.Containers.Count contenedores</span>
+            </div>
+
+            <div class="card">
+                <div class="card-body config-tables-body">
+                    <table class="config-tables-list">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Imagen</th>
+                                <th>Estado</th>
+                                <th>Status</th>
+                                <th>Puertos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var container in hostInfo.Containers)
+                            {
+                                <tr>
+                                    <td><strong>@container.Name</strong></td>
+                                    <td class="text-muted" style="font-size: 0.8rem;">@TruncateImage(container.Image)</td>
+                                    <td>
+                                        <span class="status-badge @(container.State == "running" ? "status-active" : "status-inactive")">
+                                            @(container.State == "running" ? "Corriendo" : container.State == "exited" ? "Detenido" : container.State)
+                                        </span>
+                                    </td>
+                                    <td class="text-muted" style="font-size: 0.8rem;">@container.Status</td>
+                                    <td style="font-size: 0.8rem;">@(string.IsNullOrEmpty(container.Ports) ? "-" : container.Ports)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
 }
 
 @code {
@@ -334,14 +358,18 @@ else
     private SystemInfoDto? systemInfo;
     private HostInfoDto? hostInfo;
     private bool loading = true;
+    private string brandName = "Tu Marca";
+    private string brandNameInput = "Tu Marca";
+    private bool savingBrand;
 
     protected override async Task OnInitializedAsync()
     {
         var userTask = AuthService.GetUserAsync();
         var sysTask = Api.GetSystemInfoAsync();
         var hostTask = Api.GetHostInfoAsync();
+        var settingsTask = Api.GetSettingsAsync();
 
-        await Task.WhenAll(userTask, sysTask, hostTask);
+        await Task.WhenAll(userTask, sysTask, hostTask, settingsTask);
 
         var user = userTask.Result;
         if (user is not null)
@@ -352,7 +380,32 @@ else
 
         systemInfo = sysTask.Result;
         hostInfo = hostTask.Result;
+
+        var settings = settingsTask.Result;
+        if (settings is not null && settings.TryGetValue("BrandName", out var name))
+        {
+            brandName = name;
+            brandNameInput = name;
+        }
+
         loading = false;
+    }
+
+    private async Task SaveBrandName()
+    {
+        if (string.IsNullOrWhiteSpace(brandNameInput)) return;
+        savingBrand = true;
+        var ok = await Api.UpdateSettingAsync("BrandName", brandNameInput.Trim());
+        if (ok)
+        {
+            brandName = brandNameInput.Trim();
+            Toast.Show("Nombre actualizado correctamente", ToastType.Success);
+        }
+        else
+        {
+            Toast.Show("Error al guardar el nombre", ToastType.Error);
+        }
+        savingBrand = false;
     }
 
     private string GetUsageClass(double percent)
@@ -372,10 +425,8 @@ else
     private string TruncateImage(string image)
     {
         if (string.IsNullOrEmpty(image)) return "-";
-        // Show only last part of image name
         var parts = image.Split('/');
         var name = parts[^1];
-        // Truncate hash-like image IDs
         if (name.StartsWith("sha256:"))
             return name[..19] + "...";
         return name.Length > 40 ? name[..37] + "..." : name;

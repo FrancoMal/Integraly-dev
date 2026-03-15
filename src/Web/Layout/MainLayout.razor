@@ -49,7 +49,7 @@
         @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("integraciones") || HasPerm("procesos") || HasPerm("auditoria"))
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("/usuarios") || IsActive("/roles") || IsActive("/integraciones") || IsActive("/procesos") || IsActive("/auditoria"))">
+                      HasActiveChild="@(IsActive("/usuarios") || IsActive("/roles") || IsActive("/integraciones") || IsActive("/procesos") || IsActive("/auditoria") || IsActive("/config"))">
                 @if (HasPerm("usuarios"))
                 {
                     <NavItem Href="/usuarios" Label="Usuarios" Icon="@SvgIcons.Users"
@@ -75,13 +75,12 @@
                     <NavItem Href="/auditoria" Label="Auditoria" Icon="@SvgIcons.History"
                              IsActive="@IsActive("/auditoria")" OnClick="@(() => NavigateTo("/auditoria"))" />
                 }
+                @if (HasPerm("config"))
+                {
+                    <NavItem Href="/config" Label="Configuracion" Icon="@SvgIcons.Settings"
+                             IsActive="@IsActive("/config")" OnClick="@(() => NavigateTo("/config"))" />
+                }
             </NavGroup>
-        }
-
-        @if (HasPerm("config"))
-        {
-            <NavItem Href="/config" Label="Configuracion" Icon="@SvgIcons.Settings"
-                     IsActive="@IsActive("/config")" OnClick="@(() => NavigateTo("/config"))" />
         }
     </nav>
     <div class="sidebar-user">
