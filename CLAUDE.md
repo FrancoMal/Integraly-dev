@@ -29,19 +29,21 @@ Cuando el usuario diga algo como "quiero que se vea mas lindo" o "hace que funci
 
 ### 1. Siempre hacer commits
 
-Cada vez que termines un cambio funcional, hace un commit con un mensaje claro en espanol:
+Cada vez que termines un cambio funcional, hace un commit con un mensaje claro en espanol y push automatico:
 
 ```bash
 git add -A
 git commit -m "Agregar formulario de contacto en el dashboard"
+git push
 ```
 
 No acumules muchos cambios en un solo commit. Un commit por funcionalidad o arreglo. Esto permite deshacer cosas si algo sale mal.
 
-### 1.1 Autor de commits: solo propietario del repo
+El push se hace automaticamente si hay un GITHUB_TOKEN configurado en `.env`. Si el push falla, avisar al usuario pero continuar trabajando.
 
-- El autor de commits debe ser el propietario del repositorio.
-- No incluir en commits texto tipo: "hecho por Claude", "hecho por agente", "AI generated", ni trailers `Co-authored-by` de agentes.
+### 1.1 Autor de commits
+
+- El autor de commits debe ser **Claude**.
 - Antes de commitear, verificar identidad git:
 
 ```bash
@@ -49,11 +51,11 @@ git config user.name
 git config user.email
 ```
 
-Si no coincide con el propietario, corregir:
+Si no coincide, corregir:
 
 ```bash
-git config user.name "<OWNER_NAME>"
-git config user.email "<OWNER_EMAIL>"
+git config user.name "Claude"
+git config user.email "claude@anthropic.com"
 ```
 
 ### 2. Probar antes de decir que esta listo
@@ -138,11 +140,12 @@ docker compose -f docker-compose.prod.yml logs api-prod     # Ver logs de la API
 
 Cuando el usuario diga **"PUBLICAR EN PRODUCCION"**, ejecutar estos pasos en orden:
 
-1. Asegurarse de que los cambios en `develop` estan commiteados
-2. Mergear `develop` a `master`:
+1. Asegurarse de que los cambios en `develop` estan commiteados y pusheados
+2. Mergear `develop` a `master` y pushear:
    ```bash
    git checkout master
    git merge develop
+   git push
    ```
 3. Ejecutar los scripts de base de datos en produccion (init.sql corre automatico al levantar):
    ```bash
