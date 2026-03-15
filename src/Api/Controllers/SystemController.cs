@@ -39,85 +39,88 @@ public class SystemController : ControllerBase
             Environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"
         };
 
-        // SQL Server info
+        // SQL Server info + Table counts - use raw ADO.NET with own connection
         object? sqlInfo = null;
+        List<object>? tableCounts = null;
+        var connStr = _db.Database.GetConnectionString();
+
         try
         {
-            var conn = _db.Database.GetDbConnection();
+            using var conn = new Microsoft.Data.SqlClient.SqlConnection(connStr);
             await conn.OpenAsync();
 
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = @"
-                SELECT
-                    SERVERPROPERTY('ProductVersion') AS Version,
-                    SERVERPROPERTY('Edition') AS Edition,
-                    SERVERPROPERTY('ProductLevel') AS ProductLevel,
-                    SERVERPROPERTY('ServerName') AS ServerName,
-                    SERVERPROPERTY('Collation') AS Collation,
-                    (SELECT SUM(CAST(size AS BIGINT)) * 8 / 1024 FROM sys.master_files WHERE database_id = DB_ID()) AS DatabaseSizeMb,
-                    DB_NAME() AS DatabaseName,
-                    (SELECT COUNT(*) FROM sys.tables) AS TableCount,
-                    (SELECT create_date FROM sys.databases WHERE name = DB_NAME()) AS DatabaseCreated,
-                    @@MAX_CONNECTIONS AS MaxConnections";
-
-            using var reader = await cmd.ExecuteReaderAsync();
-            if (await reader.ReadAsync())
+            // SQL Server info
+            using (var cmd = conn.CreateCommand())
             {
-                sqlInfo = new
+                cmd.CommandText = @"
+                    SELECT
+                        SERVERPROPERTY('ProductVersion') AS Version,
+                        SERVERPROPERTY('Edition') AS Edition,
+                        SERVERPROPERTY('ProductLevel') AS ProductLevel,
+                        SERVERPROPERTY('ServerName') AS ServerName,
+                        SERVERPROPERTY('Collation') AS Collation,
+                        (SELECT SUM(CAST(size AS BIGINT)) * 8 / 1024 FROM sys.master_files WHERE database_id = DB_ID()) AS DatabaseSizeMb,
+                        DB_NAME() AS DatabaseName,
+                        (SELECT COUNT(*) FROM sys.tables) AS TableCount,
+                        (SELECT create_date FROM sys.databases WHERE name = DB_NAME()) AS DatabaseCreated,
+                        @@MAX_CONNECTIONS AS MaxConnections";
+
+                using (var reader = await cmd.ExecuteReaderAsync())
                 {
-                    Version = reader["Version"]?.ToString(),
-                    Edition = reader["Edition"]?.ToString(),
-                    ProductLevel = reader["ProductLevel"]?.ToString(),
-                    ServerName = reader["ServerName"]?.ToString(),
-                    Collation = reader["Collation"]?.ToString(),
-                    DatabaseSizeMb = reader["DatabaseSizeMb"] != DBNull.Value ? Convert.ToInt64(reader["DatabaseSizeMb"]) : 0,
-                    DatabaseName = reader["DatabaseName"]?.ToString(),
-                    TableCount = reader["TableCount"] != DBNull.Value ? Convert.ToInt32(reader["TableCount"]) : 0,
-                    DatabaseCreated = reader["DatabaseCreated"] != DBNull.Value ? Convert.ToDateTime(reader["DatabaseCreated"]) : (DateTime?)null,
-                    MaxConnections = reader["MaxConnections"] != DBNull.Value ? Convert.ToInt32(reader["MaxConnections"]) : 0
-                };
+                    if (await reader.ReadAsync())
+                    {
+                        sqlInfo = new
+                        {
+                            Version = reader["Version"]?.ToString(),
+                            Edition = reader["Edition"]?.ToString(),
+                            ProductLevel = reader["ProductLevel"]?.ToString(),
+                            ServerName = reader["ServerName"]?.ToString(),
+                            Collation = reader["Collation"]?.ToString(),
+                            DatabaseSizeMb = reader["DatabaseSizeMb"] != DBNull.Value ? Convert.ToInt64(reader["DatabaseSizeMb"]) : 0,
+                            DatabaseName = reader["DatabaseName"]?.ToString(),
+                            TableCount = reader["TableCount"] != DBNull.Value ? Convert.ToInt32(reader["TableCount"]) : 0,
+                            DatabaseCreated = reader["DatabaseCreated"] != DBNull.Value ? Convert.ToDateTime(reader["DatabaseCreated"]) : (DateTime?)null,
+                            MaxConnections = reader["MaxConnections"] != DBNull.Value ? Convert.ToInt32(reader["MaxConnections"]) : 0
+                        };
+                    }
+                }
             }
-            await conn.CloseAsync();
+
+            // Table row counts with size
+            using (var cmd2 = conn.CreateCommand())
+            {
+                cmd2.CommandText = @"
+                    SELECT
+                        t.name AS TableName,
+                        SUM(p.rows) AS [RowCount],
+                        CAST(ROUND(SUM(a.total_pages) * 8.0, 2) AS FLOAT) AS SizeKB
+                    FROM sys.tables t
+                    INNER JOIN sys.indexes i ON t.object_id = i.object_id
+                    INNER JOIN sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
+                    INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id
+                    WHERE p.index_id IN (0, 1)
+                    GROUP BY t.name
+                    ORDER BY SizeKB DESC";
+
+                using (var reader2 = await cmd2.ExecuteReaderAsync())
+                {
+                    tableCounts = new List<object>();
+                    while (await reader2.ReadAsync())
+                    {
+                        tableCounts.Add(new
+                        {
+                            Name = reader2["TableName"]?.ToString(),
+                            Rows = Convert.ToInt64(reader2["RowCount"] != DBNull.Value ? reader2["RowCount"] : 0),
+                            SizeKb = reader2["SizeKB"] != DBNull.Value ? Convert.ToDouble(reader2["SizeKB"]) : 0
+                        });
+                    }
+                }
+            }
         }
         catch
         {
-            sqlInfo = new { Error = "No se pudo conectar a SQL Server" };
+            sqlInfo ??= new { Error = "No se pudo conectar a SQL Server" };
         }
-
-        // Table row counts with size
-        List<object>? tableCounts = null;
-        try
-        {
-            using var conn2 = new Microsoft.Data.SqlClient.SqlConnection(_db.Database.GetConnectionString());
-            await conn2.OpenAsync();
-
-            using var cmd2 = conn2.CreateCommand();
-            cmd2.CommandText = @"
-                SELECT
-                    t.name AS TableName,
-                    SUM(p.rows) AS RowCount,
-                    CAST(ROUND(SUM(a.total_pages) * 8.0, 2) AS FLOAT) AS SizeKB
-                FROM sys.tables t
-                INNER JOIN sys.indexes i ON t.object_id = i.object_id
-                INNER JOIN sys.partitions p ON i.object_id = p.object_id AND i.index_id = p.index_id
-                INNER JOIN sys.allocation_units a ON p.partition_id = a.container_id
-                WHERE p.index_id IN (0, 1)
-                GROUP BY t.name
-                ORDER BY SizeKB DESC";
-
-            using var reader2 = await cmd2.ExecuteReaderAsync();
-            tableCounts = new List<object>();
-            while (await reader2.ReadAsync())
-            {
-                tableCounts.Add(new
-                {
-                    Name = reader2["TableName"]?.ToString(),
-                    Rows = Convert.ToInt64(reader2["RowCount"]),
-                    SizeKb = reader2["SizeKB"] != DBNull.Value ? Convert.ToDouble(reader2["SizeKB"]) : 0
-                });
-            }
-        }
-        catch { }
 
         return Ok(new { Server = serverInfo, SqlServer = sqlInfo, Tables = tableCounts });
     }
