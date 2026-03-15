@@ -22,24 +22,24 @@ else
         <span class="config-section-chevron @(sectionMarca ? "open" : "")">@SvgIcons.ChevronRight</span>
     </div>
 
+    <!-- Vista previa siempre visible -->
+    <div class="config-brand-preview" style="background: @sidebarColorInput;">
+        @if (!string.IsNullOrEmpty(logoPreview))
+        {
+            <img src="@logoPreview" alt="Logo" class="config-brand-logo-img" />
+        }
+        else
+        {
+            <span class="config-brand-icon" style="color: @primaryColorInput;">
+                @SvgIcons.GetByName(selectedIcon)
+            </span>
+        }
+        <span class="config-brand-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
+    </div>
+
     <div class="config-section-body @(sectionMarca ? "expanded" : "")">
     <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-body">
-            <!-- Vista previa -->
-            <div class="config-brand-preview" style="background: @sidebarColorInput;">
-                @if (!string.IsNullOrEmpty(logoPreview))
-                {
-                    <img src="@logoPreview" alt="Logo" class="config-brand-logo-img" />
-                }
-                else
-                {
-                    <span class="config-brand-icon" style="color: @primaryColorInput;">
-                        @SvgIcons.GetByName(selectedIcon)
-                    </span>
-                }
-                <span class="config-brand-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
-            </div>
-
             <div class="config-marca-form">
                 <!-- Nombre -->
                 <div class="config-marca-field">
@@ -120,7 +120,6 @@ else
             <span class="config-section-chevron @(sectionServicios ? "open" : "")">@SvgIcons.ChevronRight</span>
         </div>
 
-        <div class="config-section-body @(sectionServicios ? "expanded" : "")">
         <div class="config-stats-row">
             <div class="config-stat-card">
                 <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
@@ -160,6 +159,7 @@ else
             </div>
         </div>
 
+        <div class="config-section-body @(sectionServicios ? "expanded" : "")">
         <div class="config-grid">
             <!-- API Container -->
             <div class="card">
@@ -326,7 +326,6 @@ else
             <span class="config-section-chevron @(sectionServidor ? "open" : "")">@SvgIcons.ChevronRight</span>
         </div>
 
-        <div class="config-section-body @(sectionServidor ? "expanded" : "")">
         <div class="config-stats-row">
             <div class="config-stat-card">
                 <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
@@ -372,6 +371,7 @@ else
             </div>
         </div>
 
+        <div class="config-section-body @(sectionServidor ? "expanded" : "")">
         @if (!string.IsNullOrEmpty(hostInfo.Host.CpuModel))
         {
             <div class="config-cpu-detail">
