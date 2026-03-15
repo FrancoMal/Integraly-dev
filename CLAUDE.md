@@ -65,12 +65,14 @@ No digas "listo, funciona" sin haber verificado. Siempre:
 
 ### 2.1 Validacion obligatoria de lo que ve el navegador
 
-Siempre hacer estos dos pasos antes de confirmar que un cambio web quedo aplicado:
+Siempre hacer estos dos pasos antes de confirmar que un cambio web quedo aplicado (en DESARROLLO):
 
 1. **Rebuild real del servicio web** (no confiar en archivos locales viejos)
    - `docker compose up --build -d web`
 2. **Chequeo adentro del contenedor** (confirmar lo que realmente sirve Nginx)
    - ejemplo: `docker compose exec web sh -lc "ls -la /usr/share/nginx/html && grep -n \"texto-clave\" /usr/share/nginx/html/index.html || true"`
+
+Para PRODUCCION, usar los comandos equivalentes con `-f docker-compose.prod.yml` y el servicio `web-prod`.
 
 Si el archivo local dice una cosa pero el contenedor sirve otra, prevalece lo del contenedor.
 
@@ -87,39 +89,74 @@ Despues de cada tarea, explica brevemente al usuario:
 
 Ejemplo: "Agregue una seccion de contacto en la pagina principal. Ahora cuando entres al dashboard vas a ver un formulario donde podes escribir un mensaje. Los mensajes se guardan en la base de datos."
 
-### 4.1 Flujo de ramas recomendado (produccion vs desarrollo)
+### 4.1 Entornos: Desarrollo y Produccion
 
-Usar este modelo simple:
+El proyecto tiene DOS entornos corriendo en el mismo servidor:
 
-- `main`: produccion estable (solo merges probados)
-- `develop`: integracion de cambios en desarrollo
-- `feature/<nombre-corto>`: una funcionalidad especifica
-- `hotfix/<nombre-corto>`: arreglo urgente de produccion
+| | Desarrollo | Produccion |
+|---|---|---|
+| **Puerto** | 3000 | 80 |
+| **Rama** | `develop` | `master` |
+| **Docker Compose** | `docker-compose.yml` | `docker-compose.prod.yml` |
+| **Nginx config** | `nginx/nginx.conf` | `nginx/nginx.prod.conf` |
+| **Base de datos** | Separada (container `aicoding-sqlserver`) | Separada (container `aicoding-sqlserver-prod`) |
+| **Containers** | `aicoding-*` | `aicoding-*-prod` |
 
-Flujo sugerido:
+Cada entorno maneja sus propios datos (cuentas de MercadoLibre, usuarios, ordenes, etc). NO comparten base de datos.
 
-1. Crear rama de feature desde `develop`
-2. Implementar cambios + commits chicos
-3. Abrir PR hacia `develop`
-4. Cuando `develop` este estable, merge a `main`
+### 4.2 Flujo de ramas
 
-Ejemplo:
+- `master`: produccion (puerto 80). Solo recibe merges desde `develop`.
+- `develop`: rama de trabajo diario (puerto 3000). Todos los cambios se hacen aca.
+
+**Regla: siempre trabajar en la rama `develop`.** Nunca hacer cambios directos en `master`.
+
+Antes de empezar cualquier tarea, verificar que estas en `develop`:
 
 ```bash
 git checkout develop
-git pull
-git checkout -b feature/integracion-mercadolibre
-# cambios...
-git add -A
-git commit -m "Agregar endpoint base de publicaciones"
-git push -u origin feature/integracion-mercadolibre
 ```
 
-Con GitHub CLI:
+### 4.3 Comandos por entorno
+
+**Desarrollo (rama `develop`, puerto 3000):**
 
 ```bash
-gh pr create --base develop --head feature/integracion-mercadolibre --title "Integracion MercadoLibre base" --body "Cambios iniciales"
+docker compose up --build -d              # Levantar desarrollo
+docker compose exec web sh -c "..."       # Verificar dentro del container
+docker compose logs api                   # Ver logs de la API
 ```
+
+**Produccion (rama `master`, puerto 80):**
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d    # Levantar produccion
+docker compose -f docker-compose.prod.yml logs api-prod     # Ver logs de la API prod
+```
+
+### 4.4 PUBLICAR EN PRODUCCION
+
+Cuando el usuario diga **"PUBLICAR EN PRODUCCION"**, ejecutar estos pasos en orden:
+
+1. Asegurarse de que los cambios en `develop` estan commiteados
+2. Mergear `develop` a `master`:
+   ```bash
+   git checkout master
+   git merge develop
+   ```
+3. Ejecutar los scripts de base de datos en produccion (init.sql corre automatico al levantar):
+   ```bash
+   docker compose -f docker-compose.prod.yml up --build -d
+   ```
+4. Verificar que los containers de produccion estan corriendo:
+   ```bash
+   docker compose -f docker-compose.prod.yml ps
+   ```
+5. Volver a la rama de desarrollo:
+   ```bash
+   git checkout develop
+   ```
+6. Informar al usuario que la publicacion fue exitosa y que puede verificar en puerto 80
 
 ### 5. Usar subagentes para tareas grandes
 
@@ -141,7 +178,8 @@ Hace SOLO lo que el usuario pidio. No agregues cosas "por las dudas" o "porque s
 ```
 ai-coding-environment/
 |
-|-- docker-compose.yml          <- Levanta la app (DB + API + Frontend)
+|-- docker-compose.yml          <- Desarrollo (puerto 3000)
+|-- docker-compose.prod.yml     <- Produccion (puerto 80)
 |-- setup.sh                    <- Instalador: prepara la maquina y levanta todo
 |-- .env.example                <- Variables de entorno (API keys)
 |
@@ -193,30 +231,47 @@ ai-coding-environment/
 |   '-- init.sql              <- Script que crea las tablas iniciales
 |
 |-- nginx/
-|   '-- nginx.conf            <- Configuracion del servidor web
+|   |-- nginx.conf            <- Configuracion Nginx desarrollo
+|   '-- nginx.prod.conf       <- Configuracion Nginx produccion
 |
 '-- AGENTS.md                 <- Este archivo
 ```
 
 ### Servicios Docker
 
-Todo se levanta con `docker compose up --build -d` (o con `./setup.sh` que hace todo automaticamente):
+**Desarrollo** (`docker compose up --build -d`):
 
 | Servicio | Que hace | Puerto |
 |----------|----------|--------|
-| sqlserver | Base de datos SQL Server Express | 1433 (interno) |
-| sqlserver-init | Ejecuta init.sql para crear tablas (corre una vez y termina) | - |
-| api | Backend .NET 8 con autenticacion JWT | 80 (interno) |
-| web | Blazor WASM + Nginx - sirve el frontend y proxea la API | 3000 |
+| sqlserver | Base de datos desarrollo | 1433 (interno) |
+| sqlserver-init | Ejecuta init.sql (corre una vez) | - |
+| api | Backend .NET 8 | 80 (interno) |
+| web | Frontend + Nginx | 3000 |
+
+**Produccion** (`docker compose -f docker-compose.prod.yml up --build -d`):
+
+| Servicio | Que hace | Puerto |
+|----------|----------|--------|
+| sqlserver-prod | Base de datos produccion | 1433 (interno) |
+| sqlserver-init-prod | Ejecuta init.sql (corre una vez) | - |
+| api-prod | Backend .NET 8 | 80 (interno) |
+| web-prod | Frontend + Nginx | 80 |
 
 ### Como se conectan
 
 ```
-Browser -> localhost:3000 -> Nginx
+DESARROLLO:
+Browser -> localhost:3000 -> Nginx (dev)
                               |-- /            -> Blazor WASM (frontend)
                               |-- /_framework/ -> Runtime de Blazor
                               |-- /api/        -> Backend .NET (api:80)
                               '-- /swagger     -> Documentacion de la API
+
+PRODUCCION:
+Browser -> localhost:80 -> Nginx (prod)
+                            |-- /            -> Blazor WASM (frontend)
+                            |-- /_framework/ -> Runtime de Blazor
+                            '-- /api/        -> Backend .NET (api-prod:80)
 ```
 
 ### Herramientas AI (se instalan en la maquina con setup.sh)
@@ -300,7 +355,7 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-Instala todo lo necesario (Node.js, Python, Docker, herramientas AI) y levanta el proyecto.
+Instala todo lo necesario (Node.js, Python, Docker, herramientas AI) y levanta el entorno de desarrollo.
 
 ### Opcion 2: Manual
 
@@ -310,10 +365,15 @@ cp .env.example .env
 
 # 2. (Opcional) Poner tus API keys en .env
 
-# 3. Levantar la app
+# 3. Levantar DESARROLLO (puerto 3000)
 docker compose up --build -d
 
-# 4. Abrir en el browser: http://localhost:3000
+# 4. Levantar PRODUCCION (puerto 80)
+docker compose -f docker-compose.prod.yml up --build -d
+
+# 5. Abrir en el browser:
+#    Desarrollo: http://localhost:3000
+#    Produccion: http://localhost:80
 ```
 
 ---
@@ -323,9 +383,11 @@ docker compose up --build -d
 Cuando el usuario te pida algo:
 
 1. Lee este archivo si no lo leiste
-2. Escucha lo que pide y traducilo a tareas tecnicas
-3. Dividi en subagentes si es complejo
-4. Ejecuta los cambios
-5. Probalo
-6. Hace commit
-7. Explicale al usuario que hiciste, en simple
+2. Verifica que estas en la rama `develop` (nunca trabajar directo en `master`)
+3. Escucha lo que pide y traducilo a tareas tecnicas
+4. Dividi en subagentes si es complejo
+5. Ejecuta los cambios
+6. Probalo en el entorno de desarrollo (puerto 3000)
+7. Hace commit en `develop`
+8. Explicale al usuario que hiciste, en simple
+9. Si el usuario dice **"PUBLICAR EN PRODUCCION"**: mergear `develop` a `master` + rebuild produccion (ver seccion 4.4)
