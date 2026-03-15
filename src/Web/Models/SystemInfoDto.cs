@@ -38,6 +38,7 @@ public class TableCountDto
 {
     public string Name { get; set; } = string.Empty;
     public long Rows { get; set; }
+    public double SizeKb { get; set; }
 }
 
 public class HostInfoDto

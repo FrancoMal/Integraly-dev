@@ -298,6 +298,7 @@ else
                                 <tr>
                                     <th>Tabla</th>
                                     <th style="text-align: right;">Registros</th>
+                                    <th style="text-align: right;">Tamano</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -306,11 +307,13 @@ else
                                     <tr>
                                         <td>@table.Name</td>
                                         <td style="text-align: right; font-weight: 600;">@table.Rows.ToString("N0")</td>
+                                        <td style="text-align: right; color: var(--text-secondary); font-size: 0.8rem;">@FormatSize(table.SizeKb)</td>
                                     </tr>
                                 }
                                 <tr class="config-tables-total">
                                     <td><strong>Total</strong></td>
                                     <td style="text-align: right;"><strong>@systemInfo.Tables.Sum(t => t.Rows).ToString("N0")</strong></td>
+                                    <td style="text-align: right;"><strong>@FormatSize(systemInfo.Tables.Sum(t => t.SizeKb))</strong></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -357,6 +360,13 @@ else
         if (percent >= 90) return "usage-critical";
         if (percent >= 70) return "usage-warning";
         return "usage-ok";
+    }
+
+    private string FormatSize(double sizeKb)
+    {
+        if (sizeKb >= 1024)
+            return $"{(sizeKb / 1024.0):N1} MB";
+        return $"{sizeKb:N0} KB";
     }
 
     private string TruncateImage(string image)
