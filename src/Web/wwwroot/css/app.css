@@ -1197,6 +1197,70 @@ button {
   border-width: 2px;
 }
 
+/* Logo upload */
+.config-brand-logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.config-logo-upload {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.config-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: var(--primary-bg);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.config-upload-btn:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.config-upload-btn input[type="file"],
+.config-upload-btn ::deep input[type="file"] {
+  display: none;
+}
+
+.config-remove-logo {
+  padding: 0.35rem 0.75rem;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.config-remove-logo:hover {
+  background: var(--danger);
+  color: white;
+}
+
+/* Sidebar brand logo image */
+.sidebar-brand-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
 /* Config stat card with usage bar */
 .config-stat-card {
   flex-wrap: wrap;

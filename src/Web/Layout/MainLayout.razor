@@ -10,7 +10,14 @@
 
 <aside class="sidebar @(sidebarOpen ? "open" : "") @(sidebarCollapsed ? "collapsed" : "")" id="sidebar">
     <div class="sidebar-brand">
-        <span class="sidebar-brand-icon">@SvgIcons.GetByName(BrandSettings.BrandIcon)</span>
+        @if (BrandSettings.HasCustomLogo)
+        {
+            <img src="@BrandSettings.BrandLogo" alt="Logo" class="sidebar-brand-logo" />
+        }
+        else
+        {
+            <span class="sidebar-brand-icon">@SvgIcons.GetByName(BrandSettings.BrandIcon)</span>
+        }
         <span class="sidebar-brand-text">@BrandSettings.BrandName</span>
         <button class="sidebar-collapse-btn" @onclick="ToggleCollapse" title="@(sidebarCollapsed ? "Expandir menu" : "Colapsar menu")">
             <span class="sidebar-collapse-icon">@(sidebarCollapsed ? SvgIcons.ChevronRight : SvgIcons.ChevronLeft)</span>

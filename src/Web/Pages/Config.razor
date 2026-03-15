@@ -25,9 +25,16 @@ else
         <div class="card-body">
             <!-- Vista previa -->
             <div class="config-brand-preview" style="background: @sidebarColorInput;">
-                <span class="config-brand-icon" style="color: @primaryColorInput;">
-                    @SvgIcons.GetByName(selectedIcon)
-                </span>
+                @if (!string.IsNullOrEmpty(logoPreview))
+                {
+                    <img src="@logoPreview" alt="Logo" class="config-brand-logo-img" />
+                }
+                else
+                {
+                    <span class="config-brand-icon" style="color: @primaryColorInput;">
+                        @SvgIcons.GetByName(selectedIcon)
+                    </span>
+                }
                 <span class="config-brand-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
             </div>
 
@@ -56,15 +63,31 @@ else
                     </div>
                 </div>
 
-                <!-- Icono -->
+                <!-- Icono / Logo -->
                 <div class="config-marca-field">
-                    <label class="config-marca-label">Icono</label>
+                    <label class="config-marca-label">Icono o logo</label>
+
+                    <!-- Upload logo -->
+                    <div class="config-logo-upload">
+                        <label class="config-upload-btn">
+                            <InputFile OnChange="OnLogoSelected" accept=".png,.jpg,.jpeg,.svg,.webp" />
+                            <span>Subir imagen</span>
+                        </label>
+                        <span class="text-muted" style="font-size: 0.75rem;">PNG, JPG, SVG o WebP. Max 500KB. Recomendado: 64x64 px</span>
+                        @if (!string.IsNullOrEmpty(logoPreview))
+                        {
+                            <button class="config-remove-logo" @onclick="RemoveLogo">Quitar imagen</button>
+                        }
+                    </div>
+
+                    <!-- O elegir icono SVG -->
+                    <label class="config-marca-label" style="margin-top: 0.75rem;">O elegir un icono</label>
                     <div class="config-icon-grid">
                         @foreach (var iconName in SvgIcons.AvailableIcons)
                         {
-                            <button class="config-icon-option @(selectedIcon == iconName ? "selected" : "")"
-                                    style="@(selectedIcon == iconName ? $"border-color: {primaryColorInput}; background: {primaryColorInput}15;" : "")"
-                                    @onclick="() => selectedIcon = iconName"
+                            <button class="config-icon-option @(selectedIcon == iconName && string.IsNullOrEmpty(logoPreview) ? "selected" : "")"
+                                    style="@(selectedIcon == iconName && string.IsNullOrEmpty(logoPreview) ? $"border-color: {primaryColorInput}; background: {primaryColorInput}15;" : "")"
+                                    @onclick="() => SelectIcon(iconName)"
                                     title="@iconName">
                                 @SvgIcons.GetByName(iconName)
                             </button>
@@ -403,6 +426,10 @@ else
     private string selectedIcon = "Brand";
     private string primaryColorInput = "#10b981";
     private string sidebarColorInput = "#1a1a2e";
+    private string logoPreview = "";
+    private byte[]? logoBytes;
+    private string logoFileName = "";
+    private string logoContentType = "";
     private bool savingBrand;
 
     protected override async Task OnInitializedAsync()
@@ -428,6 +455,7 @@ else
         selectedIcon = BrandSettings.BrandIcon;
         primaryColorInput = BrandSettings.PrimaryColor;
         sidebarColorInput = BrandSettings.SidebarBgColor;
+        logoPreview = BrandSettings.BrandLogo;
 
         loading = false;
     }
@@ -463,6 +491,28 @@ else
             BrandSettings.Update("BrandIcon", selectedIcon);
             BrandSettings.Update("PrimaryColor", primaryColorInput);
             BrandSettings.Update("SidebarBgColor", sidebarColorInput);
+
+            // Upload logo if selected
+            if (logoBytes is not null)
+            {
+                var dataUri = await Api.UploadLogoAsync(logoBytes, logoFileName, logoContentType);
+                if (dataUri is not null)
+                {
+                    logoPreview = dataUri;
+                    BrandSettings.Update("BrandLogo", dataUri);
+                }
+                else
+                {
+                    Toast.Show("Error al subir el logo", ToastType.Error);
+                }
+                logoBytes = null;
+            }
+            else if (string.IsNullOrEmpty(logoPreview))
+            {
+                // Logo was removed, clear it
+                BrandSettings.Update("BrandLogo", "");
+            }
+
             Toast.Show("Marca actualizada correctamente", ToastType.Success);
         }
         else
@@ -470,6 +520,38 @@ else
             Toast.Show("Error al guardar algunos cambios", ToastType.Error);
         }
         savingBrand = false;
+    }
+
+    private async Task OnLogoSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file.Size > 512000)
+        {
+            Toast.Show("El archivo es muy grande. Maximo 500KB", ToastType.Error);
+            return;
+        }
+
+        using var ms = new MemoryStream();
+        await file.OpenReadStream(512000).CopyToAsync(ms);
+        logoBytes = ms.ToArray();
+        logoFileName = file.Name;
+        logoContentType = file.ContentType;
+        logoPreview = $"data:{file.ContentType};base64,{Convert.ToBase64String(logoBytes)}";
+    }
+
+    private void SelectIcon(string iconName)
+    {
+        selectedIcon = iconName;
+        logoPreview = "";
+        logoBytes = null;
+    }
+
+    private async Task RemoveLogo()
+    {
+        logoPreview = "";
+        logoBytes = null;
+        await Api.DeleteLogoAsync();
+        BrandSettings.Update("BrandLogo", "");
     }
 
     private string GetUsageClass(double percent)
