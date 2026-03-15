@@ -3,12 +3,15 @@
 @inject NavigationManager Navigation
 @inject ToastService ToastService
 @inject SyncProgressTracker SyncProgress
+@inject BrandSettingsService BrandSettings
+@inject IJSRuntime JS
+@inject ApiClient Api
 @implements IDisposable
 
 <aside class="sidebar @(sidebarOpen ? "open" : "") @(sidebarCollapsed ? "collapsed" : "")" id="sidebar">
     <div class="sidebar-brand">
-        <span class="sidebar-brand-icon">@SvgIcons.Brand</span>
-        <span class="sidebar-brand-text">Tu Marca</span>
+        <span class="sidebar-brand-icon">@SvgIcons.GetByName(BrandSettings.BrandIcon)</span>
+        <span class="sidebar-brand-text">@BrandSettings.BrandName</span>
         <button class="sidebar-collapse-btn" @onclick="ToggleCollapse" title="@(sidebarCollapsed ? "Expandir menu" : "Colapsar menu")">
             <span class="sidebar-collapse-icon">@(sidebarCollapsed ? SvgIcons.ChevronRight : SvgIcons.ChevronLeft)</span>
         </button>
@@ -114,7 +117,7 @@
             <button class="topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Abrir menu">
                 @SvgIcons.Menu
             </button>
-            <h1 class="topbar-title">Tu Marca</h1>
+            <h1 class="topbar-title">@BrandSettings.BrandName</h1>
         </div>
         <div class="topbar-actions">
             @if (SyncProgress.State.IsActive && !SyncProgress.State.ShowModal)
@@ -190,6 +193,20 @@
             role = user.Role;
             permissions = user.Permissions ?? new();
         }
+
+        // Load brand settings
+        try
+        {
+            var settings = await Api.GetSettingsAsync();
+            if (settings is not null)
+            {
+                BrandSettings.LoadFromSettings(settings);
+                await JS.InvokeVoidAsync("applyBrandColors", BrandSettings.PrimaryColor, BrandSettings.SidebarBgColor);
+            }
+        }
+        catch { }
+
+        BrandSettings.OnChange += OnBrandChanged;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -243,10 +260,20 @@
         SyncProgress.Dismiss();
     }
 
+    private async void OnBrandChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            await JS.InvokeVoidAsync("applyBrandColors", BrandSettings.PrimaryColor, BrandSettings.SidebarBgColor);
+            StateHasChanged();
+        });
+    }
+
     public void Dispose()
     {
         SyncProgress.OnChange -= OnSyncProgressChanged;
         Navigation.LocationChanged -= OnLocationChanged;
+        BrandSettings.OnChange -= OnBrandChanged;
     }
 
     private bool IsActive(string href)

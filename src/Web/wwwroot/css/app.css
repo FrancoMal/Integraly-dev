@@ -1077,27 +1077,19 @@ button {
 }
 
 /* Brand config section */
-.config-brand-section {
-  display: flex;
-  align-items: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-}
-
 .config-brand-preview {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  background: var(--sidebar-bg);
   border-radius: 10px;
-  min-width: 200px;
+  margin-bottom: 1.5rem;
+  width: fit-content;
 }
 
 .config-brand-icon {
   width: 32px;
   height: 32px;
-  color: var(--primary);
   display: flex;
   align-items: center;
 }
@@ -1113,29 +1105,96 @@ button {
   color: white;
 }
 
-.config-brand-edit {
-  flex: 1;
-  min-width: 250px;
-}
-
-.config-brand-input-row {
+.config-marca-form {
   display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.config-marca-field {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
-  align-items: center;
 }
 
-.config-brand-input-row .form-input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-.config-brand-input-row .btn-sm {
-  padding: 0.5rem 1rem;
+.config-marca-label {
   font-size: 0.85rem;
-  white-space: nowrap;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.config-marca-colors {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.config-color-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.config-color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.config-color-row input[type="color"] {
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 2px;
+  background: white;
+}
+
+.config-color-hex {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: #f1f5f9;
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+}
+
+/* Icon grid selector */
+.config-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 0.5rem;
+  max-width: 500px;
+}
+
+.config-icon-option {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s ease;
+}
+
+.config-icon-option svg {
+  width: 22px;
+  height: 22px;
+}
+
+.config-icon-option:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.config-icon-option.selected {
+  color: var(--primary);
+  border-width: 2px;
 }
 
 /* Config stat card with usage bar */

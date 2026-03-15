@@ -3,6 +3,8 @@
 @inject AuthService AuthService
 @inject ApiClient Api
 @inject ToastService Toast
+@inject BrandSettingsService BrandSettings
+@inject IJSRuntime JS
 
 @if (loading)
 {
@@ -13,45 +15,84 @@
 }
 else
 {
-    <!-- ========== SECCION 1: CONFIGURACION DE ENTORNO ========== -->
+    <!-- ========== SECCION 1: MARCA ========== -->
     <div class="config-section-title">
-        @SvgIcons.Settings
-        <span>Configuracion de Entorno</span>
-        @if (systemInfo is not null)
-        {
-            <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")" style="margin-left: 0.5rem;">
-                @systemInfo.Server.Environment
-            </span>
-        }
+        @SvgIcons.Edit
+        <span>Marca</span>
     </div>
 
-    <!-- Brand / Nombre de empresa -->
     <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-body">
-            <div class="config-brand-section">
-                <div class="config-brand-preview">
-                    <span class="config-brand-icon">@SvgIcons.Brand</span>
-                    <span class="config-brand-name">@brandName</span>
+            <!-- Vista previa -->
+            <div class="config-brand-preview" style="background: @sidebarColorInput;">
+                <span class="config-brand-icon" style="color: @primaryColorInput;">
+                    @SvgIcons.GetByName(selectedIcon)
+                </span>
+                <span class="config-brand-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
+            </div>
+
+            <div class="config-marca-form">
+                <!-- Nombre -->
+                <div class="config-marca-field">
+                    <label class="config-marca-label">Nombre de la marca</label>
+                    <input type="text" class="form-input" @bind="brandNameInput" @bind:event="oninput" placeholder="Nombre de tu empresa..." />
                 </div>
-                <div class="config-brand-edit">
-                    <label class="info-label" style="margin-bottom: 0.5rem; display: block;">Nombre de la empresa o marca</label>
-                    <div class="config-brand-input-row">
-                        <input type="text" class="form-input" @bind="brandNameInput" @bind:event="oninput" placeholder="Nombre de tu empresa..." />
-                        <button class="btn btn-primary btn-sm" @onclick="SaveBrandName" disabled="@(savingBrand || brandNameInput == brandName)">
-                            @(savingBrand ? "Guardando..." : "Guardar")
-                        </button>
+
+                <!-- Colores -->
+                <div class="config-marca-colors">
+                    <div class="config-color-picker">
+                        <label class="config-marca-label">Color principal</label>
+                        <div class="config-color-row">
+                            <input type="color" value="@primaryColorInput" @oninput="OnPrimaryColorChange" />
+                            <span class="config-color-hex">@primaryColorInput</span>
+                        </div>
                     </div>
-                    <span class="text-muted" style="font-size: 0.75rem; margin-top: 0.25rem; display: block;">
-                        Este nombre aparece en el sidebar, topbar y login.
-                    </span>
+                    <div class="config-color-picker">
+                        <label class="config-marca-label">Fondo del menu</label>
+                        <div class="config-color-row">
+                            <input type="color" value="@sidebarColorInput" @oninput="OnSidebarColorChange" />
+                            <span class="config-color-hex">@sidebarColorInput</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Icono -->
+                <div class="config-marca-field">
+                    <label class="config-marca-label">Icono</label>
+                    <div class="config-icon-grid">
+                        @foreach (var iconName in SvgIcons.AvailableIcons)
+                        {
+                            <button class="config-icon-option @(selectedIcon == iconName ? "selected" : "")"
+                                    style="@(selectedIcon == iconName ? $"border-color: {primaryColorInput}; background: {primaryColorInput}15;" : "")"
+                                    @onclick="() => selectedIcon = iconName"
+                                    title="@iconName">
+                                @SvgIcons.GetByName(iconName)
+                            </button>
+                        }
+                    </div>
+                </div>
+
+                <!-- Boton guardar -->
+                <div style="margin-top: 1rem;">
+                    <button class="btn btn-primary" @onclick="SaveBrandSettings" disabled="@savingBrand">
+                        @(savingBrand ? "Guardando..." : "Guardar cambios")
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Info del entorno -->
+    <!-- ========== SECCION 2: SERVICIOS DEL ENTORNO ========== -->
     @if (systemInfo is not null)
     {
+        <div class="config-section-title" style="margin-top: 2rem;">
+            @SvgIcons.Code
+            <span>Servicios del Entorno</span>
+            <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")" style="margin-left: 0.5rem;">
+                @systemInfo.Server.Environment
+            </span>
+        </div>
+
         <div class="config-stats-row">
             <div class="config-stat-card">
                 <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
@@ -246,7 +287,7 @@ else
         </div>
     }
 
-    <!-- ========== SECCION 2: SERVIDOR FISICO ========== -->
+    <!-- ========== SECCION 3: SERVIDOR FISICO ========== -->
     @if (hostInfo is not null)
     {
         <div class="config-section-title" style="margin-top: 2rem;">
@@ -300,7 +341,6 @@ else
             </div>
         </div>
 
-        <!-- Detalle CPU -->
         @if (!string.IsNullOrEmpty(hostInfo.Host.CpuModel))
         {
             <div class="config-cpu-detail">
@@ -308,7 +348,6 @@ else
             </div>
         }
 
-        <!-- Containers Docker -->
         @if (hostInfo.Containers is not null && hostInfo.Containers.Count > 0)
         {
             <div class="config-section-title" style="margin-top: 1.5rem;">
@@ -358,8 +397,12 @@ else
     private SystemInfoDto? systemInfo;
     private HostInfoDto? hostInfo;
     private bool loading = true;
-    private string brandName = "Tu Marca";
+
+    // Brand settings
     private string brandNameInput = "Tu Marca";
+    private string selectedIcon = "Brand";
+    private string primaryColorInput = "#10b981";
+    private string sidebarColorInput = "#1a1a2e";
     private bool savingBrand;
 
     protected override async Task OnInitializedAsync()
@@ -367,9 +410,8 @@ else
         var userTask = AuthService.GetUserAsync();
         var sysTask = Api.GetSystemInfoAsync();
         var hostTask = Api.GetHostInfoAsync();
-        var settingsTask = Api.GetSettingsAsync();
 
-        await Task.WhenAll(userTask, sysTask, hostTask, settingsTask);
+        await Task.WhenAll(userTask, sysTask, hostTask);
 
         var user = userTask.Result;
         if (user is not null)
@@ -381,29 +423,51 @@ else
         systemInfo = sysTask.Result;
         hostInfo = hostTask.Result;
 
-        var settings = settingsTask.Result;
-        if (settings is not null && settings.TryGetValue("BrandName", out var name))
-        {
-            brandName = name;
-            brandNameInput = name;
-        }
+        // Load brand settings from service (already loaded by MainLayout)
+        brandNameInput = BrandSettings.BrandName;
+        selectedIcon = BrandSettings.BrandIcon;
+        primaryColorInput = BrandSettings.PrimaryColor;
+        sidebarColorInput = BrandSettings.SidebarBgColor;
 
         loading = false;
     }
 
-    private async Task SaveBrandName()
+    private async Task OnPrimaryColorChange(ChangeEventArgs e)
+    {
+        primaryColorInput = e.Value?.ToString() ?? "#10b981";
+        await JS.InvokeVoidAsync("applyBrandColors", primaryColorInput, null);
+    }
+
+    private async Task OnSidebarColorChange(ChangeEventArgs e)
+    {
+        sidebarColorInput = e.Value?.ToString() ?? "#1a1a2e";
+        await JS.InvokeVoidAsync("applyBrandColors", null, sidebarColorInput);
+    }
+
+    private async Task SaveBrandSettings()
     {
         if (string.IsNullOrWhiteSpace(brandNameInput)) return;
         savingBrand = true;
-        var ok = await Api.UpdateSettingAsync("BrandName", brandNameInput.Trim());
-        if (ok)
+
+        var tasks = new List<Task<bool>>();
+        tasks.Add(Api.UpdateSettingAsync("BrandName", brandNameInput.Trim()));
+        tasks.Add(Api.UpdateSettingAsync("BrandIcon", selectedIcon));
+        tasks.Add(Api.UpdateSettingAsync("PrimaryColor", primaryColorInput));
+        tasks.Add(Api.UpdateSettingAsync("SidebarBgColor", sidebarColorInput));
+
+        await Task.WhenAll(tasks);
+
+        if (tasks.All(t => t.Result))
         {
-            brandName = brandNameInput.Trim();
-            Toast.Show("Nombre actualizado correctamente", ToastType.Success);
+            BrandSettings.Update("BrandName", brandNameInput.Trim());
+            BrandSettings.Update("BrandIcon", selectedIcon);
+            BrandSettings.Update("PrimaryColor", primaryColorInput);
+            BrandSettings.Update("SidebarBgColor", sidebarColorInput);
+            Toast.Show("Marca actualizada correctamente", ToastType.Success);
         }
         else
         {
-            Toast.Show("Error al guardar el nombre", ToastType.Error);
+            Toast.Show("Error al guardar algunos cambios", ToastType.Error);
         }
         savingBrand = false;
     }

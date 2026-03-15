@@ -442,3 +442,21 @@ BEGIN
     INSERT INTO AppSettings ([Key], [Value]) VALUES ('BrandName', 'Tu Marca');
 END
 GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BrandIcon')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BrandIcon', 'Brand');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'PrimaryColor')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('PrimaryColor', '#10b981');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SidebarBgColor')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SidebarBgColor', '#1a1a2e');
+END
+GO
