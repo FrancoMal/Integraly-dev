@@ -26,8 +26,9 @@ public class UserService
                 u.FirstName,
                 u.LastName,
                 u.Phone,
-                u.RoleNav != null ? u.RoleNav.Name : u.Role,
+                u.RoleNav != null ? u.RoleNav.Name : "usuario",
                 u.RoleId,
+                u.VpsInfo,
                 u.CreatedAt,
                 u.IsActive
             ))
@@ -46,8 +47,9 @@ public class UserService
                 u.FirstName,
                 u.LastName,
                 u.Phone,
-                u.RoleNav != null ? u.RoleNav.Name : u.Role,
+                u.RoleNav != null ? u.RoleNav.Name : "usuario",
                 u.RoleId,
+                u.VpsInfo,
                 u.CreatedAt,
                 u.IsActive
             ))
@@ -74,7 +76,7 @@ public class UserService
             LastName = request.LastName,
             Phone = request.Phone,
             RoleId = request.RoleId,
-            Role = role.Name,
+            VpsInfo = request.VpsInfo,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -85,7 +87,7 @@ public class UserService
         return new UserListDto(
             user.Id, user.Username, user.Email,
             user.FirstName, user.LastName, user.Phone,
-            role.Name, user.RoleId, user.CreatedAt, user.IsActive
+            role.Name, user.RoleId, user.VpsInfo, user.CreatedAt, user.IsActive
         );
     }
 
@@ -98,6 +100,7 @@ public class UserService
         if (request.LastName is not null) user.LastName = request.LastName;
         if (request.Phone is not null) user.Phone = request.Phone;
         if (request.IsActive.HasValue) user.IsActive = request.IsActive.Value;
+        if (request.VpsInfo is not null) user.VpsInfo = request.VpsInfo;
 
         if (request.Email is not null && request.Email != user.Email)
         {
@@ -111,16 +114,15 @@ public class UserService
             var role = await _db.Roles.FindAsync(request.RoleId.Value);
             if (role is null) return null;
             user.RoleId = request.RoleId.Value;
-            user.Role = role.Name;
         }
 
         await _db.SaveChangesAsync();
 
-        var roleName = user.RoleNav?.Name ?? user.Role;
+        var roleName = user.RoleNav?.Name ?? "usuario";
         return new UserListDto(
             user.Id, user.Username, user.Email,
             user.FirstName, user.LastName, user.Phone,
-            roleName, user.RoleId, user.CreatedAt, user.IsActive
+            roleName, user.RoleId, user.VpsInfo, user.CreatedAt, user.IsActive
         );
     }
 

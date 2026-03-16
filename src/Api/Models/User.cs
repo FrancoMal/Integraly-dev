@@ -31,13 +31,12 @@ public class User
     [MaxLength(50)]
     public string? Phone { get; set; }
 
-    public int RoleId { get; set; } = 2;
+    public int RoleId { get; set; } = 3;
 
     [ForeignKey("RoleId")]
     public Role? RoleNav { get; set; }
 
-    [MaxLength(50)]
-    public string Role { get; set; } = "usuario";
+    public string? VpsInfo { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

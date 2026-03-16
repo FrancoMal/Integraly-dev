@@ -32,26 +32,47 @@ public class AuthService
         return await GenerateAuthResponseAsync(user);
     }
 
-    public async Task<AuthResponse?> Register(string username, string email, string password)
+    public async Task<AuthResponse?> RegisterWithInvitation(string token, string password, string firstName, string lastName, string? phone)
     {
-        if (await _db.Users.AnyAsync(u => u.Username == username))
+        var invitation = await _db.Invitations
+            .Include(i => i.Role)
+            .FirstOrDefaultAsync(i => i.Token == token && i.UsedAt == null && i.ExpiresAt > DateTime.UtcNow);
+
+        if (invitation is null)
             return null;
 
-        if (await _db.Users.AnyAsync(u => u.Email == email))
+        // Check if email already registered
+        if (await _db.Users.AnyAsync(u => u.Email == invitation.Email))
             return null;
+
+        // Generate username from email (part before @)
+        var baseUsername = invitation.Email.Split('@')[0].ToLower();
+        var username = baseUsername;
+        var counter = 1;
+        while (await _db.Users.AnyAsync(u => u.Username == username))
+        {
+            username = $"{baseUsername}{counter}";
+            counter++;
+        }
 
         var user = new User
         {
             Username = username,
-            Email = email,
+            Email = invitation.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-            Role = "usuario",
-            RoleId = 2,
+            FirstName = firstName,
+            LastName = lastName,
+            Phone = phone,
+            RoleId = invitation.RoleId,
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
 
         _db.Users.Add(user);
+
+        // Mark invitation as used
+        invitation.UsedAt = DateTime.UtcNow;
+
         await _db.SaveChangesAsync();
 
         return await GenerateAuthResponseAsync(user);
@@ -62,12 +83,14 @@ public class AuthService
         var expirationHours = _config.GetValue<int>("Jwt:ExpirationHours", 24);
         var expiresAt = DateTime.UtcNow.AddHours(expirationHours);
 
+        var roleName = user.RoleNav?.Name ?? "usuario";
+
         var claims = new[]
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, user.RoleNav?.Name ?? user.Role)
+            new Claim(ClaimTypes.Role, roleName)
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
@@ -83,7 +106,6 @@ public class AuthService
         );
 
         // Get permissions for this role
-        var roleName = user.RoleNav?.Name ?? user.Role;
         List<string> permissions;
         if (roleName.Equals("admin", StringComparison.OrdinalIgnoreCase))
         {

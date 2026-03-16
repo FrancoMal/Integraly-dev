@@ -7,10 +7,12 @@ public record LoginRequest(
     [Required] string Password
 );
 
-public record RegisterRequest(
-    [Required][MaxLength(100)] string Username,
-    [Required][EmailAddress][MaxLength(255)] string Email,
-    [Required][MinLength(6)] string Password
+public record RegisterWithInvitationRequest(
+    [Required] string Token,
+    [Required][MinLength(6)] string Password,
+    [Required][MaxLength(100)] string FirstName,
+    [Required][MaxLength(100)] string LastName,
+    [MaxLength(50)] string? Phone
 );
 
 public record AuthResponse(
@@ -26,6 +28,7 @@ public record UserDto(
     string Username,
     string Email,
     string Role,
+    string? VpsInfo,
     DateTime CreatedAt,
     bool IsActive
 );

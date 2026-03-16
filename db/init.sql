@@ -22,16 +22,28 @@ BEGIN
 END
 GO
 
--- Seed default roles
+-- Seed roles: admin, instructor, usuario
 IF NOT EXISTS (SELECT * FROM Roles WHERE Name = 'admin')
 BEGIN
-    INSERT INTO Roles (Name, Description) VALUES ('admin', 'Administrador con acceso total');
+    SET IDENTITY_INSERT Roles ON;
+    INSERT INTO Roles (Id, Name, Description) VALUES (1, 'admin', 'Administrador con acceso total');
+    SET IDENTITY_INSERT Roles OFF;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM Roles WHERE Name = 'instructor')
+BEGIN
+    SET IDENTITY_INSERT Roles ON;
+    INSERT INTO Roles (Id, Name, Description) VALUES (2, 'instructor', 'Instructor de tutorias');
+    SET IDENTITY_INSERT Roles OFF;
 END
 GO
 
 IF NOT EXISTS (SELECT * FROM Roles WHERE Name = 'usuario')
 BEGIN
-    INSERT INTO Roles (Name, Description) VALUES ('usuario', 'Usuario con acceso basico');
+    SET IDENTITY_INSERT Roles ON;
+    INSERT INTO Roles (Id, Name, Description) VALUES (3, 'usuario', 'Usuario que reserva tutorias');
+    SET IDENTITY_INSERT Roles OFF;
 END
 GO
 
@@ -46,8 +58,8 @@ BEGIN
         FirstName NVARCHAR(100) NULL,
         LastName NVARCHAR(100) NULL,
         Phone NVARCHAR(50) NULL,
-        Role NVARCHAR(50) NOT NULL DEFAULT 'usuario',
-        RoleId INT NOT NULL DEFAULT 1,
+        RoleId INT NOT NULL DEFAULT 3,
+        VpsInfo NVARCHAR(MAX) NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
         IsActive BIT DEFAULT 1,
         CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleId) REFERENCES Roles(Id)
@@ -55,164 +67,102 @@ BEGIN
 END
 GO
 
--- Add new columns if table already exists but columns don't
+-- Add VpsInfo column if table already exists but column doesn't
 IF EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'FirstName')
+   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'VpsInfo')
 BEGIN
-    ALTER TABLE Users ADD FirstName NVARCHAR(100) NULL;
-    ALTER TABLE Users ADD LastName NVARCHAR(100) NULL;
-    ALTER TABLE Users ADD Phone NVARCHAR(50) NULL;
+    ALTER TABLE Users ADD VpsInfo NVARCHAR(MAX) NULL;
 END
 GO
 
--- Add RoleId column if it doesn't exist
+-- Drop old Role string column if it exists (legacy)
 IF EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'RoleId')
+   AND EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'Role')
 BEGIN
-    ALTER TABLE Users ADD RoleId INT NULL;
-    -- Set existing admin users to role 1 (admin)
-    UPDATE Users SET RoleId = 1 WHERE Role = 'admin';
-    -- Set existing regular users to role 2 (usuario)
-    UPDATE Users SET RoleId = 2 WHERE Role != 'admin' OR RoleId IS NULL;
-    -- Make it not null with default
-    ALTER TABLE Users ALTER COLUMN RoleId INT NOT NULL;
-    ALTER TABLE Users ADD CONSTRAINT DF_Users_RoleId DEFAULT 2 FOR RoleId;
-    ALTER TABLE Users ADD CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleId) REFERENCES Roles(Id);
+    ALTER TABLE Users DROP COLUMN Role;
 END
 GO
 
--- Integrations table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Integrations' AND xtype='U')
+-- Invitations table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Invitations' AND xtype='U')
 BEGIN
-    CREATE TABLE Integrations (
+    CREATE TABLE Invitations (
         Id INT PRIMARY KEY IDENTITY(1,1),
-        Provider NVARCHAR(50) NOT NULL UNIQUE,
-        AppId NVARCHAR(255) NULL,
-        AppSecret NVARCHAR(255) NULL,
-        RedirectUrl NVARCHAR(500) NULL,
-    Settings NVARCHAR(MAX) NULL,
-        IsActive BIT DEFAULT 0,
+        Email NVARCHAR(255) NOT NULL,
+        RoleId INT NOT NULL,
+        Token NVARCHAR(100) NOT NULL UNIQUE,
+        CreatedBy INT NOT NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
-        UpdatedAt DATETIME2 NULL
+        UsedAt DATETIME2 NULL,
+        ExpiresAt DATETIME2 NOT NULL,
+        CONSTRAINT FK_Invitations_Roles FOREIGN KEY (RoleId) REFERENCES Roles(Id),
+        CONSTRAINT FK_Invitations_CreatedBy FOREIGN KEY (CreatedBy) REFERENCES Users(Id)
     );
+    CREATE INDEX IX_Invitations_Token ON Invitations (Token);
+    CREATE INDEX IX_Invitations_Email ON Invitations (Email);
 END
 GO
 
--- MeliAccounts table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MeliAccounts' AND xtype='U')
+-- TokenPacks table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TokenPacks' AND xtype='U')
 BEGIN
-    CREATE TABLE MeliAccounts (
+    CREATE TABLE TokenPacks (
         Id INT PRIMARY KEY IDENTITY(1,1),
-        MeliUserId BIGINT NOT NULL UNIQUE,
-        Nickname NVARCHAR(255) NOT NULL,
-        Email NVARCHAR(255) NULL,
-        AccessToken NVARCHAR(MAX) NOT NULL,
-        RefreshToken NVARCHAR(MAX) NULL,
-        TokenExpiresAt DATETIME2 NOT NULL,
+        UserId INT NOT NULL,
+        TotalTokens INT NOT NULL,
+        RemainingTokens INT NOT NULL,
+        CreatedBy INT NOT NULL,
+        Description NVARCHAR(500) NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
-        UpdatedAt DATETIME2 NULL
+        CONSTRAINT FK_TokenPacks_User FOREIGN KEY (UserId) REFERENCES Users(Id),
+        CONSTRAINT FK_TokenPacks_CreatedBy FOREIGN KEY (CreatedBy) REFERENCES Users(Id)
     );
+    CREATE INDEX IX_TokenPacks_UserId ON TokenPacks (UserId);
 END
 GO
 
--- MeliOrders table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MeliOrders' AND xtype='U')
+-- Availability table (instructor weekly schedule)
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Availabilities' AND xtype='U')
 BEGIN
-    CREATE TABLE MeliOrders (
+    CREATE TABLE Availabilities (
         Id INT PRIMARY KEY IDENTITY(1,1),
-        MeliOrderId BIGINT NOT NULL,
-        MeliAccountId INT NOT NULL,
-        Status NVARCHAR(50) NOT NULL,
-        DateCreated DATETIME2 NOT NULL,
-        DateClosed DATETIME2 NULL,
-        TotalAmount DECIMAL(18,2) NOT NULL,
-        CurrencyId NVARCHAR(10) NOT NULL,
-        BuyerId BIGINT NOT NULL,
-        BuyerNickname NVARCHAR(255) NOT NULL,
-        ItemId NVARCHAR(50) NOT NULL,
-        ItemTitle NVARCHAR(500) NOT NULL,
-        Quantity INT NOT NULL,
-        UnitPrice DECIMAL(18,2) NOT NULL,
-        FullUnitPrice DECIMAL(18,2) NULL,
-        ShippingId BIGINT NULL,
-        PackId BIGINT NULL,
-        ShippingStatus NVARCHAR(50) NULL,
-        ShippingSubstatus NVARCHAR(100) NULL,
+        InstructorId INT NOT NULL,
+        DayOfWeek INT NOT NULL,
+        StartHour INT NOT NULL,
+        IsActive BIT DEFAULT 1,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
-        UpdatedAt DATETIME2 NULL,
-        CONSTRAINT FK_MeliOrders_MeliAccounts FOREIGN KEY (MeliAccountId) REFERENCES MeliAccounts(Id)
+        CONSTRAINT FK_Availabilities_Instructor FOREIGN KEY (InstructorId) REFERENCES Users(Id),
+        CONSTRAINT CK_Availabilities_DayOfWeek CHECK (DayOfWeek >= 0 AND DayOfWeek <= 6),
+        CONSTRAINT CK_Availabilities_StartHour CHECK (StartHour >= 0 AND StartHour <= 23)
     );
-    CREATE UNIQUE INDEX IX_MeliOrders_MeliOrderId_ItemId ON MeliOrders (MeliOrderId, ItemId);
-    CREATE INDEX IX_MeliOrders_MeliAccountId ON MeliOrders (MeliAccountId);
-    CREATE INDEX IX_MeliOrders_DateCreated ON MeliOrders (DateCreated);
-    CREATE INDEX IX_MeliOrders_PackId ON MeliOrders (PackId);
+    CREATE INDEX IX_Availabilities_InstructorId ON Availabilities (InstructorId);
+    CREATE UNIQUE INDEX IX_Availabilities_Unique ON Availabilities (InstructorId, DayOfWeek, StartHour);
 END
 GO
 
--- Add PackId column if table already exists
-IF EXISTS (SELECT * FROM sysobjects WHERE name='MeliOrders' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliOrders') AND name = 'PackId')
+-- Bookings table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Bookings' AND xtype='U')
 BEGIN
-    ALTER TABLE MeliOrders ADD PackId BIGINT NULL;
-    CREATE INDEX IX_MeliOrders_PackId ON MeliOrders (PackId);
-END
-GO
-
--- Add ShippingStatus column if table already exists
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliOrders') AND name = 'ShippingStatus')
-BEGIN
-    ALTER TABLE MeliOrders ADD ShippingStatus NVARCHAR(50) NULL;
-END
-GO
-
--- Add ShippingSubstatus column if table already exists
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliOrders') AND name = 'ShippingSubstatus')
-BEGIN
-    ALTER TABLE MeliOrders ADD ShippingSubstatus NVARCHAR(100) NULL;
-END
-GO
-
--- Add FullUnitPrice column if table already exists
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliOrders') AND name = 'FullUnitPrice')
-BEGIN
-    ALTER TABLE MeliOrders ADD FullUnitPrice DECIMAL(18,2) NULL;
-END
-GO
-
--- MeliItems table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MeliItems' AND xtype='U')
-BEGIN
-    CREATE TABLE MeliItems (
+    CREATE TABLE Bookings (
         Id INT PRIMARY KEY IDENTITY(1,1),
-        MeliItemId NVARCHAR(50) NOT NULL,
-        MeliAccountId INT NOT NULL,
-        Title NVARCHAR(500) NOT NULL,
-        CategoryId NVARCHAR(50) NULL,
-        Price DECIMAL(18,2) NOT NULL DEFAULT 0,
-        OriginalPrice DECIMAL(18,2) NULL,
-        CurrencyId NVARCHAR(10) NOT NULL DEFAULT 'ARS',
-        AvailableQuantity INT NOT NULL DEFAULT 0,
-        SoldQuantity INT NOT NULL DEFAULT 0,
-        Status NVARCHAR(50) NOT NULL DEFAULT 'active',
-        Condition NVARCHAR(20) NULL,
-        ListingTypeId NVARCHAR(50) NULL,
-        Thumbnail NVARCHAR(500) NULL,
-        Permalink NVARCHAR(1000) NULL,
-        Sku NVARCHAR(255) NULL,
-        UserProductId NVARCHAR(100) NULL,
-        FamilyId NVARCHAR(100) NULL,
-        FamilyName NVARCHAR(500) NULL,
-        DateCreated DATETIME2 NULL,
-        LastUpdated DATETIME2 NULL,
+        UserId INT NOT NULL,
+        InstructorId INT NOT NULL,
+        TokenPackId INT NOT NULL,
+        ScheduledDate DATE NOT NULL,
+        StartHour INT NOT NULL,
+        Status NVARCHAR(20) NOT NULL DEFAULT 'confirmed',
+        MeetLink NVARCHAR(500) NULL,
+        CancelledAt DATETIME2 NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
-        UpdatedAt DATETIME2 NULL,
-        CONSTRAINT FK_MeliItems_MeliAccounts FOREIGN KEY (MeliAccountId) REFERENCES MeliAccounts(Id) ON DELETE CASCADE
+        CONSTRAINT FK_Bookings_User FOREIGN KEY (UserId) REFERENCES Users(Id),
+        CONSTRAINT FK_Bookings_Instructor FOREIGN KEY (InstructorId) REFERENCES Users(Id),
+        CONSTRAINT FK_Bookings_TokenPack FOREIGN KEY (TokenPackId) REFERENCES TokenPacks(Id),
+        CONSTRAINT CK_Bookings_Status CHECK (Status IN ('confirmed', 'cancelled', 'completed')),
+        CONSTRAINT CK_Bookings_StartHour CHECK (StartHour >= 0 AND StartHour <= 23)
     );
-    CREATE UNIQUE INDEX IX_MeliItems_MeliItemId ON MeliItems (MeliItemId);
-    CREATE INDEX IX_MeliItems_MeliAccountId ON MeliItems (MeliAccountId);
-    CREATE INDEX IX_MeliItems_Status ON MeliItems (Status);
-    CREATE INDEX IX_MeliItems_UserProductId ON MeliItems (UserProductId);
-    CREATE INDEX IX_MeliItems_FamilyId ON MeliItems (FamilyId);
+    CREATE INDEX IX_Bookings_UserId ON Bookings (UserId);
+    CREATE INDEX IX_Bookings_InstructorId ON Bookings (InstructorId);
+    CREATE INDEX IX_Bookings_ScheduledDate ON Bookings (ScheduledDate);
 END
 GO
 
@@ -233,165 +183,6 @@ BEGIN
 END
 GO
 
--- Seed admin user (password will be set by API on startup)
-IF NOT EXISTS (SELECT * FROM Users WHERE Username = 'admin')
-BEGIN
-    INSERT INTO Users (Username, Email, PasswordHash, FirstName, LastName, Role, RoleId)
-    VALUES ('admin', 'admin@template.local', 'placeholder', 'Admin', 'Sistema', 'admin', 1);
-END
-GO
-
-PRINT 'Database initialized successfully';
-GO
-
--- Add CategoryPath column to MeliItems
-IF EXISTS (SELECT * FROM sysobjects WHERE name='MeliItems' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliItems') AND name = 'CategoryPath')
-BEGIN
-    ALTER TABLE MeliItems ADD CategoryPath NVARCHAR(500) NULL;
-END
-GO
-
--- Add InstallmentTag column to MeliItems
-IF EXISTS (SELECT * FROM sysobjects WHERE name='MeliItems' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliItems') AND name = 'InstallmentTag')
-BEGIN
-    ALTER TABLE MeliItems ADD InstallmentTag NVARCHAR(50) NULL;
-END
-GO
-
--- Add FreeShipping column to MeliItems
-IF EXISTS (SELECT * FROM sysobjects WHERE name='MeliItems' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliItems') AND name = 'FreeShipping')
-BEGIN
-    ALTER TABLE MeliItems ADD FreeShipping BIT NOT NULL DEFAULT 0;
-END
-GO
-
--- ScheduledProcesses table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ScheduledProcesses' AND xtype='U')
-BEGIN
-    CREATE TABLE ScheduledProcesses (
-        Id INT PRIMARY KEY IDENTITY(1,1),
-        Code NVARCHAR(100) NOT NULL UNIQUE,
-        Name NVARCHAR(255) NOT NULL,
-        Description NVARCHAR(500) NULL,
-        TriggerType NVARCHAR(20) NOT NULL DEFAULT 'Interval',
-        IntervalMinutes INT NULL,
-        DailyAtTime NVARCHAR(5) NULL,
-        CronExpression NVARCHAR(100) NULL,
-        IsEnabled BIT NOT NULL DEFAULT 0,
-        LastRunAt DATETIME2 NULL,
-        LastRunStatus NVARCHAR(20) NULL,
-        LastRunDurationMs INT NULL,
-        NextRunAt DATETIME2 NULL,
-        CreatedAt DATETIME2 DEFAULT GETDATE(),
-        UpdatedAt DATETIME2 NULL
-    );
-END
-GO
-
--- ProcessExecutionLogs table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='ProcessExecutionLogs' AND xtype='U')
-BEGIN
-    CREATE TABLE ProcessExecutionLogs (
-        Id INT PRIMARY KEY IDENTITY(1,1),
-        ProcessCode NVARCHAR(100) NOT NULL,
-        StartedAt DATETIME2 NOT NULL,
-        FinishedAt DATETIME2 NULL,
-        Status NVARCHAR(20) NOT NULL,
-        DurationMs INT NULL,
-        ResultSummary NVARCHAR(MAX) NULL,
-        ErrorMessage NVARCHAR(MAX) NULL,
-        CONSTRAINT FK_ProcessLogs_Process FOREIGN KEY (ProcessCode) REFERENCES ScheduledProcesses(Code) ON DELETE CASCADE
-    );
-    CREATE INDEX IX_ProcessLogs_ProcessCode ON ProcessExecutionLogs (ProcessCode);
-    CREATE INDEX IX_ProcessLogs_StartedAt ON ProcessExecutionLogs (StartedAt DESC);
-END
-GO
-
--- Seed scheduled processes
-IF NOT EXISTS (SELECT * FROM ScheduledProcesses WHERE Code = 'SyncMeliOrders')
-BEGIN
-    INSERT INTO ScheduledProcesses (Code, Name, Description, TriggerType, IntervalMinutes, IsEnabled)
-    VALUES ('SyncMeliOrders', 'Sincronizar Ordenes', 'Sincroniza las ordenes de MercadoLibre de los ultimos 7 dias', 'Interval', 360, 0);
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM ScheduledProcesses WHERE Code = 'SyncMeliItems')
-BEGIN
-    INSERT INTO ScheduledProcesses (Code, Name, Description, TriggerType, IntervalMinutes, IsEnabled)
-    VALUES ('SyncMeliItems', 'Sincronizar Publicaciones', 'Sincroniza las publicaciones activas de MercadoLibre', 'Interval', 360, 0);
-END
-GO
-
--- Products table
-IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Products' AND xtype='U')
-BEGIN
-    CREATE TABLE Products (
-        Id INT PRIMARY KEY IDENTITY(1,1),
-        Title NVARCHAR(200) NOT NULL,
-        Description NVARCHAR(MAX) NULL,
-        Brand NVARCHAR(100) NULL,
-        Model NVARCHAR(100) NULL,
-        Photo1 NVARCHAR(MAX) NULL,
-        Photo2 NVARCHAR(MAX) NULL,
-        Photo3 NVARCHAR(MAX) NULL,
-        CostPrice DECIMAL(18,2) NOT NULL DEFAULT 0,
-        RetailPrice DECIMAL(18,2) NOT NULL DEFAULT 0,
-        Stock INT NOT NULL DEFAULT 0,
-        CriticalStock INT DEFAULT 0,
-        IsActive BIT NOT NULL DEFAULT 1,
-        CreatedAt DATETIME2 DEFAULT GETDATE(),
-        UpdatedAt DATETIME2 NULL
-    );
-END
-GO
-
--- Add ProductId FK to MeliItems (link publications to products)
-IF EXISTS (SELECT * FROM sysobjects WHERE name='MeliItems' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliItems') AND name = 'ProductId')
-BEGIN
-    ALTER TABLE MeliItems ADD ProductId INT NULL;
-    ALTER TABLE MeliItems ADD CONSTRAINT FK_MeliItems_Products
-        FOREIGN KEY (ProductId) REFERENCES Products(Id) ON DELETE SET NULL;
-    CREATE INDEX IX_MeliItems_ProductId ON MeliItems (ProductId);
-END
-GO
-
-
--- Add StockDiscounted to MeliOrders
-IF EXISTS (SELECT * FROM sysobjects WHERE name='MeliOrders' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('MeliOrders') AND name = 'StockDiscounted')
-BEGIN
-    ALTER TABLE MeliOrders ADD StockDiscounted BIT NOT NULL DEFAULT 0;
-END
-GO
-
--- Seed ProcessOrderStock scheduled process
-IF NOT EXISTS (SELECT * FROM ScheduledProcesses WHERE Code = 'ProcessOrderStock')
-BEGIN
-    INSERT INTO ScheduledProcesses (Code, Name, Description, TriggerType, IntervalMinutes, IsEnabled)
-    VALUES ('ProcessOrderStock', 'Descontar Stock por Ordenes', 'Descuenta el stock de los productos vinculados cuando entran ordenes nuevas y propaga el cambio a todas las cuentas', 'Interval', 360, 0);
-END
-GO
-
--- Add SKU to Products
-IF EXISTS (SELECT * FROM sysobjects WHERE name='Products' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Products') AND name = 'Sku')
-BEGIN
-    ALTER TABLE Products ADD Sku NVARCHAR(100) NULL;
-END
-GO
-
--- Add CriticalStock to Products
-IF EXISTS (SELECT * FROM sysobjects WHERE name='Products' AND xtype='U')
-   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Products') AND name = 'CriticalStock')
-BEGIN
-    ALTER TABLE Products ADD CriticalStock INT DEFAULT 0;
-END
-GO
-
 -- RolePermissions table
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='RolePermissions' AND xtype='U')
 BEGIN
@@ -406,25 +197,6 @@ BEGIN
 END
 GO
 
--- Seed admin permissions (all menus)
-IF NOT EXISTS (SELECT * FROM RolePermissions WHERE RoleId = 1)
-BEGIN
-    INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
-    (1, 'dashboard'), (1, 'publicaciones'), (1, 'ordenes'),
-    (1, 'productos'), (1, 'usuarios'), (1, 'roles'),
-    (1, 'integraciones'), (1, 'procesos'), (1, 'auditoria'), (1, 'config');
-END
-GO
-
--- Seed usuario permissions (basic menus)
-IF NOT EXISTS (SELECT * FROM RolePermissions WHERE RoleId = 2)
-BEGIN
-    INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
-    (2, 'dashboard'), (2, 'publicaciones'), (2, 'ordenes'),
-    (2, 'productos'), (2, 'config');
-END
-GO
-
 -- App Settings table
 IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='AppSettings' AND xtype='U')
 BEGIN
@@ -436,16 +208,49 @@ BEGIN
 END
 GO
 
--- Seed default brand name
-IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BrandName')
+-- Seed admin user (password will be set by API on startup)
+IF NOT EXISTS (SELECT * FROM Users WHERE Username = 'admin')
 BEGIN
-    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BrandName', 'Tu Marca');
+    INSERT INTO Users (Username, Email, PasswordHash, FirstName, LastName, RoleId)
+    VALUES ('admin', 'admin@integraly.dev', 'placeholder', 'Admin', 'Sistema', 1);
 END
 GO
 
-IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BrandIcon')
+-- Clear old permissions and reseed
+DELETE FROM RolePermissions;
+GO
+
+-- Seed admin permissions (all menus)
+INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
+(1, 'dashboard'), (1, 'calendario'), (1, 'reservar'), (1, 'mis-reservas'),
+(1, 'usuarios'), (1, 'invitaciones'), (1, 'packs'), (1, 'todas-reservas'),
+(1, 'config'), (1, 'perfil');
+GO
+
+-- Seed instructor permissions
+INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
+(2, 'dashboard'), (2, 'calendario'), (2, 'mis-reservas'), (2, 'perfil');
+GO
+
+-- Seed usuario permissions
+INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
+(3, 'dashboard'), (3, 'reservar'), (3, 'mis-reservas'), (3, 'perfil');
+GO
+
+-- Seed AppSettings
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BrandName')
 BEGIN
-    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BrandIcon', 'Brand');
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BrandName', 'Integraly');
+END
+ELSE
+BEGIN
+    UPDATE AppSettings SET [Value] = 'Integraly', UpdatedAt = GETDATE() WHERE [Key] = 'BrandName';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'CancellationHours')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('CancellationHours', '24');
 END
 GO
 
@@ -459,4 +264,7 @@ IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SidebarBgColor')
 BEGIN
     INSERT INTO AppSettings ([Key], [Value]) VALUES ('SidebarBgColor', '#1a1a2e');
 END
+GO
+
+PRINT 'Database initialized successfully';
 GO

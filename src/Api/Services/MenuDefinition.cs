@@ -4,30 +4,27 @@ public static class MenuDefinition
 {
     public static readonly List<MenuGroup> MenuTree = new()
     {
-        new MenuGroup("root", "Dashboard", new[]
+        new MenuGroup("principal", "Principal", new[]
         {
             new MenuItem("dashboard", "Dashboard", "/")
         }),
-        new MenuGroup("mercadolibre", "MercadoLibre", new[]
+        new MenuGroup("tutorias", "Tutorias", new[]
         {
-            new MenuItem("publicaciones", "Publicaciones", "/publicaciones"),
-            new MenuItem("ordenes", "Ordenes", "/ordenes")
-        }),
-        new MenuGroup("inventario", "Inventario", new[]
-        {
-            new MenuItem("productos", "Productos", "/productos")
+            new MenuItem("calendario", "Calendario", "/calendario"),
+            new MenuItem("reservar", "Reservar", "/reservar"),
+            new MenuItem("mis-reservas", "Mis Reservas", "/mis-reservas")
         }),
         new MenuGroup("administracion", "Administracion", new[]
         {
             new MenuItem("usuarios", "Usuarios", "/usuarios"),
-            new MenuItem("roles", "Roles", "/roles"),
-            new MenuItem("integraciones", "Integraciones", "/integraciones"),
-            new MenuItem("procesos", "Procesos", "/procesos"),
-            new MenuItem("auditoria", "Auditoria", "/auditoria")
-        }),
-        new MenuGroup("configuracion", "Configuracion", new[]
-        {
+            new MenuItem("invitaciones", "Invitaciones", "/invitaciones"),
+            new MenuItem("packs", "Packs", "/packs"),
+            new MenuItem("todas-reservas", "Todas las Reservas", "/todas-reservas"),
             new MenuItem("config", "Configuracion", "/config")
+        }),
+        new MenuGroup("cuenta", "Cuenta", new[]
+        {
+            new MenuItem("perfil", "Mi Perfil", "/perfil")
         })
     };
 

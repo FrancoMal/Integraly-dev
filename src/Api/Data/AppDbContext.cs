@@ -9,16 +9,13 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Role> Roles => Set<Role>();
-    public DbSet<Integration> Integrations => Set<Integration>();
-    public DbSet<MeliAccount> MeliAccounts => Set<MeliAccount>();
-    public DbSet<MeliOrder> MeliOrders => Set<MeliOrder>();
-    public DbSet<MeliItem> MeliItems => Set<MeliItem>();
-    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
-    public DbSet<Product> Products => Set<Product>();
-    public DbSet<ScheduledProcess> ScheduledProcesses => Set<ScheduledProcess>();
-    public DbSet<ProcessExecutionLog> ProcessExecutionLogs => Set<ProcessExecutionLog>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<AppSetting> AppSettings => Set<AppSetting>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Invitation> Invitations => Set<Invitation>();
+    public DbSet<TokenPack> TokenPacks => Set<TokenPack>();
+    public DbSet<Availability> Availabilities => Set<Availability>();
+    public DbSet<Booking> Bookings => Set<Booking>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -50,66 +47,66 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<AppSetting>().HasKey(a => a.Key);
 
-        modelBuilder.Entity<Integration>(entity =>
-        {
-            entity.HasIndex(i => i.Provider).IsUnique();
-        });
-
-        modelBuilder.Entity<MeliAccount>(entity =>
-        {
-            entity.HasIndex(a => a.MeliUserId).IsUnique();
-        });
-
-        modelBuilder.Entity<MeliOrder>(entity =>
-        {
-            entity.HasIndex(o => new { o.MeliOrderId, o.ItemId }).IsUnique();
-            entity.HasIndex(o => o.MeliAccountId);
-            entity.HasIndex(o => o.DateCreated);
-            entity.HasIndex(o => o.PackId);
-            entity.HasOne(o => o.MeliAccount)
-                  .WithMany()
-                  .HasForeignKey(o => o.MeliAccountId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<MeliItem>(entity =>
-        {
-            entity.HasIndex(i => i.MeliItemId).IsUnique();
-            entity.HasIndex(i => i.MeliAccountId);
-            entity.HasIndex(i => i.Status);
-            entity.HasIndex(i => i.UserProductId);
-            entity.HasIndex(i => i.FamilyId);
-            entity.HasOne(i => i.MeliAccount)
-                  .WithMany()
-                  .HasForeignKey(i => i.MeliAccountId)
-                  .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(i => i.ProductId);
-            entity.HasOne(i => i.Product)
-                  .WithMany(p => p.MeliItems)
-                  .HasForeignKey(i => i.ProductId)
-                  .OnDelete(DeleteBehavior.SetNull);
-        });
-
         modelBuilder.Entity<AuditLog>(entity =>
         {
             entity.HasIndex(a => new { a.EntityType, a.EntityId });
             entity.HasIndex(a => a.CreatedAt);
         });
 
-        modelBuilder.Entity<ScheduledProcess>(entity =>
+        modelBuilder.Entity<Invitation>(entity =>
         {
-            entity.HasIndex(p => p.Code).IsUnique();
+            entity.HasIndex(i => i.Token).IsUnique();
+            entity.HasIndex(i => i.Email);
+            entity.HasOne(i => i.Role)
+                  .WithMany()
+                  .HasForeignKey(i => i.RoleId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(i => i.CreatedByUser)
+                  .WithMany()
+                  .HasForeignKey(i => i.CreatedBy)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
-        modelBuilder.Entity<ProcessExecutionLog>(entity =>
+        modelBuilder.Entity<TokenPack>(entity =>
         {
-            entity.HasIndex(l => l.ProcessCode);
-            entity.HasIndex(l => l.StartedAt);
-            entity.HasOne(l => l.Process)
+            entity.HasIndex(tp => tp.UserId);
+            entity.HasOne(tp => tp.User)
                   .WithMany()
-                  .HasForeignKey(l => l.ProcessCode)
-                  .HasPrincipalKey(p => p.Code)
-                  .OnDelete(DeleteBehavior.Cascade);
+                  .HasForeignKey(tp => tp.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(tp => tp.CreatedByUser)
+                  .WithMany()
+                  .HasForeignKey(tp => tp.CreatedBy)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Availability>(entity =>
+        {
+            entity.HasIndex(a => a.InstructorId);
+            entity.HasIndex(a => new { a.InstructorId, a.DayOfWeek, a.StartHour }).IsUnique();
+            entity.HasOne(a => a.Instructor)
+                  .WithMany()
+                  .HasForeignKey(a => a.InstructorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Booking>(entity =>
+        {
+            entity.HasIndex(b => b.UserId);
+            entity.HasIndex(b => b.InstructorId);
+            entity.HasIndex(b => b.ScheduledDate);
+            entity.HasOne(b => b.User)
+                  .WithMany()
+                  .HasForeignKey(b => b.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(b => b.Instructor)
+                  .WithMany()
+                  .HasForeignKey(b => b.InstructorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(b => b.TokenPack)
+                  .WithMany()
+                  .HasForeignKey(b => b.TokenPackId)
+                  .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Api.BackgroundJobs;
 using Api.Data;
 using Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -45,22 +44,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RoleService>();
-builder.Services.AddScoped<IntegrationService>();
-builder.Services.AddHttpClient();
-builder.Services.AddScoped<MeliAccountService>();
-builder.Services.AddScoped<MeliOrderService>();
-builder.Services.AddScoped<MeliItemService>();
 builder.Services.AddScoped<AuditLogService>();
-builder.Services.AddScoped<ScheduledProcessService>();
-builder.Services.AddScoped<ProductService>();
-builder.Services.AddScoped<AiService>();
-builder.Services.AddSingleton<SyncProgressService>();
-
-// Background Jobs
-builder.Services.AddSingleton<IScheduledJob, SyncMeliOrdersJob>();
-builder.Services.AddSingleton<IScheduledJob, SyncMeliItemsJob>();
-builder.Services.AddSingleton<IScheduledJob, ProcessOrderStockJob>();
-builder.Services.AddHostedService<ProcessSchedulerService>();
+builder.Services.AddHttpClient();
 
 // CORS
 builder.Services.AddCors(options =>
@@ -87,7 +72,7 @@ builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "Template API",
+        Title = "Integraly API",
         Version = "v1"
     });
 
@@ -117,7 +102,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// Increase request body size for base64 photo uploads
+// Increase request body size for file uploads
 builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
 
 var app = builder.Build();

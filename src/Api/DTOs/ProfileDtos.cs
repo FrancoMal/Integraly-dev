@@ -10,6 +10,7 @@ public record ProfileDto(
     string? LastName,
     string? Phone,
     string Role,
+    string? VpsInfo,
     DateTime CreatedAt
 );
 

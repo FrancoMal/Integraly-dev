@@ -38,14 +38,16 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("register")]
-    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+    [HttpPost("register-invitation")]
+    public async Task<IActionResult> RegisterWithInvitation([FromBody] RegisterWithInvitationRequest request)
     {
         try
         {
-            var result = await _authService.Register(request.Username, request.Email, request.Password);
+            var result = await _authService.RegisterWithInvitation(
+                request.Token, request.Password, request.FirstName, request.LastName, request.Phone);
+
             if (result is null)
-                return Conflict(new { message = "Username or email already exists" });
+                return BadRequest(new { message = "Invalid or expired invitation token, or email already registered" });
 
             return Created("", result);
         }
@@ -73,7 +75,8 @@ public class AuthController : ControllerBase
                 Id: user.Id,
                 Username: user.Username,
                 Email: user.Email,
-                Role: user.RoleNav?.Name ?? user.Role,
+                Role: user.RoleNav?.Name ?? "usuario",
+                VpsInfo: user.VpsInfo,
                 CreatedAt: user.CreatedAt,
                 IsActive: user.IsActive
             ));
@@ -105,7 +108,8 @@ public class AuthController : ControllerBase
                 FirstName: user.FirstName,
                 LastName: user.LastName,
                 Phone: user.Phone,
-                Role: user.RoleNav?.Name ?? user.Role,
+                Role: user.RoleNav?.Name ?? "usuario",
+                VpsInfo: user.VpsInfo,
                 CreatedAt: user.CreatedAt
             ));
         }
@@ -149,7 +153,8 @@ public class AuthController : ControllerBase
                 FirstName: user.FirstName,
                 LastName: user.LastName,
                 Phone: user.Phone,
-                Role: user.RoleNav?.Name ?? user.Role,
+                Role: user.RoleNav?.Name ?? "usuario",
+                VpsInfo: user.VpsInfo,
                 CreatedAt: user.CreatedAt
             ));
         }
