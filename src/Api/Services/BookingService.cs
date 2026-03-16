@@ -9,13 +9,11 @@ public class BookingService
 {
     private readonly AppDbContext _db;
     private readonly TokenPackService _tokenPackService;
-    private readonly IConfiguration _configuration;
 
-    public BookingService(AppDbContext db, TokenPackService tokenPackService, IConfiguration configuration)
+    public BookingService(AppDbContext db, TokenPackService tokenPackService)
     {
         _db = db;
         _tokenPackService = tokenPackService;
-        _configuration = configuration;
     }
 
     public async Task<List<BookingDto>> GetByUserIdAsync(int userId)
@@ -114,6 +112,10 @@ public class BookingService
         if (tokenPackId is null)
             return (null, "No tenes tokens disponibles");
 
+        // Generate Google Meet link
+        var meetCode = Guid.NewGuid().ToString("N")[..12];
+        var meetLink = $"https://meet.google.com/{meetCode[..3]}-{meetCode[3..7]}-{meetCode[7..]}";
+
         var booking = new Booking
         {
             UserId = userId,
@@ -122,6 +124,7 @@ public class BookingService
             ScheduledDate = scheduledDate.Date,
             StartHour = startHour,
             Status = "confirmed",
+            MeetLink = meetLink,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -159,8 +162,9 @@ public class BookingService
         if (booking.Status != "confirmed")
             return (false, "La reserva ya fue cancelada");
 
-        // Check cancellation window
-        var cancellationHours = _configuration.GetValue<int>("AppSettings:CancellationHours", 24);
+        // Check cancellation window (from DB settings)
+        var cancellationHoursSetting = await _db.AppSettings.FindAsync("CancellationHours");
+        var cancellationHours = int.TryParse(cancellationHoursSetting?.Value, out var ch) ? ch : 24;
         var bookingDateTime = booking.ScheduledDate.Date.AddHours(booking.StartHour);
         var hoursUntilBooking = (bookingDateTime - DateTime.UtcNow).TotalHours;
 
