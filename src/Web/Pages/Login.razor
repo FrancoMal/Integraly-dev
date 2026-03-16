@@ -3,6 +3,7 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
+@inject IJSRuntime JS
 
 <div class="login-card" role="main">
     <div class="login-header">
@@ -10,7 +11,7 @@
             @SvgIcons.Brand
         </div>
         <h1>Integraly</h1>
-        <p>Panel de administracion</p>
+        <p>@(IsAdminPanel ? "Panel de administracion" : "Panel de tutorias")</p>
     </div>
 
     <div class="login-body">
@@ -47,10 +48,10 @@
     private LoginRequest loginModel = new();
     private string? errorMessage;
     private bool isLoading;
+    private bool IsAdminPanel => Navigation.BaseUri.Contains("/admin/");
 
     protected override async Task OnInitializedAsync()
     {
-        // Redirect if already authenticated
         if (await AuthService.IsTokenValidAsync())
         {
             Navigation.NavigateTo("");
@@ -71,8 +72,28 @@
 
         try
         {
-            await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
-            Navigation.NavigateTo("", forceLoad: true);
+            var response = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
+
+            // Redirect based on role and current panel
+            var role = response?.Role ?? "";
+            var basePath = Navigation.BaseUri;
+            var isOnAdmin = basePath.Contains("/admin/");
+            var isOnPanel = basePath.Contains("/panel/");
+
+            if (role == "admin" && isOnPanel)
+            {
+                // Admin logged in on /panel/ -> redirect to /admin/
+                Navigation.NavigateTo("/admin/", forceLoad: true);
+            }
+            else if (role != "admin" && isOnAdmin)
+            {
+                // Non-admin logged in on /admin/ -> redirect to /panel/
+                Navigation.NavigateTo("/panel/", forceLoad: true);
+            }
+            else
+            {
+                Navigation.NavigateTo("", forceLoad: true);
+            }
         }
         catch (Exception ex)
         {

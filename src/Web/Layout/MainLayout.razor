@@ -154,6 +154,8 @@
         { "perfil", "" } // perfil always allowed
     };
 
+    private bool IsAdminPanel => Navigation.BaseUri.Contains("/admin/");
+
     protected override async Task OnInitializedAsync()
     {
         var user = await AuthService.GetUserAsync();
@@ -162,6 +164,18 @@
             username = user.Username;
             role = user.Role;
             permissions = user.Permissions ?? new();
+
+            // Redirect to correct panel based on role
+            if (role == "admin" && !IsAdminPanel)
+            {
+                Navigation.NavigateTo("/admin/", forceLoad: true);
+                return;
+            }
+            else if (role != "admin" && IsAdminPanel)
+            {
+                Navigation.NavigateTo("/panel/", forceLoad: true);
+                return;
+            }
         }
     }
 

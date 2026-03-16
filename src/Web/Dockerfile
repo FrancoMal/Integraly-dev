@@ -12,4 +12,8 @@ FROM nginx:alpine AS final
 COPY landing/index.html /usr/share/nginx/html/index.html
 # Blazor app under /admin/
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/admin
+# Same Blazor app under /panel/ (with different index.html for base href)
+COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/panel
+# Override panel's index.html with the one that has base href="/panel/"
+COPY panel-index.html /usr/share/nginx/html/panel/index.html
 EXPOSE 80
