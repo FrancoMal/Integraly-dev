@@ -580,6 +580,19 @@ public class ApiClient
     }
 
     // --- HTTP helpers ---
+    private bool IsOnLoginPage()
+    {
+        try { return _navigation.Uri.Contains("/login", StringComparison.OrdinalIgnoreCase); }
+        catch { return false; }
+    }
+
+    private async Task HandleUnauthorizedAsync()
+    {
+        await _authService.LogoutAsync();
+        if (!IsOnLoginPage())
+            _navigation.NavigateTo("/login", forceLoad: true);
+    }
+
     private async Task<T?> GetAsync<T>(string url)
     {
         await SetAuthHeaderAsync();
@@ -587,8 +600,7 @@ public class ApiClient
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            await HandleUnauthorizedAsync();
             return default;
         }
 
@@ -603,8 +615,7 @@ public class ApiClient
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            await HandleUnauthorizedAsync();
             return default;
         }
 
@@ -619,8 +630,7 @@ public class ApiClient
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            await HandleUnauthorizedAsync();
             return default;
         }
 
@@ -635,8 +645,7 @@ public class ApiClient
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            await HandleUnauthorizedAsync();
             return false;
         }
 

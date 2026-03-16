@@ -19,6 +19,7 @@ public class SettingsController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<IActionResult> GetAll()
     {
         var settings = await _db.AppSettings.ToListAsync();
