@@ -548,6 +548,37 @@ public class ApiClient
         return result != null;
     }
 
+    public async Task<string?> UploadLogoAsync(byte[] fileBytes, string fileName, string contentType)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            using var content = new MultipartFormDataContent();
+            var fileContent = new ByteArrayContent(fileBytes);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            content.Add(fileContent, "file", fileName);
+            var response = await _http.PostAsync("/api/settings/logo", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
+                return result?.GetValueOrDefault("value");
+            }
+            return null;
+        }
+        catch { return null; }
+    }
+
+    public async Task<bool> DeleteLogoAsync()
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _http.DeleteAsync("/api/settings/logo");
+            return response.IsSuccessStatusCode;
+        }
+        catch { return false; }
+    }
+
     // --- HTTP helpers ---
     private async Task<T?> GetAsync<T>(string url)
     {
