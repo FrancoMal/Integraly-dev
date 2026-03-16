@@ -162,6 +162,8 @@ ai-coding-environment/
 |   |-- _Imports.razor        <- Usings globales
 |   |-- Web.csproj            <- Dependencias del proyecto Blazor
 |   |-- Dockerfile            <- Build multi-stage (SDK + nginx)
+|   |-- landing/              <- Landing page (se sirve en /)
+|   |   '-- index.html        <- Pagina de presentacion de integraly.dev
 |   |-- Pages/                <- Paginas de la app
 |   |   |-- Login.razor       <- Pagina de login
 |   |   |-- Dashboard.razor   <- Pagina principal del dashboard
@@ -186,7 +188,7 @@ ai-coding-environment/
 |   |   |-- ApiClient.cs      <- Cliente HTTP con Bearer token
 |   |   '-- ToastService.cs   <- Servicio de notificaciones
 |   '-- wwwroot/              <- Archivos estaticos
-|       |-- index.html        <- Pagina host de Blazor
+|       |-- index.html        <- Pagina host de Blazor (base href="/admin/")
 |       '-- css/app.css       <- Estilos visuales
 |
 |-- db/
@@ -213,8 +215,8 @@ Todo se levanta con `docker compose up --build -d` (o con `./setup.sh` que hace 
 
 ```
 Browser -> localhost:3000 -> Nginx
-                              |-- /            -> Blazor WASM (frontend)
-                              |-- /_framework/ -> Runtime de Blazor
+                              |-- /            -> Landing page (integraly.dev)
+                              |-- /admin/      -> Blazor WASM (panel de admin)
                               |-- /api/        -> Backend .NET (api:80)
                               '-- /swagger     -> Documentacion de la API
 ```
@@ -313,7 +315,9 @@ cp .env.example .env
 # 3. Levantar la app
 docker compose up --build -d
 
-# 4. Abrir en el browser: http://localhost:3000
+# 4. Abrir en el browser:
+#    Landing: http://localhost:3000
+#    Panel admin: http://localhost:3000/admin
 ```
 
 ---

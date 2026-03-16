@@ -51,7 +51,8 @@ El script `setup.sh` instala automaticamente:
 
 | Que | Direccion |
 |-----|-----------|
-| Dashboard | http://localhost:3000 |
+| Landing page | http://localhost:3000 |
+| Panel de admin | http://localhost:3000/admin |
 
 **Login:** admin / admin123
 
@@ -68,7 +69,7 @@ cp .env.example .env
 # 3. Levantar la app
 docker compose up --build -d
 
-# 4. Abrir http://localhost:3000
+# 4. Abrir http://localhost:3000 (landing) o http://localhost:3000/admin (panel)
 ```
 
 ## Herramientas AI
@@ -98,6 +99,7 @@ ai-coding-environment/
 │   ├── Data/                   # Entity Framework (base de datos)
 │   └── Dockerfile              # Build del backend
 ├── src/Web/                    # Frontend Blazor WebAssembly
+│   ├── landing/                # Landing page de integraly.dev (se sirve en /)
 │   ├── Pages/                  # Paginas (Login, Dashboard, Config)
 │   ├── Layout/                 # Layouts (MainLayout, LoginLayout)
 │   ├── Shared/                 # Componentes reutilizables
@@ -114,7 +116,7 @@ ai-coding-environment/
 |----------|----------|--------|
 | sqlserver | Base de datos SQL Server Express | 1433 (interno) |
 | api | Backend .NET 8 con autenticacion JWT | 80 (interno) |
-| web | Blazor WASM + Nginx | 3000 |
+| web | Landing + Blazor WASM + Nginx (/ = landing, /admin = panel) | 3000 |
 
 ## Credenciales por defecto
 
