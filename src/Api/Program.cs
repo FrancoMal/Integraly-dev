@@ -45,6 +45,10 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<AuditLogService>();
+builder.Services.AddScoped<InvitationService>();
+builder.Services.AddScoped<TokenPackService>();
+builder.Services.AddScoped<AvailabilityService>();
+builder.Services.AddScoped<BookingService>();
 builder.Services.AddHttpClient();
 
 // CORS

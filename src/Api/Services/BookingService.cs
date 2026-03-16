@@ -1,0 +1,207 @@
+using Api.Data;
+using Api.DTOs;
+using Api.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Api.Services;
+
+public class BookingService
+{
+    private readonly AppDbContext _db;
+    private readonly TokenPackService _tokenPackService;
+    private readonly IConfiguration _configuration;
+
+    public BookingService(AppDbContext db, TokenPackService tokenPackService, IConfiguration configuration)
+    {
+        _db = db;
+        _tokenPackService = tokenPackService;
+        _configuration = configuration;
+    }
+
+    public async Task<List<BookingDto>> GetByUserIdAsync(int userId)
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Instructor)
+            .Where(b => b.UserId == userId)
+            .OrderByDescending(b => b.ScheduledDate)
+            .ThenBy(b => b.StartHour)
+            .Select(b => new BookingDto(
+                b.Id,
+                b.UserId,
+                b.User != null ? b.User.Username : "",
+                b.InstructorId,
+                b.Instructor != null ? b.Instructor.Username : "",
+                b.ScheduledDate,
+                b.StartHour,
+                b.Status,
+                b.MeetLink,
+                b.CreatedAt
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<List<BookingDto>> GetByInstructorIdAsync(int instructorId)
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Instructor)
+            .Where(b => b.InstructorId == instructorId)
+            .OrderByDescending(b => b.ScheduledDate)
+            .ThenBy(b => b.StartHour)
+            .Select(b => new BookingDto(
+                b.Id,
+                b.UserId,
+                b.User != null ? b.User.Username : "",
+                b.InstructorId,
+                b.Instructor != null ? b.Instructor.Username : "",
+                b.ScheduledDate,
+                b.StartHour,
+                b.Status,
+                b.MeetLink,
+                b.CreatedAt
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<List<BookingDto>> GetAllAsync()
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Instructor)
+            .OrderByDescending(b => b.ScheduledDate)
+            .ThenBy(b => b.StartHour)
+            .Select(b => new BookingDto(
+                b.Id,
+                b.UserId,
+                b.User != null ? b.User.Username : "",
+                b.InstructorId,
+                b.Instructor != null ? b.Instructor.Username : "",
+                b.ScheduledDate,
+                b.StartHour,
+                b.Status,
+                b.MeetLink,
+                b.CreatedAt
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<(BookingDto? Booking, string? Error)> CreateAsync(int userId, int instructorId, DateTime scheduledDate, int startHour)
+    {
+        // Validate instructor has availability for that day/hour
+        var dayOfWeek = (int)scheduledDate.DayOfWeek;
+        var availability = await _db.Availabilities
+            .FirstOrDefaultAsync(a => a.InstructorId == instructorId
+                && a.DayOfWeek == dayOfWeek
+                && a.StartHour == startHour
+                && a.IsActive);
+
+        if (availability is null)
+            return (null, "El instructor no tiene disponibilidad en ese horario");
+
+        // Validate slot not already taken
+        var existingBooking = await _db.Bookings
+            .AnyAsync(b => b.InstructorId == instructorId
+                && b.ScheduledDate.Date == scheduledDate.Date
+                && b.StartHour == startHour
+                && b.Status == "confirmed");
+
+        if (existingBooking)
+            return (null, "Ese horario ya esta reservado");
+
+        // Consume token
+        var tokenPackId = await _tokenPackService.ConsumeTokenAsync(userId);
+        if (tokenPackId is null)
+            return (null, "No tenes tokens disponibles");
+
+        var booking = new Booking
+        {
+            UserId = userId,
+            InstructorId = instructorId,
+            TokenPackId = tokenPackId.Value,
+            ScheduledDate = scheduledDate.Date,
+            StartHour = startHour,
+            Status = "confirmed",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Bookings.Add(booking);
+        await _db.SaveChangesAsync();
+
+        var user = await _db.Users.FindAsync(userId);
+        var instructor = await _db.Users.FindAsync(instructorId);
+
+        var dto = new BookingDto(
+            booking.Id,
+            booking.UserId,
+            user?.Username ?? "",
+            booking.InstructorId,
+            instructor?.Username ?? "",
+            booking.ScheduledDate,
+            booking.StartHour,
+            booking.Status,
+            booking.MeetLink,
+            booking.CreatedAt
+        );
+
+        return (dto, null);
+    }
+
+    public async Task<(bool Success, string? Error)> CancelAsync(int bookingId, int userId)
+    {
+        var booking = await _db.Bookings.FindAsync(bookingId);
+        if (booking is null)
+            return (false, "Reserva no encontrada");
+
+        if (booking.UserId != userId)
+            return (false, "No tenes permiso para cancelar esta reserva");
+
+        if (booking.Status != "confirmed")
+            return (false, "La reserva ya fue cancelada");
+
+        // Check cancellation window
+        var cancellationHours = _configuration.GetValue<int>("AppSettings:CancellationHours", 24);
+        var bookingDateTime = booking.ScheduledDate.Date.AddHours(booking.StartHour);
+        var hoursUntilBooking = (bookingDateTime - DateTime.UtcNow).TotalHours;
+
+        if (hoursUntilBooking < cancellationHours)
+            return (false, $"No se puede cancelar con menos de {cancellationHours} horas de anticipacion");
+
+        // Refund token
+        await _tokenPackService.RefundTokenAsync(booking.TokenPackId);
+
+        booking.Status = "cancelled";
+        booking.CancelledAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return (true, null);
+    }
+
+    public async Task<List<AvailableSlotDto>> GetAvailableSlotsAsync(int instructorId, DateTime date)
+    {
+        var dayOfWeek = (int)date.DayOfWeek;
+
+        // Get all active availability for that day
+        var availabilities = await _db.Availabilities
+            .Where(a => a.InstructorId == instructorId
+                && a.DayOfWeek == dayOfWeek
+                && a.IsActive)
+            .OrderBy(a => a.StartHour)
+            .ToListAsync();
+
+        // Get confirmed bookings for that date
+        var bookedHours = await _db.Bookings
+            .Where(b => b.InstructorId == instructorId
+                && b.ScheduledDate.Date == date.Date
+                && b.Status == "confirmed")
+            .Select(b => b.StartHour)
+            .ToListAsync();
+
+        return availabilities
+            .Select(a => new AvailableSlotDto(
+                a.StartHour,
+                !bookedHours.Contains(a.StartHour)
+            ))
+            .ToList();
+    }
+}
