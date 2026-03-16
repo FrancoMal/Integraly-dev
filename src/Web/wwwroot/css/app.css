@@ -1262,15 +1262,6 @@ button {
 }
 
 /* Collapsible config sections */
-.config-collapsible {
-  cursor: pointer;
-  user-select: none;
-}
-
-.config-collapsible:hover {
-  opacity: 0.85;
-}
-
 .config-section-chevron {
   margin-left: auto;
   width: 18px;
@@ -1299,6 +1290,19 @@ button {
 
 .config-section-body.expanded {
   max-height: 5000px;
+  opacity: 1;
+}
+
+.config-collapsible {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  transition: background 0.2s ease;
+}
+
+.config-collapsible:hover {
+  background: #f1f5f9;
   opacity: 1;
 }
 
