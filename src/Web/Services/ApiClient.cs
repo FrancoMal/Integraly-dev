@@ -105,7 +105,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return false;
         }
 
@@ -194,7 +194,7 @@ public class ApiClient
         if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return null;
         }
 
@@ -313,7 +313,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return default;
         }
 
@@ -341,7 +341,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return new();
         }
 
@@ -369,7 +369,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return new();
         }
 
@@ -397,7 +397,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return 0;
         }
 
@@ -416,7 +416,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return null;
         }
 
@@ -437,7 +437,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return null;
         }
 
@@ -518,7 +518,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return null;
         }
         if (!response.IsSuccessStatusCode)
@@ -590,7 +590,7 @@ public class ApiClient
     {
         await _authService.LogoutAsync();
         if (!IsOnLoginPage())
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
     }
 
     private async Task<T?> GetAsync<T>(string url)
@@ -668,7 +668,7 @@ public class ApiClient
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             await _authService.LogoutAsync();
-            _navigation.NavigateTo("/login", forceLoad: true);
+            _navigation.NavigateTo("login", forceLoad: true);
             return null;
         }
         if (!response.IsSuccessStatusCode)

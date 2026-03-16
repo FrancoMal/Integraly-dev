@@ -26,23 +26,23 @@
     <nav class="sidebar-nav" role="navigation" aria-label="Menu principal">
         @if (HasPerm("dashboard"))
         {
-            <NavItem Href="/" Label="Dashboard" Icon="@SvgIcons.Dashboard"
-                     IsActive="@IsActive("/")" OnClick="@(() => NavigateTo("/"))" />
+            <NavItem Href="" Label="Dashboard" Icon="@SvgIcons.Dashboard"
+                     IsActive="@IsActive("")" OnClick="@(() => NavigateTo(""))" />
         }
 
         @if (HasPerm("publicaciones") || HasPerm("ordenes"))
         {
             <NavGroup Label="MercadoLibre" Icon="@SvgIcons.Store"
-                      HasActiveChild="@(IsActive("/publicaciones") || IsActive("/ordenes"))">
+                      HasActiveChild="@(IsActive("publicaciones") || IsActive("ordenes"))">
                 @if (HasPerm("publicaciones"))
                 {
-                    <NavItem Href="/publicaciones" Label="Publicaciones" Icon="@SvgIcons.Tag"
-                             IsActive="@IsActive("/publicaciones")" OnClick="@(() => NavigateTo("/publicaciones"))" />
+                    <NavItem Href="publicaciones" Label="Publicaciones" Icon="@SvgIcons.Tag"
+                             IsActive="@IsActive("publicaciones")" OnClick="@(() => NavigateTo("publicaciones"))" />
                 }
                 @if (HasPerm("ordenes"))
                 {
-                    <NavItem Href="/ordenes" Label="Ordenes" Icon="@SvgIcons.ShoppingBag"
-                             IsActive="@IsActive("/ordenes")" OnClick="@(() => NavigateTo("/ordenes"))" />
+                    <NavItem Href="ordenes" Label="Ordenes" Icon="@SvgIcons.ShoppingBag"
+                             IsActive="@IsActive("ordenes")" OnClick="@(() => NavigateTo("ordenes"))" />
                 }
             </NavGroup>
         }
@@ -50,45 +50,45 @@
         @if (HasPerm("productos"))
         {
             <NavGroup Label="Inventario" Icon="@SvgIcons.Inventory"
-                      HasActiveChild="@IsActive("/productos")">
-                <NavItem Href="/productos" Label="Productos" Icon="@SvgIcons.Package"
-                         IsActive="@IsActive("/productos")" OnClick="@(() => NavigateTo("/productos"))" />
+                      HasActiveChild="@IsActive("productos")">
+                <NavItem Href="productos" Label="Productos" Icon="@SvgIcons.Package"
+                         IsActive="@IsActive("productos")" OnClick="@(() => NavigateTo("productos"))" />
             </NavGroup>
         }
 
         @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("integraciones") || HasPerm("procesos") || HasPerm("auditoria"))
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("/usuarios") || IsActive("/roles") || IsActive("/integraciones") || IsActive("/procesos") || IsActive("/auditoria") || IsActive("/config"))">
+                      HasActiveChild="@(IsActive("usuarios") || IsActive("roles") || IsActive("integraciones") || IsActive("procesos") || IsActive("auditoria") || IsActive("config"))">
                 @if (HasPerm("usuarios"))
                 {
-                    <NavItem Href="/usuarios" Label="Usuarios" Icon="@SvgIcons.Users"
-                             IsActive="@IsActive("/usuarios")" OnClick="@(() => NavigateTo("/usuarios"))" />
+                    <NavItem Href="usuarios" Label="Usuarios" Icon="@SvgIcons.Users"
+                             IsActive="@IsActive("usuarios")" OnClick="@(() => NavigateTo("usuarios"))" />
                 }
                 @if (HasPerm("roles"))
                 {
-                    <NavItem Href="/roles" Label="Roles" Icon="@SvgIcons.Shield"
-                             IsActive="@IsActive("/roles")" OnClick="@(() => NavigateTo("/roles"))" />
+                    <NavItem Href="roles" Label="Roles" Icon="@SvgIcons.Shield"
+                             IsActive="@IsActive("roles")" OnClick="@(() => NavigateTo("roles"))" />
                 }
                 @if (HasPerm("integraciones"))
                 {
-                    <NavItem Href="/integraciones" Label="Integraciones" Icon="@SvgIcons.Link"
-                             IsActive="@IsActive("/integraciones")" OnClick="@(() => NavigateTo("/integraciones"))" />
+                    <NavItem Href="integraciones" Label="Integraciones" Icon="@SvgIcons.Link"
+                             IsActive="@IsActive("integraciones")" OnClick="@(() => NavigateTo("integraciones"))" />
                 }
                 @if (HasPerm("procesos"))
                 {
-                    <NavItem Href="/procesos" Label="Procesos" Icon="@SvgIcons.Timer"
-                             IsActive="@IsActive("/procesos")" OnClick="@(() => NavigateTo("/procesos"))" />
+                    <NavItem Href="procesos" Label="Procesos" Icon="@SvgIcons.Timer"
+                             IsActive="@IsActive("procesos")" OnClick="@(() => NavigateTo("procesos"))" />
                 }
                 @if (HasPerm("auditoria"))
                 {
-                    <NavItem Href="/auditoria" Label="Auditoria" Icon="@SvgIcons.History"
-                             IsActive="@IsActive("/auditoria")" OnClick="@(() => NavigateTo("/auditoria"))" />
+                    <NavItem Href="auditoria" Label="Auditoria" Icon="@SvgIcons.History"
+                             IsActive="@IsActive("auditoria")" OnClick="@(() => NavigateTo("auditoria"))" />
                 }
                 @if (HasPerm("config"))
                 {
-                    <NavItem Href="/config" Label="Configuracion" Icon="@SvgIcons.Settings"
-                             IsActive="@IsActive("/config")" OnClick="@(() => NavigateTo("/config"))" />
+                    <NavItem Href="config" Label="Configuracion" Icon="@SvgIcons.Settings"
+                             IsActive="@IsActive("config")" OnClick="@(() => NavigateTo("config"))" />
                 }
             </NavGroup>
         }
@@ -243,7 +243,7 @@
             // Empty menuKey means always allowed (like /perfil)
             if (!string.IsNullOrEmpty(menuKey) && !permissions.Contains(menuKey))
             {
-                Navigation.NavigateTo("/");
+                Navigation.NavigateTo("");
             }
         }
     }
@@ -260,7 +260,7 @@
         if (SyncProgress.State.Status == "running")
         {
             SyncProgress.State.ShowModal = true;
-            Navigation.NavigateTo("/publicaciones");
+            Navigation.NavigateTo("publicaciones");
         }
     }
 
@@ -289,7 +289,7 @@
     private bool IsActive(string href)
     {
         var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri);
-        if (href == "/")
+        if (href == "/" || href == "")
             return string.IsNullOrEmpty(relativePath) || relativePath == "/" || relativePath.Equals("index.html", StringComparison.OrdinalIgnoreCase);
         return relativePath.StartsWith(href.TrimStart('/'), StringComparison.OrdinalIgnoreCase);
     }
@@ -313,7 +313,7 @@
     {
         userMenuOpen = false;
         CloseSidebar();
-        Navigation.NavigateTo("/perfil");
+        Navigation.NavigateTo("perfil");
     }
 
     private void Refresh()
@@ -325,6 +325,6 @@
     {
         userMenuOpen = false;
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login", forceLoad: true);
+        Navigation.NavigateTo("login", forceLoad: true);
     }
 }

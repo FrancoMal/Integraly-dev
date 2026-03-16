@@ -43,7 +43,7 @@
             if (account is not null)
             {
                 ToastService.Success($"Cuenta {account.Nickname} conectada exitosamente");
-                Navigation.NavigateTo("/integraciones");
+                Navigation.NavigateTo("integraciones");
             }
             else
             {
@@ -60,7 +60,7 @@
 
     private void GoBack()
     {
-        Navigation.NavigateTo("/integraciones");
+        Navigation.NavigateTo("integraciones");
     }
 
     private static string? GetQueryParam(string query, string key)
