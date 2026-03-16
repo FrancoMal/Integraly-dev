@@ -1306,6 +1306,95 @@ button {
   opacity: 1;
 }
 
+/* Card collapsible - secciones dentro de un card */
+.config-card-collapsible {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.config-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  user-select: none;
+}
+
+.config-card-header:hover {
+  background: #f1f5f9;
+}
+
+.config-card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.config-card-header-left svg {
+  width: 20px;
+  height: 20px;
+  color: var(--text-secondary);
+}
+
+.config-card-header-title {
+  font-size: 1.05rem;
+}
+
+.config-card-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.config-card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease;
+  opacity: 0;
+}
+
+.config-card-body.expanded {
+  max-height: 5000px;
+  opacity: 1;
+  padding: 1rem;
+}
+
+/* Mini brand preview in card header */
+.config-brand-mini-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  color: #fff;
+}
+
+.config-brand-mini-img {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: contain;
+}
+
+.config-brand-mini-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.config-brand-mini-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* Config stat card with usage bar */
 .config-stat-card {
   flex-wrap: wrap;

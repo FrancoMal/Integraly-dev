@@ -16,30 +16,47 @@
 else
 {
     <!-- ========== SECCION 1: MARCA ========== -->
-    <div class="config-section-title config-collapsible" @onclick="() => sectionMarca = !sectionMarca">
-        @SvgIcons.Edit
-        <span>Marca</span>
-        <span class="config-section-chevron @(sectionMarca ? "open" : "")">@SvgIcons.ChevronRight</span>
-    </div>
+    <div class="config-card-collapsible">
+        <div class="config-card-header" @onclick="() => sectionMarca = !sectionMarca">
+            <div class="config-card-header-left">
+                @SvgIcons.Edit
+                <span class="config-card-header-title">Marca</span>
+            </div>
+            <div class="config-card-header-right">
+                <!-- Vista previa mini en el header -->
+                <div class="config-brand-mini-preview" style="background: @sidebarColorInput;">
+                    @if (!string.IsNullOrEmpty(logoPreview))
+                    {
+                        <img src="@logoPreview" alt="Logo" class="config-brand-mini-img" />
+                    }
+                    else
+                    {
+                        <span class="config-brand-mini-icon" style="color: @primaryColorInput;">
+                            @SvgIcons.GetByName(selectedIcon)
+                        </span>
+                    }
+                    <span class="config-brand-mini-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
+                </div>
+                <span class="config-section-chevron @(sectionMarca ? "open" : "")">@SvgIcons.ChevronRight</span>
+            </div>
+        </div>
 
-    <!-- Vista previa siempre visible -->
-    <div class="config-brand-preview" style="background: @sidebarColorInput;">
-        @if (!string.IsNullOrEmpty(logoPreview))
-        {
-            <img src="@logoPreview" alt="Logo" class="config-brand-logo-img" />
-        }
-        else
-        {
-            <span class="config-brand-icon" style="color: @primaryColorInput;">
-                @SvgIcons.GetByName(selectedIcon)
-            </span>
-        }
-        <span class="config-brand-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
-    </div>
+        <div class="config-card-body @(sectionMarca ? "expanded" : "")">
+            <!-- Vista previa grande -->
+            <div class="config-brand-preview" style="background: @sidebarColorInput;">
+                @if (!string.IsNullOrEmpty(logoPreview))
+                {
+                    <img src="@logoPreview" alt="Logo" class="config-brand-logo-img" />
+                }
+                else
+                {
+                    <span class="config-brand-icon" style="color: @primaryColorInput;">
+                        @SvgIcons.GetByName(selectedIcon)
+                    </span>
+                }
+                <span class="config-brand-name">@(string.IsNullOrWhiteSpace(brandNameInput) ? "Tu Marca" : brandNameInput)</span>
+            </div>
 
-    <div class="config-section-body @(sectionMarca ? "expanded" : "")">
-    <div class="card" style="margin-bottom: 1.5rem;">
-        <div class="card-body">
             <div class="config-marca-form">
                 <!-- Nombre -->
                 <div class="config-marca-field">
@@ -106,21 +123,25 @@ else
             </div>
         </div>
     </div>
-    </div>
 
     <!-- ========== SECCION 2: SERVICIOS DEL ENTORNO ========== -->
     @if (systemInfo is not null)
     {
-        <div class="config-section-title config-collapsible" style="margin-top: 2rem;" @onclick="() => sectionServicios = !sectionServicios">
-            @SvgIcons.Code
-            <span>Servicios del Entorno</span>
-            <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")" style="margin-left: 0.5rem;">
-                @systemInfo.Server.Environment
-            </span>
-            <span class="config-section-chevron @(sectionServicios ? "open" : "")">@SvgIcons.ChevronRight</span>
+        <div class="config-card-collapsible" style="margin-top: 1.5rem;">
+        <div class="config-card-header" @onclick="() => sectionServicios = !sectionServicios">
+            <div class="config-card-header-left">
+                @SvgIcons.Code
+                <span class="config-card-header-title">Servicios del Entorno</span>
+                <span class="status-badge @(systemInfo.Server.Environment == "Production" ? "status-active" : "status-warning")" style="margin-left: 0.5rem;">
+                    @systemInfo.Server.Environment
+                </span>
+            </div>
+            <div class="config-card-header-right">
+                <span class="config-section-chevron @(sectionServicios ? "open" : "")">@SvgIcons.ChevronRight</span>
+            </div>
         </div>
 
-        <div class="config-stats-row">
+        <div class="config-stats-row" style="padding: 0 1rem;">
             <div class="config-stat-card">
                 <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
                     @SvgIcons.Server
@@ -159,7 +180,7 @@ else
             </div>
         </div>
 
-        <div class="config-section-body @(sectionServicios ? "expanded" : "")">
+        <div class="config-card-body @(sectionServicios ? "expanded" : "")">
         <div class="config-grid">
             <!-- API Container -->
             <div class="card">
@@ -314,19 +335,25 @@ else
             </div>
         </div>
         </div>
+        </div>
     }
 
     <!-- ========== SECCION 3: SERVIDOR FISICO ========== -->
     @if (hostInfo is not null)
     {
-        <div class="config-section-title config-collapsible" style="margin-top: 2rem;" @onclick="() => sectionServidor = !sectionServidor">
-            @SvgIcons.Server
-            <span>Servidor fisico</span>
-            <span class="config-section-subtitle">@hostInfo.Host.Hostname</span>
-            <span class="config-section-chevron @(sectionServidor ? "open" : "")">@SvgIcons.ChevronRight</span>
+        <div class="config-card-collapsible" style="margin-top: 1.5rem;">
+        <div class="config-card-header" @onclick="() => sectionServidor = !sectionServidor">
+            <div class="config-card-header-left">
+                @SvgIcons.Server
+                <span class="config-card-header-title">Servidor fisico</span>
+                <span class="config-section-subtitle">@hostInfo.Host.Hostname</span>
+            </div>
+            <div class="config-card-header-right">
+                <span class="config-section-chevron @(sectionServidor ? "open" : "")">@SvgIcons.ChevronRight</span>
+            </div>
         </div>
 
-        <div class="config-stats-row">
+        <div class="config-stats-row" style="padding: 0 1rem;">
             <div class="config-stat-card">
                 <div class="config-stat-icon" style="background: #dbeafe; color: #2563eb;">
                     @SvgIcons.Memory
@@ -371,7 +398,7 @@ else
             </div>
         </div>
 
-        <div class="config-section-body @(sectionServidor ? "expanded" : "")">
+        <div class="config-card-body @(sectionServidor ? "expanded" : "")">
         @if (!string.IsNullOrEmpty(hostInfo.Host.CpuModel))
         {
             <div class="config-cpu-detail">
@@ -419,6 +446,7 @@ else
                 </div>
             </div>
         }
+        </div>
         </div>
     }
 }
