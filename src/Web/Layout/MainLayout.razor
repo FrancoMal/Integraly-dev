@@ -2,23 +2,14 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 @inject ToastService ToastService
-@inject SyncProgressTracker SyncProgress
-@inject BrandSettingsService BrandSettings
 @inject IJSRuntime JS
 @inject ApiClient Api
 @implements IDisposable
 
 <aside class="sidebar @(sidebarOpen ? "open" : "") @(sidebarCollapsed ? "collapsed" : "")" id="sidebar">
     <div class="sidebar-brand">
-        @if (BrandSettings.HasCustomLogo)
-        {
-            <img src="@BrandSettings.BrandLogo" alt="Logo" class="sidebar-brand-logo" />
-        }
-        else
-        {
-            <span class="sidebar-brand-icon">@SvgIcons.GetByName(BrandSettings.BrandIcon)</span>
-        }
-        <span class="sidebar-brand-text">@BrandSettings.BrandName</span>
+        <span class="sidebar-brand-icon">@SvgIcons.Brand</span>
+        <span class="sidebar-brand-text">Integraly</span>
         <button class="sidebar-collapse-btn" @onclick="ToggleCollapse" title="@(sidebarCollapsed ? "Expandir menu" : "Colapsar menu")">
             <span class="sidebar-collapse-icon">@(sidebarCollapsed ? SvgIcons.ChevronRight : SvgIcons.ChevronLeft)</span>
         </button>
@@ -30,36 +21,32 @@
                      IsActive="@IsActive("")" OnClick="@(() => NavigateTo(""))" />
         }
 
-        @if (HasPerm("publicaciones") || HasPerm("ordenes"))
+        @if (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas"))
         {
-            <NavGroup Label="MercadoLibre" Icon="@SvgIcons.Store"
-                      HasActiveChild="@(IsActive("publicaciones") || IsActive("ordenes"))">
-                @if (HasPerm("publicaciones"))
+            <NavGroup Label="Tutorias" Icon="@SvgIcons.Calendar"
+                      HasActiveChild="@(IsActive("calendario") || IsActive("reservar") || IsActive("mis-reservas"))">
+                @if (HasPerm("calendario"))
                 {
-                    <NavItem Href="publicaciones" Label="Publicaciones" Icon="@SvgIcons.Tag"
-                             IsActive="@IsActive("publicaciones")" OnClick="@(() => NavigateTo("publicaciones"))" />
+                    <NavItem Href="calendario" Label="Calendario" Icon="@SvgIcons.Calendar"
+                             IsActive="@IsActive("calendario")" OnClick="@(() => NavigateTo("calendario"))" />
                 }
-                @if (HasPerm("ordenes"))
+                @if (HasPerm("reservar"))
                 {
-                    <NavItem Href="ordenes" Label="Ordenes" Icon="@SvgIcons.ShoppingBag"
-                             IsActive="@IsActive("ordenes")" OnClick="@(() => NavigateTo("ordenes"))" />
+                    <NavItem Href="reservar" Label="Reservar" Icon="@SvgIcons.Clock"
+                             IsActive="@IsActive("reservar")" OnClick="@(() => NavigateTo("reservar"))" />
+                }
+                @if (HasPerm("mis-reservas"))
+                {
+                    <NavItem Href="mis-reservas" Label="Mis Reservas" Icon="@SvgIcons.CheckCircle"
+                             IsActive="@IsActive("mis-reservas")" OnClick="@(() => NavigateTo("mis-reservas"))" />
                 }
             </NavGroup>
         }
 
-        @if (HasPerm("productos"))
-        {
-            <NavGroup Label="Inventario" Icon="@SvgIcons.Inventory"
-                      HasActiveChild="@IsActive("productos")">
-                <NavItem Href="productos" Label="Productos" Icon="@SvgIcons.Package"
-                         IsActive="@IsActive("productos")" OnClick="@(() => NavigateTo("productos"))" />
-            </NavGroup>
-        }
-
-        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("integraciones") || HasPerm("procesos") || HasPerm("auditoria"))
+        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("config"))
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("usuarios") || IsActive("roles") || IsActive("integraciones") || IsActive("procesos") || IsActive("auditoria") || IsActive("config"))">
+                      HasActiveChild="@(IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("config"))">
                 @if (HasPerm("usuarios"))
                 {
                     <NavItem Href="usuarios" Label="Usuarios" Icon="@SvgIcons.Users"
@@ -70,20 +57,20 @@
                     <NavItem Href="roles" Label="Roles" Icon="@SvgIcons.Shield"
                              IsActive="@IsActive("roles")" OnClick="@(() => NavigateTo("roles"))" />
                 }
-                @if (HasPerm("integraciones"))
+                @if (HasPerm("invitaciones"))
                 {
-                    <NavItem Href="integraciones" Label="Integraciones" Icon="@SvgIcons.Link"
-                             IsActive="@IsActive("integraciones")" OnClick="@(() => NavigateTo("integraciones"))" />
+                    <NavItem Href="invitaciones" Label="Invitaciones" Icon="@SvgIcons.Mail"
+                             IsActive="@IsActive("invitaciones")" OnClick="@(() => NavigateTo("invitaciones"))" />
                 }
-                @if (HasPerm("procesos"))
+                @if (HasPerm("packs"))
                 {
-                    <NavItem Href="procesos" Label="Procesos" Icon="@SvgIcons.Timer"
-                             IsActive="@IsActive("procesos")" OnClick="@(() => NavigateTo("procesos"))" />
+                    <NavItem Href="packs" Label="Packs de Clases" Icon="@SvgIcons.Package"
+                             IsActive="@IsActive("packs")" OnClick="@(() => NavigateTo("packs"))" />
                 }
-                @if (HasPerm("auditoria"))
+                @if (HasPerm("todas-reservas"))
                 {
-                    <NavItem Href="auditoria" Label="Auditoria" Icon="@SvgIcons.History"
-                             IsActive="@IsActive("auditoria")" OnClick="@(() => NavigateTo("auditoria"))" />
+                    <NavItem Href="todas-reservas" Label="Todas las Reservas" Icon="@SvgIcons.List"
+                             IsActive="@IsActive("todas-reservas")" OnClick="@(() => NavigateTo("todas-reservas"))" />
                 }
                 @if (HasPerm("config"))
                 {
@@ -124,32 +111,9 @@
             <button class="topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Abrir menu">
                 @SvgIcons.Menu
             </button>
-            <h1 class="topbar-title">@BrandSettings.BrandName</h1>
+            <h1 class="topbar-title">Integraly</h1>
         </div>
         <div class="topbar-actions">
-            @if (SyncProgress.State.IsActive && !SyncProgress.State.ShowModal)
-            {
-                <div class="topbar-sync-indicator @(SyncProgress.State.Status)" @onclick="OpenSyncModal" title="@SyncProgress.State.Description">
-                    @if (SyncProgress.State.Status == "running")
-                    {
-                        <span class="topbar-sync-spinner"></span>
-                        <span class="topbar-sync-text">@SyncProgress.State.Percentage%</span>
-                        <div class="topbar-sync-bar">
-                            <div class="topbar-sync-bar-fill" style="width: @(SyncProgress.State.Percentage)%"></div>
-                        </div>
-                    }
-                    else if (SyncProgress.State.Status == "completed")
-                    {
-                        <span class="topbar-sync-text">✅ Sincronizado</span>
-                        <button class="topbar-sync-dismiss" @onclick="DismissSync" @onclick:stopPropagation="true" title="Cerrar">✕</button>
-                    }
-                    else if (SyncProgress.State.Status == "error")
-                    {
-                        <span class="topbar-sync-text">❌ Error</span>
-                        <button class="topbar-sync-dismiss" @onclick="DismissSync" @onclick:stopPropagation="true" title="Cerrar">✕</button>
-                    }
-                </div>
-            }
             <button class="topbar-btn" @onclick="Refresh" title="Actualizar">
                 @SvgIcons.Refresh
             </button>
@@ -178,21 +142,20 @@
     private static readonly Dictionary<string, string> RouteToMenuKey = new()
     {
         { "", "dashboard" },
-        { "publicaciones", "publicaciones" },
-        { "ordenes", "ordenes" },
-        { "productos", "productos" },
+        { "calendario", "calendario" },
+        { "reservar", "reservar" },
+        { "mis-reservas", "mis-reservas" },
         { "usuarios", "usuarios" },
         { "roles", "roles" },
-        { "integraciones", "integraciones" },
-        { "procesos", "procesos" },
-        { "auditoria", "auditoria" },
+        { "invitaciones", "invitaciones" },
+        { "packs", "packs" },
+        { "todas-reservas", "todas-reservas" },
         { "config", "config" },
         { "perfil", "" } // perfil always allowed
     };
 
     protected override async Task OnInitializedAsync()
     {
-        SyncProgress.OnChange += OnSyncProgressChanged;
         var user = await AuthService.GetUserAsync();
         if (user is not null)
         {
@@ -200,21 +163,6 @@
             role = user.Role;
             permissions = user.Permissions ?? new();
         }
-
-        // Load brand settings
-        try
-        {
-            var settings = await Api.GetSettingsAsync();
-            if (settings is not null)
-            {
-                BrandSettings.LoadFromSettings(settings);
-                await JS.InvokeVoidAsync("applyBrandColors", BrandSettings.PrimaryColor, BrandSettings.SidebarBgColor);
-                await JS.InvokeVoidAsync("updatePageTitle", BrandSettings.BrandName);
-            }
-        }
-        catch { }
-
-        BrandSettings.OnChange += OnBrandChanged;
     }
 
     protected override void OnAfterRender(bool firstRender)
@@ -229,18 +177,16 @@
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         CheckRoutePermission();
-        _ = InvokeAsync(async () => await JS.InvokeVoidAsync("updatePageTitle", BrandSettings.BrandName));
     }
 
     private void CheckRoutePermission()
     {
-        if (permissions.Count == 0) return; // permissions not loaded yet
+        if (permissions.Count == 0) return;
 
         var relativePath = Navigation.ToBaseRelativePath(Navigation.Uri).TrimStart('/').Split('?')[0].Split('#')[0];
 
         if (RouteToMenuKey.TryGetValue(relativePath, out var menuKey))
         {
-            // Empty menuKey means always allowed (like /perfil)
             if (!string.IsNullOrEmpty(menuKey) && !permissions.Contains(menuKey))
             {
                 Navigation.NavigateTo("");
@@ -250,40 +196,9 @@
 
     private bool HasPerm(string key) => permissions.Contains(key);
 
-    private void OnSyncProgressChanged()
-    {
-        InvokeAsync(StateHasChanged);
-    }
-
-    private void OpenSyncModal()
-    {
-        if (SyncProgress.State.Status == "running")
-        {
-            SyncProgress.State.ShowModal = true;
-            Navigation.NavigateTo("publicaciones");
-        }
-    }
-
-    private void DismissSync()
-    {
-        SyncProgress.Dismiss();
-    }
-
-    private async void OnBrandChanged()
-    {
-        await InvokeAsync(async () =>
-        {
-            await JS.InvokeVoidAsync("applyBrandColors", BrandSettings.PrimaryColor, BrandSettings.SidebarBgColor);
-            await JS.InvokeVoidAsync("updatePageTitle", BrandSettings.BrandName);
-            StateHasChanged();
-        });
-    }
-
     public void Dispose()
     {
-        SyncProgress.OnChange -= OnSyncProgressChanged;
         Navigation.LocationChanged -= OnLocationChanged;
-        BrandSettings.OnChange -= OnBrandChanged;
     }
 
     private bool IsActive(string href)

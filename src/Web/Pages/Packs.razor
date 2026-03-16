@@ -1,0 +1,204 @@
+@page "/packs"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <h2>Packs de Clases</h2>
+    <p class="view-subtitle">Administra los packs de clases asignados a los usuarios</p>
+</div>
+
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Packs (@(packs?.Count ?? 0))</h3>
+        <button class="btn btn-primary" @onclick="ShowCreateForm">+ Nuevo Pack</button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        @if (isLoading)
+        {
+            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+        }
+        else if (packs is null || !packs.Any())
+        {
+            <p class="text-muted" style="padding: 1.5rem;">No hay packs creados</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Clases totales</th>
+                            <th>Restantes</th>
+                            <th>Descripcion</th>
+                            <th>Creado por</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pack in packs.OrderByDescending(p => p.CreatedAt))
+                        {
+                            <tr>
+                                <td><strong>@pack.UserName</strong></td>
+                                <td>@pack.TotalTokens</td>
+                                <td>
+                                    <span class="@(pack.RemainingTokens > 0 ? "text-success" : "text-muted")">
+                                        @pack.RemainingTokens
+                                    </span>
+                                </td>
+                                <td>@(string.IsNullOrEmpty(pack.Description) ? "-" : pack.Description)</td>
+                                <td>@pack.CreatedByName</td>
+                                <td>@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseForm">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Nuevo Pack de Clases</h3>
+                <button class="btn-close" @onclick="CloseForm">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="form-error">@formError</div>
+                }
+
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    <select class="form-input" @bind="formUserId">
+                        <option value="0">-- Seleccionar usuario --</option>
+                        @if (users is not null)
+                        {
+                            @foreach (var user in users.Where(u => u.IsActive))
+                            {
+                                <option value="@user.Id">@user.Username - @($"{user.FirstName} {user.LastName}".Trim()) (@user.Role)</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Cantidad de clases</label>
+                    <input class="form-input" type="number" @bind="formTokens" min="1" max="100" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripcion (opcional)</label>
+                    <input class="form-input" @bind="formDescription" placeholder="Ej: Pack mensual marzo 2026" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                <button class="btn btn-primary" @onclick="CreatePack" disabled="@isSaving">
+                    @(isSaving ? "Creando..." : "Crear Pack")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<TokenPackDto>? packs;
+    private List<UserManageDto>? users;
+    private bool isLoading = true;
+    private bool showForm;
+    private bool isSaving;
+    private string? formError;
+
+    private int formUserId;
+    private int formTokens = 4;
+    private string formDescription = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var packsTask = Api.GetAllTokenPacksAsync();
+            var usersTask = Api.GetUsersAsync();
+            await Task.WhenAll(packsTask, usersTask);
+            packs = packsTask.Result;
+            users = usersTask.Result;
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar los datos");
+        }
+        isLoading = false;
+    }
+
+    private void ShowCreateForm()
+    {
+        formUserId = 0;
+        formTokens = 4;
+        formDescription = "";
+        formError = null;
+        showForm = true;
+    }
+
+    private void CloseForm()
+    {
+        showForm = false;
+        formError = null;
+    }
+
+    private async Task CreatePack()
+    {
+        formError = null;
+
+        if (formUserId == 0)
+        {
+            formError = "Selecciona un usuario";
+            return;
+        }
+
+        if (formTokens < 1)
+        {
+            formError = "La cantidad de clases debe ser al menos 1";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var request = new CreateTokenPackRequest
+            {
+                UserId = formUserId,
+                TotalTokens = formTokens,
+                Description = formDescription
+            };
+
+            var result = await Api.CreateTokenPackAsync(request);
+            if (result is not null)
+            {
+                ToastService.Success("Pack creado correctamente");
+                showForm = false;
+                await LoadData();
+            }
+            else
+            {
+                formError = "Error al crear el pack";
+            }
+        }
+        catch
+        {
+            formError = "Error al crear el pack";
+        }
+        isSaving = false;
+    }
+}

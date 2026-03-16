@@ -1,0 +1,213 @@
+@page "/registro"
+@layout LoginLayout
+@inject ApiClient Api
+@inject NavigationManager Navigation
+@inject ToastService ToastService
+
+<div class="login-card" role="main" style="max-width: 480px;">
+    <div class="login-header">
+        <div class="login-logo" aria-hidden="true">
+            @SvgIcons.Brand
+        </div>
+        <h1>Integraly</h1>
+        <p>Registro con invitacion</p>
+    </div>
+
+    <div class="login-body">
+        @if (isLoadingInvitation)
+        {
+            <p class="text-muted">Verificando invitacion...</p>
+        }
+        else if (invitation is null)
+        {
+            <div class="login-error visible" role="alert">
+                @SvgIcons.AlertCircle
+                <span>@errorMessage</span>
+            </div>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a href="login" class="btn btn-secondary">Ir al login</a>
+            </div>
+        }
+        else if (registered)
+        {
+            <div class="form-success" style="margin-bottom: 1rem;">
+                Cuenta creada correctamente. Ya podes iniciar sesion.
+            </div>
+            <div style="text-align: center;">
+                <a href="login" class="btn btn-primary">Iniciar Sesion</a>
+            </div>
+        }
+        else
+        {
+            <div style="margin-bottom: 1rem; padding: 0.75rem; background: var(--bg-secondary, #f5f5f5); border-radius: 0.5rem;">
+                <p style="margin: 0;"><strong>Invitacion para:</strong> @invitation.Email</p>
+                <p style="margin: 0.25rem 0 0;"><strong>Rol:</strong> @invitation.RoleName</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="login-error visible" role="alert">
+                    @SvgIcons.AlertCircle
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Nombre</label>
+                    <input class="form-input" @bind="firstName" placeholder="Tu nombre" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Apellido</label>
+                    <input class="form-input" @bind="lastName" placeholder="Tu apellido" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Telefono (opcional)</label>
+                <input class="form-input" @bind="phone" placeholder="+54 11 1234-5678" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nombre de usuario</label>
+                <input class="form-input" @bind="username" placeholder="Tu nombre de usuario" autocomplete="username" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Contrasena</label>
+                <input class="form-input" type="password" @bind="password" placeholder="Minimo 6 caracteres" autocomplete="new-password" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Confirmar contrasena</label>
+                <input class="form-input" type="password" @bind="confirmPassword" placeholder="Repetir contrasena" autocomplete="new-password" />
+            </div>
+
+            <button class="login-btn" @onclick="DoRegister" disabled="@isRegistering" style="margin-top: 0.5rem;">
+                @(isRegistering ? "Creando cuenta..." : "Crear Cuenta")
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private bool isLoadingInvitation = true;
+    private bool isRegistering;
+    private bool registered;
+    private string? errorMessage;
+    private InvitationDto? invitation;
+    private string? token;
+
+    private string firstName = "";
+    private string lastName = "";
+    private string phone = "";
+    private string username = "";
+    private string password = "";
+    private string confirmPassword = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = Navigation.Uri;
+        var queryStart = uri.IndexOf('?');
+        if (queryStart >= 0)
+        {
+            var queryString = uri.Substring(queryStart + 1);
+            foreach (var part in queryString.Split('&'))
+            {
+                var kv = part.Split('=', 2);
+                if (kv.Length == 2 && kv[0] == "token")
+                {
+                    token = Uri.UnescapeDataString(kv[1]);
+                    break;
+                }
+            }
+        }
+
+        if (string.IsNullOrEmpty(token))
+        {
+            errorMessage = "No se encontro el token de invitacion. Verifica el link que recibiste.";
+            isLoadingInvitation = false;
+            return;
+        }
+
+        try
+        {
+            invitation = await Api.GetInvitationByTokenAsync(token);
+            if (invitation is null)
+            {
+                errorMessage = "La invitacion no es valida o ya fue utilizada.";
+            }
+            else if (invitation.IsExpired)
+            {
+                errorMessage = "La invitacion ya expiro. Pedile al administrador que te envie una nueva.";
+                invitation = null;
+            }
+            else if (invitation.UsedAt.HasValue)
+            {
+                errorMessage = "Esta invitacion ya fue utilizada.";
+                invitation = null;
+            }
+        }
+        catch
+        {
+            errorMessage = "Error al verificar la invitacion.";
+        }
+
+        isLoadingInvitation = false;
+    }
+
+    private async Task DoRegister()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            errorMessage = "El nombre de usuario es obligatorio";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
+        {
+            errorMessage = "La contrasena debe tener al menos 6 caracteres";
+            return;
+        }
+
+        if (password != confirmPassword)
+        {
+            errorMessage = "Las contrasenas no coinciden";
+            return;
+        }
+
+        isRegistering = true;
+
+        try
+        {
+            var request = new
+            {
+                Token = token,
+                Username = username,
+                Password = password,
+                FirstName = firstName,
+                LastName = lastName,
+                Phone = phone
+            };
+
+            var result = await Api.RegisterWithInvitationAsync(request);
+            if (result)
+            {
+                registered = true;
+                ToastService.Success("Cuenta creada correctamente");
+            }
+            else
+            {
+                errorMessage = "Error al crear la cuenta. El nombre de usuario puede estar en uso.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Error al crear la cuenta";
+        }
+
+        isRegistering = false;
+    }
+}

@@ -1,0 +1,147 @@
+@page "/todas-reservas"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <h2>Todas las Reservas</h2>
+    <p class="view-subtitle">Vista general de todas las reservas del sistema</p>
+</div>
+
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <h3>Reservas (@(filteredBookings?.Count ?? 0))</h3>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <label class="form-label" style="margin: 0;">Desde:</label>
+            <input class="form-input" type="date" value="@dateFrom.ToString("yyyy-MM-dd")"
+                   @onchange="OnDateFromChanged" style="width: auto;" />
+            <label class="form-label" style="margin: 0;">Hasta:</label>
+            <input class="form-input" type="date" value="@dateTo.ToString("yyyy-MM-dd")"
+                   @onchange="OnDateToChanged" style="width: auto;" />
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        @if (isLoading)
+        {
+            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+        }
+        else if (filteredBookings is null || !filteredBookings.Any())
+        {
+            <p class="text-muted" style="padding: 1.5rem;">No hay reservas en el rango seleccionado</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Horario</th>
+                            <th>Estudiante</th>
+                            <th>Instructor</th>
+                            <th>Estado</th>
+                            <th>Link Meet</th>
+                            <th>Creada</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var booking in filteredBookings.OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour))
+                        {
+                            <tr>
+                                <td>@booking.ScheduledDate.ToString("dd/MM/yyyy")</td>
+                                <td>@($"{booking.StartHour:00}:00 - {booking.StartHour + 1:00}:00")</td>
+                                <td><strong>@booking.UserName</strong></td>
+                                <td>@booking.InstructorName</td>
+                                <td>
+                                    <span class="status-badge @GetStatusClass(booking.Status)">
+                                        @GetStatusText(booking.Status)
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(booking.MeetLink))
+                                    {
+                                        <a href="@booking.MeetLink" target="_blank" class="btn btn-sm btn-primary">Link</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>@booking.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<BookingDto>? allBookings;
+    private List<BookingDto>? filteredBookings;
+    private bool isLoading = true;
+    private DateTime dateFrom = DateTime.Today.AddDays(-30);
+    private DateTime dateTo = DateTime.Today.AddDays(30);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            allBookings = await Api.GetAllBookingsAsync();
+            ApplyFilter();
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar las reservas");
+        }
+        isLoading = false;
+    }
+
+    private void ApplyFilter()
+    {
+        filteredBookings = allBookings?
+            .Where(b => b.ScheduledDate.Date >= dateFrom.Date && b.ScheduledDate.Date <= dateTo.Date)
+            .ToList();
+    }
+
+    private void OnDateFromChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var d))
+        {
+            dateFrom = d;
+            ApplyFilter();
+        }
+    }
+
+    private void OnDateToChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var d))
+        {
+            dateTo = d;
+            ApplyFilter();
+        }
+    }
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "confirmed" => "status-active",
+        "cancelled" => "status-inactive",
+        "completed" => "status-active",
+        _ => ""
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "confirmed" => "Confirmada",
+        "cancelled" => "Cancelada",
+        "completed" => "Completada",
+        _ => status
+    };
+}

@@ -1,0 +1,235 @@
+@page "/reservar"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <h2>Reservar Clase</h2>
+    <p class="view-subtitle">Selecciona un instructor, fecha y horario para reservar tu clase</p>
+</div>
+
+@if (remainingTokens.HasValue)
+{
+    <div class="stat-card" style="margin-bottom: 1.5rem; display: inline-flex;">
+        <div class="stat-card-icon primary">@SvgIcons.Package</div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@remainingTokens</span>
+            <span class="stat-card-label">Clases disponibles</span>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Instructor</label>
+                    <select class="form-input" @onchange="OnInstructorChanged">
+                        <option value="">-- Seleccionar instructor --</option>
+                        @if (instructors is not null)
+                        {
+                            @foreach (var inst in instructors)
+                            {
+                                <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim()) (@inst.Username)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fecha</label>
+                    <input class="form-input" type="date" value="@selectedDate.ToString("yyyy-MM-dd")"
+                           min="@DateTime.Today.ToString("yyyy-MM-dd")"
+                           @onchange="OnDateChanged" />
+                </div>
+            </div>
+
+            @if (selectedInstructorId > 0 && availableSlots is not null)
+            {
+                <h4 style="margin-top: 1.5rem; margin-bottom: 1rem;">Horarios disponibles para @selectedDate.ToString("dd/MM/yyyy")</h4>
+
+                @if (!availableSlots.Any(s => s.IsAvailable))
+                {
+                    <p class="text-muted">No hay horarios disponibles para esta fecha. Proba con otro dia u otro instructor.</p>
+                }
+                else
+                {
+                    <div class="slots-grid">
+                        @foreach (var slot in availableSlots.Where(s => s.IsAvailable))
+                        {
+                            <button class="btn @(selectedHour == slot.StartHour ? "btn-primary" : "btn-secondary")"
+                                    @onclick="() => selectedHour = slot.StartHour">
+                                @($"{slot.StartHour:00}:00 - {slot.StartHour + 1:00}:00")
+                            </button>
+                        }
+                    </div>
+
+                    @if (selectedHour.HasValue)
+                    {
+                        <div style="margin-top: 1.5rem;">
+                            <button class="btn btn-primary" @onclick="ConfirmBooking" disabled="@isBooking">
+                                @(isBooking ? "Reservando..." : "Confirmar Reserva")
+                            </button>
+                        </div>
+                    }
+                }
+            }
+        }
+    </div>
+</div>
+
+@if (showConfirmDialog)
+{
+    <div class="modal-overlay" @onclick="() => showConfirmDialog = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirmar reserva</h3>
+            </div>
+            <div class="modal-body">
+                <p>Vas a reservar una clase:</p>
+                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                    <li><strong>Instructor:</strong> @selectedInstructorName</li>
+                    <li><strong>Fecha:</strong> @selectedDate.ToString("dd/MM/yyyy")</li>
+                    <li><strong>Horario:</strong> @($"{selectedHour:00}:00 - {selectedHour + 1:00}:00")</li>
+                </ul>
+                <p>Se descontara 1 clase de tu pack. Confirmar?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showConfirmDialog = false">Cancelar</button>
+                <button class="btn btn-primary" @onclick="DoBooking" disabled="@isBooking">
+                    @(isBooking ? "Reservando..." : "Confirmar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isLoading = true;
+    private bool isBooking;
+    private bool showConfirmDialog;
+    private int? remainingTokens;
+
+    private List<UserManageDto>? instructors;
+    private int selectedInstructorId;
+    private string selectedInstructorName = "";
+    private DateTime selectedDate = DateTime.Today;
+    private int? selectedHour;
+    private List<AvailableSlotDto>? availableSlots;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var usersTask = Api.GetUsersAsync();
+            var dashTask = Api.GetUserDashboardAsync();
+            await Task.WhenAll(usersTask, dashTask);
+
+            var allUsers = usersTask.Result;
+            instructors = allUsers?.Where(u => u.Role?.ToLower() == "instructor" && u.IsActive).ToList();
+
+            var dash = dashTask.Result;
+            if (dash is not null)
+                remainingTokens = dash.RemainingTokens;
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar los datos");
+        }
+        isLoading = false;
+    }
+
+    private async Task OnInstructorChanged(ChangeEventArgs e)
+    {
+        selectedHour = null;
+        availableSlots = null;
+
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            selectedInstructorId = id;
+            var inst = instructors?.FirstOrDefault(i => i.Id == id);
+            selectedInstructorName = inst != null ? $"{inst.FirstName} {inst.LastName}".Trim() : "";
+            await LoadSlots();
+        }
+        else
+        {
+            selectedInstructorId = 0;
+            selectedInstructorName = "";
+        }
+    }
+
+    private async Task OnDateChanged(ChangeEventArgs e)
+    {
+        selectedHour = null;
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+        {
+            selectedDate = date;
+            if (selectedInstructorId > 0)
+                await LoadSlots();
+        }
+    }
+
+    private async Task LoadSlots()
+    {
+        try
+        {
+            availableSlots = await Api.GetAvailableSlotsAsync(selectedInstructorId, selectedDate);
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar horarios disponibles");
+            availableSlots = null;
+        }
+    }
+
+    private void ConfirmBooking()
+    {
+        if (!selectedHour.HasValue || selectedInstructorId == 0) return;
+        if (remainingTokens.HasValue && remainingTokens <= 0)
+        {
+            ToastService.Error("No tenes clases disponibles. Pedile al administrador que te cargue un pack.");
+            return;
+        }
+        showConfirmDialog = true;
+    }
+
+    private async Task DoBooking()
+    {
+        if (!selectedHour.HasValue || selectedInstructorId == 0) return;
+
+        isBooking = true;
+        try
+        {
+            var request = new CreateBookingRequest
+            {
+                InstructorId = selectedInstructorId,
+                ScheduledDate = selectedDate,
+                StartHour = selectedHour.Value
+            };
+
+            var result = await Api.CreateBookingAsync(request);
+            if (result is not null)
+            {
+                ToastService.Success("Clase reservada correctamente");
+                showConfirmDialog = false;
+                selectedHour = null;
+                if (remainingTokens.HasValue) remainingTokens--;
+                await LoadSlots();
+            }
+            else
+            {
+                ToastService.Error("Error al reservar la clase");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al reservar la clase");
+        }
+        isBooking = false;
+    }
+}

@@ -1,0 +1,170 @@
+@page "/calendario"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <h2>Mi Calendario</h2>
+    <p class="view-subtitle">Configura tus horarios disponibles para clases</p>
+</div>
+
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Disponibilidad semanal</h3>
+        <button class="btn btn-primary" @onclick="SaveAvailability" disabled="@isSaving">
+            @(isSaving ? "Guardando..." : "Guardar Cambios")
+        </button>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table calendar-grid">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            @foreach (var day in dayNames)
+                            {
+                                <th style="text-align: center;">@day</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int hour = 8; hour <= 21; hour++)
+                        {
+                            var h = hour;
+                            <tr>
+                                <td><strong>@($"{h:00}:00")</strong></td>
+                                @for (int day = 1; day <= 7; day++)
+                                {
+                                    var d = day;
+                                    var key = $"{d}-{h}";
+                                    var isActive = activeSlots.Contains(key);
+                                    var hasBooking = bookedSlots.Contains(key);
+                                    <td style="text-align: center; cursor: pointer; padding: 0.5rem;"
+                                        class="@(hasBooking ? "calendar-booked" : isActive ? "calendar-active" : "calendar-inactive")"
+                                        @onclick="() => ToggleSlot(d, h)">
+                                        @if (hasBooking)
+                                        {
+                                            <span title="Reservado">@SvgIcons.CheckCircle</span>
+                                        }
+                                        else if (isActive)
+                                        {
+                                            <span title="Disponible">@SvgIcons.Check</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 1rem; display: flex; gap: 1.5rem; font-size: 0.85rem;">
+                <span><span class="calendar-legend calendar-active-legend"></span> Disponible</span>
+                <span><span class="calendar-legend calendar-booked-legend"></span> Reservado</span>
+                <span><span class="calendar-legend calendar-inactive-legend"></span> No disponible</span>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool isLoading = true;
+    private bool isSaving;
+    private HashSet<string> activeSlots = new();
+    private HashSet<string> bookedSlots = new();
+    private string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var availability = await Api.GetMyAvailabilityAsync();
+            if (availability is not null)
+            {
+                activeSlots = new HashSet<string>(
+                    availability.Where(a => a.IsActive).Select(a => $"{a.DayOfWeek}-{a.StartHour}")
+                );
+            }
+
+            // Load bookings to show on calendar
+            var bookings = await Api.GetMyBookingsAsync();
+            if (bookings is not null)
+            {
+                bookedSlots = new HashSet<string>();
+                foreach (var b in bookings.Where(b => b.Status == "confirmed"))
+                {
+                    var dayOfWeek = (int)b.ScheduledDate.DayOfWeek;
+                    if (dayOfWeek == 0) dayOfWeek = 7; // Sunday = 7
+                    bookedSlots.Add($"{dayOfWeek}-{b.StartHour}");
+                }
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar el calendario");
+        }
+        isLoading = false;
+    }
+
+    private void ToggleSlot(int day, int hour)
+    {
+        var key = $"{day}-{hour}";
+        if (bookedSlots.Contains(key)) return; // Can't toggle booked slots
+
+        if (activeSlots.Contains(key))
+            activeSlots.Remove(key);
+        else
+            activeSlots.Add(key);
+    }
+
+    private async Task SaveAvailability()
+    {
+        isSaving = true;
+        try
+        {
+            var slots = new List<SetAvailabilityRequest>();
+            for (int day = 1; day <= 7; day++)
+            {
+                for (int hour = 8; hour <= 21; hour++)
+                {
+                    var key = $"{day}-{hour}";
+                    if (activeSlots.Contains(key))
+                    {
+                        slots.Add(new SetAvailabilityRequest
+                        {
+                            DayOfWeek = day,
+                            StartHour = hour,
+                            IsActive = true
+                        });
+                    }
+                }
+            }
+
+            var result = await Api.SetAvailabilityAsync(slots);
+            if (result is not null)
+            {
+                ToastService.Success("Disponibilidad guardada correctamente");
+            }
+            else
+            {
+                ToastService.Error("Error al guardar la disponibilidad");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar la disponibilidad");
+        }
+        isSaving = false;
+    }
+}

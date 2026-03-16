@@ -19,19 +19,20 @@ public class ApiClient
         _navigation = navigation;
     }
 
-    public async Task<DashboardStats?> GetDashboardStatsAsync()
+    // --- Dashboard ---
+    public async Task<AdminDashboardDto?> GetAdminDashboardAsync()
     {
-        return await GetAsync<DashboardStats>("/api/dashboard/stats");
+        return await GetAsync<AdminDashboardDto>("/api/dashboard/admin");
     }
 
-    public async Task<SystemInfoDto?> GetSystemInfoAsync()
+    public async Task<InstructorDashboardDto?> GetInstructorDashboardAsync()
     {
-        return await GetAsync<SystemInfoDto>("/api/system/info");
+        return await GetAsync<InstructorDashboardDto>("/api/dashboard/instructor");
     }
 
-    public async Task<HostInfoDto?> GetHostInfoAsync()
+    public async Task<UserDashboardDto?> GetUserDashboardAsync()
     {
-        return await GetAsync<HostInfoDto>("/api/system/host-info");
+        return await GetAsync<UserDashboardDto>("/api/dashboard/user");
     }
 
     public async Task<UserDto?> GetMeAsync()
@@ -58,6 +59,11 @@ public class ApiClient
     public async Task<bool> DeleteUserAsync(int id)
     {
         return await DeleteAsync($"/api/users/{id}");
+    }
+
+    public async Task<List<UserManageDto>?> GetInstructorsAsync()
+    {
+        return await GetAsync<List<UserManageDto>>("/api/users?role=instructor");
     }
 
     // --- Roles ---
@@ -112,428 +118,83 @@ public class ApiClient
         return response.IsSuccessStatusCode;
     }
 
-    // --- MeLi Item Details (pictures + description) ---
-    public async Task<MeliItemDetailsDto?> GetMeliItemDetailsAsync(string meliItemId)
+    // --- Invitations ---
+    public async Task<List<InvitationDto>?> GetInvitationsAsync()
     {
-        return await GetAsync<MeliItemDetailsDto>($"/api/meli/items/{meliItemId}/details");
+        return await GetAsync<List<InvitationDto>>("/api/invitations");
     }
 
-        // --- Item-Product Linking ---
-    public async Task<MeliItemDto?> LinkItemToProductAsync(string meliItemId, int productId)
+    public async Task<InvitationDto?> CreateInvitationAsync(CreateInvitationRequest request)
     {
-        return await PutAsync<MeliItemDto>($"/api/meli/items/{meliItemId}/link", new { productId });
+        return await PostAsync<InvitationDto>("/api/invitations", request);
     }
 
-    public async Task<MeliItemDto?> UnlinkItemProductAsync(string meliItemId)
+    public async Task<bool> DeleteInvitationAsync(int id)
     {
-        await SetAuthHeaderAsync();
-        var response = await _http.DeleteAsync($"/api/meli/items/{meliItemId}/link");
-        if (!response.IsSuccessStatusCode) return null;
-        return await response.Content.ReadFromJsonAsync<MeliItemDto>();
+        return await DeleteAsync($"/api/invitations/{id}");
     }
 
-    // --- Products ---
-    public async Task<List<ProductDto>?> GetProductsAsync()
+    public async Task<InvitationDto?> GetInvitationByTokenAsync(string token)
     {
-        return await GetAsync<List<ProductDto>>("/api/products");
+        return await GetAsync<InvitationDto>($"/api/invitations/by-token/{token}");
     }
 
-    public async Task<ProductDto?> CreateProductAsync(CreateProductRequest request)
+    // --- Token Packs ---
+    public async Task<List<TokenPackDto>?> GetAllTokenPacksAsync()
     {
-        return await PostAsync<ProductDto>("/api/products", request);
+        return await GetAsync<List<TokenPackDto>>("/api/token-packs");
     }
 
-    public async Task<ProductDto?> UpdateProductAsync(int id, UpdateProductRequest request)
+    public async Task<List<TokenPackDto>?> GetMyTokenPacksAsync()
     {
-        return await PutAsync<ProductDto>($"/api/products/{id}", request);
+        return await GetAsync<List<TokenPackDto>>("/api/token-packs/mine");
     }
 
-    public async Task<int> BulkDeleteProductsAsync(List<int> ids)
+    public async Task<TokenPackDto?> CreateTokenPackAsync(CreateTokenPackRequest request)
     {
-        var result = await PostAsync<Dictionary<string, int>>("/api/products/bulk-delete", new { ids });
-        return result?.GetValueOrDefault("deleted") ?? 0;
+        return await PostAsync<TokenPackDto>("/api/token-packs", request);
     }
 
-    public async Task<int> BulkToggleProductStatusAsync(List<int> ids, bool isActive)
+    // --- Availability ---
+    public async Task<List<AvailabilityDto>?> GetInstructorAvailabilityAsync(int instructorId)
     {
-        var result = await PutAsync<Dictionary<string, int>>("/api/products/bulk-toggle-status", new { ids, isActive });
-        return result?.GetValueOrDefault("updated") ?? 0;
+        return await GetAsync<List<AvailabilityDto>>($"/api/availability/instructor/{instructorId}");
     }
 
-    public async Task<bool> DeleteProductAsync(int id)
+    public async Task<List<AvailabilityDto>?> GetMyAvailabilityAsync()
     {
-        return await DeleteAsync($"/api/products/{id}");
+        return await GetAsync<List<AvailabilityDto>>("/api/availability/mine");
     }
 
-    // --- Integrations ---
-    public async Task<List<IntegrationDto>?> GetIntegrationsAsync()
+    public async Task<List<AvailabilityDto>?> SetAvailabilityAsync(List<SetAvailabilityRequest> slots)
     {
-        return await GetAsync<List<IntegrationDto>>("/api/integrations");
+        return await PostAsync<List<AvailabilityDto>>("/api/availability", slots);
     }
 
-    public async Task<IntegrationDto?> GetIntegrationAsync(string provider)
+    // --- Bookings ---
+    public async Task<List<BookingDto>?> GetAllBookingsAsync()
     {
-        return await GetAsync<IntegrationDto>($"/api/integrations/{provider}");
+        return await GetAsync<List<BookingDto>>("/api/bookings");
     }
 
-    public async Task<IntegrationDto?> SaveIntegrationAsync(SaveIntegrationRequest request)
+    public async Task<List<BookingDto>?> GetMyBookingsAsync()
     {
-        return await PostAsync<IntegrationDto>("/api/integrations", request);
+        return await GetAsync<List<BookingDto>>("/api/bookings/mine");
     }
 
-    public async Task<bool> DeleteIntegrationAsync(string provider)
+    public async Task<BookingDto?> CreateBookingAsync(CreateBookingRequest request)
     {
-        return await DeleteAsync($"/api/integrations/{provider}");
+        return await PostAsync<BookingDto>("/api/bookings", request);
     }
 
-    public async Task<string?> TestEmailAsync()
+    public async Task<bool> CancelBookingAsync(int id)
     {
-        await SetAuthHeaderAsync();
-        var response = await _http.PostAsync("/api/integrations/email-smtp/test", null);
-
-        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return null;
-        }
-
-        var body = await response.Content.ReadAsStringAsync();
-        try
-        {
-            var doc = System.Text.Json.JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("message", out var msg))
-                return msg.GetString();
-            if (doc.RootElement.TryGetProperty("error", out var err))
-                throw new Exception(err.GetString());
-        }
-        catch (System.Text.Json.JsonException) { }
-
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"Error del servidor ({response.StatusCode})");
-
-        return body;
+        return await DeleteAsync($"/api/bookings/{id}");
     }
 
-    // --- MercadoLibre Accounts ---
-    public async Task<List<MeliAccountDto>?> GetMeliAccountsAsync()
+    public async Task<List<AvailableSlotDto>?> GetAvailableSlotsAsync(int instructorId, DateTime date)
     {
-        return await GetAsync<List<MeliAccountDto>>("/api/meli/accounts");
-    }
-
-    public async Task<MeliAuthUrlResponse?> GetMeliAuthUrlAsync()
-    {
-        return await GetAsync<MeliAuthUrlResponse>("/api/meli/auth-url");
-    }
-
-    public async Task<MeliAccountDto?> MeliCallbackAsync(string code)
-    {
-        return await PostAsync<MeliAccountDto>("/api/meli/callback", new MeliCallbackRequest { Code = code });
-    }
-
-
-    public async Task<MeliAccountStatsDto?> GetMeliAccountStatsAsync(int id)
-    {
-        return await GetAsync<MeliAccountStatsDto>($"/api/meli/accounts/{id}/stats");
-    }
-
-    public async Task<bool> DeleteMeliAccountAsync(int id)
-    {
-        return await DeleteAsync($"/api/meli/accounts/{id}");
-    }
-
-    // --- MercadoLibre Orders ---
-    public async Task<MeliOrdersResponse?> GetMeliOrdersAsync(DateTime from, DateTime to, int? accountId = null)
-    {
-        var url = $"/api/meli/orders?from={from:yyyy-MM-ddTHH:mm:ss}&to={to:yyyy-MM-ddTHH:mm:ss}";
-        if (accountId.HasValue)
-            url += $"&accountId={accountId.Value}";
-        return await GetAsync<MeliOrdersResponse>(url);
-    }
-
-    public async Task<MeliOrderSyncResult?> SyncMeliOrdersAsync(DateTime from, DateTime to)
-    {
-        var url = $"/api/meli/orders/sync?from={from:yyyy-MM-ddTHH:mm:ss}&to={to:yyyy-MM-ddTHH:mm:ss}";
-        return await PostAsync<MeliOrderSyncResult>(url, new { });
-    }
-
-    // --- MercadoLibre Items ---
-    public async Task<MeliItemsResponse?> GetMeliItemsAsync(int? accountId = null, string? status = null)
-    {
-        var url = "/api/meli/items";
-        var queryParams = new List<string>();
-        if (accountId.HasValue)
-            queryParams.Add($"accountId={accountId.Value}");
-        if (!string.IsNullOrEmpty(status))
-            queryParams.Add($"status={status}");
-        if (queryParams.Any())
-            url += "?" + string.Join("&", queryParams);
-        return await GetAsync<MeliItemsResponse>(url);
-    }
-
-    public async Task<MeliItemSyncResult?> SyncMeliItemsAsync(string? status = null, int? accountId = null)
-    {
-        var url = "/api/meli/items/sync";
-        var queryParams = new List<string>();
-        if (!string.IsNullOrEmpty(status)) queryParams.Add($"status={status}");
-        if (accountId.HasValue) queryParams.Add($"accountId={accountId.Value}");
-        if (queryParams.Any()) url += "?" + string.Join("&", queryParams);
-        return await PostAsync<MeliItemSyncResult>(url, new { });
-    }
-
-    public async Task<SyncProgressResponse?> GetSyncProgressAsync(string? id = null)
-    {
-        var url = "/api/meli/items/sync/progress";
-        if (!string.IsNullOrEmpty(id)) url += $"?id={id}";
-        return await GetAsync<SyncProgressResponse>(url);
-    }
-
-    public async Task<List<ItemPromotionDto>?> GetItemPromotionsAsync(string meliItemId)
-    {
-        return await GetAsync<List<ItemPromotionDto>>($"/api/meli/items/{meliItemId}/promotions");
-    }
-
-    public async Task<ListingCostDto?> GetItemCostsAsync(string meliItemId)
-    {
-        try
-        {
-            return await _http.GetFromJsonAsync<ListingCostDto>($"api/meli/items/{meliItemId}/costs");
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    public async Task<MeliItemDto?> UpdateMeliItemAsync(string meliItemId, UpdateMeliItemRequest request)
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.PutAsJsonAsync($"/api/meli/items/{meliItemId}", request);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return default;
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            try
-            {
-                var doc = System.Text.Json.JsonDocument.Parse(errorBody);
-                if (doc.RootElement.TryGetProperty("error", out var errorProp))
-                    throw new Exception(errorProp.GetString());
-            }
-            catch (System.Text.Json.JsonException) { }
-            throw new Exception($"Error del servidor ({response.StatusCode})");
-        }
-
-        return await response.Content.ReadFromJsonAsync<MeliItemDto>();
-    }
-
-    public async Task<List<OpenAiModelDto>> GetOpenAiModelsAsync()
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.GetAsync("/api/integrations/openai/models");
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return new();
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            try
-            {
-                var doc = System.Text.Json.JsonDocument.Parse(errorBody);
-                if (doc.RootElement.TryGetProperty("error", out var errorProp))
-                    throw new Exception(errorProp.GetString());
-            }
-            catch (System.Text.Json.JsonException) { }
-            throw new Exception($"Error al obtener modelos ({response.StatusCode})");
-        }
-
-        return await response.Content.ReadFromJsonAsync<List<OpenAiModelDto>>() ?? new();
-    }
-
-    public async Task<List<ClaudeModelDto>> GetClaudeModelsAsync()
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.GetAsync("/api/integrations/claude/models");
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return new();
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            try
-            {
-                var doc = System.Text.Json.JsonDocument.Parse(errorBody);
-                if (doc.RootElement.TryGetProperty("error", out var errorProp))
-                    throw new Exception(errorProp.GetString());
-            }
-            catch (System.Text.Json.JsonException) { }
-            throw new Exception($"Error al obtener modelos ({response.StatusCode})");
-        }
-
-        return await response.Content.ReadFromJsonAsync<List<ClaudeModelDto>>() ?? new();
-    }
-
-    public async Task<int> DeleteMeliItemsBulkAsync(List<int> ids)
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.PostAsJsonAsync("/api/meli/items/bulk-delete", new { ids });
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return 0;
-        }
-
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"Error al eliminar publicaciones ({response.StatusCode})");
-
-        var result = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        return result.GetProperty("deleted").GetInt32();
-    }
-
-    public async Task<BulkCreateProductResult?> CreateProductFromItemAsync(int itemId)
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.PostAsync("/api/meli/items/" + itemId + "/create-product", null);
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return null;
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorText = await response.Content.ReadAsStringAsync();
-            throw new Exception(errorText);
-        }
-
-        return await response.Content.ReadFromJsonAsync<BulkCreateProductResult>();
-    }
-
-        public async Task<BulkCreateProductResult?> BulkCreateProductsAsync(List<int> ids)
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.PostAsJsonAsync("/api/meli/items/bulk-create-products", new { ids });
-
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return null;
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorText = await response.Content.ReadAsStringAsync();
-            throw new Exception($"Error al crear productos ({response.StatusCode}): {errorText}");
-        }
-
-        return await response.Content.ReadFromJsonAsync<BulkCreateProductResult>();
-    }
-
-
-        // --- Audit Logs ---
-    public async Task<AuditLogListResponse?> GetAuditLogsAsync(DateTime from, DateTime to, string? entityType = null, int page = 1)
-    {
-        var url = $"/api/audit-logs?from={from:yyyy-MM-ddTHH:mm:ss}&to={to:yyyy-MM-ddTHH:mm:ss}&page={page}";
-        if (!string.IsNullOrEmpty(entityType))
-            url += $"&entityType={entityType}";
-        return await GetAsync<AuditLogListResponse>(url);
-    }
-
-    // --- MercadoLibre Order Detail ---
-    public async Task<MeliOrderDetailResponse?> GetMeliOrderDetailAsync(long meliOrderId)
-    {
-        return await GetAsync<MeliOrderDetailResponse>($"/api/meli/orders/detail/{meliOrderId}");
-    }
-
-    public async Task<MeliOrderDetailResponse?> GetMeliPackDetailAsync(long packId)
-    {
-        return await GetAsync<MeliOrderDetailResponse>($"/api/meli/orders/pack-detail/{packId}");
-    }
-
-    // --- Scheduled Processes ---
-    public async Task<List<ScheduledProcessDto>?> GetScheduledProcessesAsync()
-    {
-        return await GetAsync<List<ScheduledProcessDto>>("/api/scheduled-processes");
-    }
-
-    public async Task<ScheduledProcessDto?> UpdateProcessScheduleAsync(string code, UpdateScheduleRequest request)
-    {
-        return await PutAsync<ScheduledProcessDto>($"/api/scheduled-processes/{code}/schedule", request);
-    }
-
-    public async Task<RunProcessResponse?> RunProcessNowAsync(string code)
-    {
-        return await PostAsync<RunProcessResponse>($"/api/scheduled-processes/{code}/run", new { });
-    }
-
-    public async Task<ProcessLogListResponse?> GetProcessLogsAsync(string? code = null, int page = 1)
-    {
-        var url = code != null
-            ? $"/api/scheduled-processes/{code}/logs?page={page}"
-            : $"/api/scheduled-processes/logs?page={page}";
-        return await GetAsync<ProcessLogListResponse>(url);
-    }
-
-    // --- MeLi Publish ---
-    public async Task<List<CategoryPredictionDto>?> PredictCategoryAsync(string title, int accountId)
-    {
-        return await PostAsync<List<CategoryPredictionDto>>($"/api/meli/publish/predict-category?accountId={accountId}", new { title });
-    }
-
-    public async Task<List<CategoryAttributeDto>?> GetCategoryAttributesAsync(string categoryId)
-    {
-        return await GetAsync<List<CategoryAttributeDto>>($"/api/meli/publish/category-attributes/{categoryId}");
-    }
-
-    public async Task<List<SuggestedAttributeDto>?> SuggestAttributesAsync(object request)
-    {
-        return await PostAsync<List<SuggestedAttributeDto>>("/api/meli/publish/suggest-attributes", request);
-    }
-
-    public async Task<PublishItemResponse?> PublishItemAsync(PublishItemRequest request)
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.PostAsJsonAsync("/api/meli/publish", request);
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return null;
-        }
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            try
-            {
-                var doc = System.Text.Json.JsonDocument.Parse(errorBody);
-                if (doc.RootElement.TryGetProperty("error", out var errorProp))
-                    return new PublishItemResponse { Error = errorProp.GetString() };
-            }
-            catch (System.Text.Json.JsonException) { }
-            return new PublishItemResponse { Error = $"Error del servidor ({response.StatusCode})" };
-        }
-        return await response.Content.ReadFromJsonAsync<PublishItemResponse>();
+        return await GetAsync<List<AvailableSlotDto>>($"/api/bookings/available-slots?instructorId={instructorId}&date={date:yyyy-MM-dd}");
     }
 
     // --- Settings ---
@@ -548,35 +209,11 @@ public class ApiClient
         return result != null;
     }
 
-    public async Task<string?> UploadLogoAsync(byte[] fileBytes, string fileName, string contentType)
+    // --- Register (public, no auth) ---
+    public async Task<bool> RegisterWithInvitationAsync(object request)
     {
-        try
-        {
-            await SetAuthHeaderAsync();
-            using var content = new MultipartFormDataContent();
-            var fileContent = new ByteArrayContent(fileBytes);
-            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
-            content.Add(fileContent, "file", fileName);
-            var response = await _http.PostAsync("/api/settings/logo", content);
-            if (response.IsSuccessStatusCode)
-            {
-                var result = await response.Content.ReadFromJsonAsync<Dictionary<string, string>>();
-                return result?.GetValueOrDefault("value");
-            }
-            return null;
-        }
-        catch { return null; }
-    }
-
-    public async Task<bool> DeleteLogoAsync()
-    {
-        try
-        {
-            await SetAuthHeaderAsync();
-            var response = await _http.DeleteAsync("/api/settings/logo");
-            return response.IsSuccessStatusCode;
-        }
-        catch { return false; }
+        var response = await _http.PostAsJsonAsync("/api/auth/register", request);
+        return response.IsSuccessStatusCode;
     }
 
     // --- HTTP helpers ---
@@ -660,30 +297,4 @@ public class ApiClient
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
     }
-
-    public async Task<BulkPublishResponse?> BulkPublishAsync(BulkPublishRequest request)
-    {
-        await SetAuthHeaderAsync();
-        var response = await _http.PostAsJsonAsync("/api/meli/publish/bulk", request);
-        if (response.StatusCode == HttpStatusCode.Unauthorized)
-        {
-            await _authService.LogoutAsync();
-            _navigation.NavigateTo("login", forceLoad: true);
-            return null;
-        }
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync();
-            try
-            {
-                var doc = System.Text.Json.JsonDocument.Parse(errorBody);
-                if (doc.RootElement.TryGetProperty("error", out var errorProp))
-                    throw new Exception(errorProp.GetString());
-            }
-            catch (System.Text.Json.JsonException) { }
-            throw new Exception("Error del servidor (" + response.StatusCode + ")");
-        }
-        return await response.Content.ReadFromJsonAsync<BulkPublishResponse>();
-    }
-
 }

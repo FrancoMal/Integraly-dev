@@ -9,83 +9,97 @@
     <p class="view-subtitle">Panel de control</p>
 </div>
 
-<div class="dashboard-cards-row">
-    <div class="dashboard-detail-card">
-        <div class="detail-card-header">
-            <div class="detail-card-icon primary">@SvgIcons.Tag</div>
-            <div>
-                <span class="detail-card-value">@totalItems</span>
-                <span class="detail-card-label">Publicaciones</span>
+@if (isLoading)
+{
+    <p class="text-muted">Cargando...</p>
+}
+else if (userRole == "admin")
+{
+    <div class="dashboard-cards-row">
+        <div class="stat-card">
+            <div class="stat-card-icon primary">@SvgIcons.Users</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@adminStats?.TotalUsers</span>
+                <span class="stat-card-label">Usuarios totales</span>
             </div>
-            <div class="detail-card-badge warning">@itemsSinProducto sin producto</div>
         </div>
-
-        @if (accountStats.Any())
-        {
-            <table class="detail-card-table">
-                <thead>
-                    <tr>
-                        <th>Cuenta</th>
-                        <th>Publicaciones</th>
-                        <th>Con producto</th>
-                        <th>Sin producto</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var acc in accountStats)
-                    {
-                        <tr>
-                            <td><strong>@acc.Nickname</strong></td>
-                            <td>@acc.TotalItems</td>
-                            <td>@acc.ItemsConProducto</td>
-                            <td class="@(acc.ItemsSinProducto > 0 ? "text-warning-bold" : "")">@acc.ItemsSinProducto</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-    </div>
-
-    <div class="dashboard-detail-card">
-        <div class="detail-card-header">
-            <div class="detail-card-icon info">@SvgIcons.Box</div>
-            <div>
-                <span class="detail-card-value">@totalProducts</span>
-                <span class="detail-card-label">Productos</span>
+        <div class="stat-card">
+            <div class="stat-card-icon info">@SvgIcons.User</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@adminStats?.TotalInstructors</span>
+                <span class="stat-card-label">Instructores</span>
             </div>
-            <div class="detail-card-badge warning">@productosSinItems sin publicacion</div>
         </div>
-
-        @if (accountStats.Any())
-        {
-            <table class="detail-card-table">
-                <thead>
-                    <tr>
-                        <th>Cuenta</th>
-                        <th>Productos vinculados</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var acc in accountStats)
-                    {
-                        <tr>
-                            <td><strong>@acc.Nickname</strong></td>
-                            <td>@acc.ProductosVinculados</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
+        <div class="stat-card">
+            <div class="stat-card-icon success">@SvgIcons.Users</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@adminStats?.TotalStudents</span>
+                <span class="stat-card-label">Estudiantes</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon warning">@SvgIcons.Calendar</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@adminStats?.TotalBookings</span>
+                <span class="stat-card-label">Reservas totales</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon primary">@SvgIcons.CheckCircle</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@adminStats?.ActiveBookings</span>
+                <span class="stat-card-label">Reservas activas</span>
+            </div>
+        </div>
     </div>
-</div>
+}
+else if (userRole == "instructor")
+{
+    <div class="dashboard-cards-row">
+        <div class="stat-card">
+            <div class="stat-card-icon primary">@SvgIcons.Calendar</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@instructorStats?.TotalBookings</span>
+                <span class="stat-card-label">Reservas totales</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon success">@SvgIcons.Clock</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@instructorStats?.UpcomingBookings</span>
+                <span class="stat-card-label">Proximas clases</span>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="dashboard-cards-row">
+        <div class="stat-card">
+            <div class="stat-card-icon primary">@SvgIcons.Package</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@userStats?.RemainingTokens</span>
+                <span class="stat-card-label">Clases disponibles</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon success">@SvgIcons.Calendar</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@userStats?.UpcomingBookings</span>
+                <span class="stat-card-label">Proximas clases</span>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private string username = "usuario";
-    private string totalItems = "--";
-    private string totalProducts = "--";
-    private string itemsSinProducto = "--";
-    private string productosSinItems = "--";
-    private List<AccountStatsRow> accountStats = new();
+    private string userRole = "";
+    private bool isLoading = true;
+
+    private AdminDashboardDto? adminStats;
+    private InstructorDashboardDto? instructorStats;
+    private UserDashboardDto? userStats;
 
     protected override async Task OnInitializedAsync()
     {
@@ -93,23 +107,29 @@
         if (user is not null)
         {
             username = user.Username;
+            userRole = user.Role?.ToLower() ?? "";
         }
 
         try
         {
-            var stats = await Api.GetDashboardStatsAsync();
-            if (stats is not null)
+            if (userRole == "admin")
             {
-                totalItems = stats.TotalItems.ToString();
-                totalProducts = stats.TotalProducts.ToString();
-                itemsSinProducto = stats.ItemsSinProducto.ToString();
-                productosSinItems = stats.ProductosSinItems.ToString();
-                accountStats = stats.AccountStats;
+                adminStats = await Api.GetAdminDashboardAsync();
+            }
+            else if (userRole == "instructor")
+            {
+                instructorStats = await Api.GetInstructorDashboardAsync();
+            }
+            else
+            {
+                userStats = await Api.GetUserDashboardAsync();
             }
         }
         catch
         {
-            // defaults already set
+            // defaults
         }
+
+        isLoading = false;
     }
 }

@@ -3623,3 +3623,92 @@ textarea.form-input {
 .topbar-sync-dismiss:hover {
   color: #374151;
 }
+
+/* ============================================================
+   Calendar & Booking Styles
+   ============================================================ */
+.calendar-grid td {
+  min-width: 48px;
+  height: 40px;
+  transition: background 0.15s;
+}
+.calendar-active {
+  background: var(--primary-bg) !important;
+  color: var(--primary);
+}
+.calendar-active:hover {
+  background: rgba(16, 185, 129, 0.2) !important;
+}
+.calendar-booked {
+  background: var(--info-bg) !important;
+  color: var(--info);
+  cursor: default !important;
+}
+.calendar-inactive:hover {
+  background: #f1f5f9;
+}
+.calendar-legend {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+.calendar-active-legend { background: var(--primary-bg); border: 1px solid var(--primary); }
+.calendar-booked-legend { background: var(--info-bg); border: 1px solid var(--info); }
+.calendar-inactive-legend { background: #f1f5f9; border: 1px solid #e2e8f0; }
+
+.slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.slots-grid .btn {
+  min-width: 140px;
+}
+
+/* Stat cards row for dashboard */
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+.stat-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stat-card-icon svg { width: 24px; height: 24px; }
+.stat-card-icon.primary { background: var(--primary-bg); color: var(--primary); }
+.stat-card-icon.info { background: var(--info-bg); color: var(--info); }
+.stat-card-icon.warning { background: var(--warning-bg); color: var(--warning); }
+.stat-card-icon.success { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.stat-card-info { display: flex; flex-direction: column; }
+.stat-card-value { font-size: 1.75rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+.stat-card-label { font-size: 0.85rem; color: var(--text-secondary); }
+
+.dashboard-cards-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Small buttons */
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+/* Text colors */
+.text-success { color: #059669; font-weight: 600; }

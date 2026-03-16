@@ -1,0 +1,157 @@
+@page "/mis-reservas"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <h2>Mis Reservas</h2>
+    <p class="view-subtitle">Listado de tus clases reservadas</p>
+</div>
+
+<div class="card">
+    <div class="card-body" style="padding: 0;">
+        @if (isLoading)
+        {
+            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+        }
+        else if (bookings is null || !bookings.Any())
+        {
+            <p class="text-muted" style="padding: 1.5rem;">No tenes reservas todavia</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Horario</th>
+                            <th>Instructor</th>
+                            <th>Estado</th>
+                            <th>Link Meet</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var booking in bookings.OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour))
+                        {
+                            <tr>
+                                <td>@booking.ScheduledDate.ToString("dd/MM/yyyy")</td>
+                                <td>@($"{booking.StartHour:00}:00 - {booking.StartHour + 1:00}:00")</td>
+                                <td>@booking.InstructorName</td>
+                                <td>
+                                    <span class="status-badge @GetStatusClass(booking.Status)">
+                                        @GetStatusText(booking.Status)
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(booking.MeetLink))
+                                    {
+                                        <a href="@booking.MeetLink" target="_blank" class="btn btn-sm btn-primary">Entrar</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (booking.Status == "confirmed" && booking.ScheduledDate >= DateTime.Today)
+                                    {
+                                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmCancel(booking)">
+                                            Cancelar
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (showCancelConfirm)
+{
+    <div class="modal-overlay" @onclick="() => showCancelConfirm = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Cancelar reserva</h3>
+            </div>
+            <div class="modal-body">
+                <p>Estas seguro que queres cancelar la clase del <strong>@bookingToCancel?.ScheduledDate.ToString("dd/MM/yyyy")</strong> a las <strong>@($"{bookingToCancel?.StartHour:00}:00")</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showCancelConfirm = false">No, volver</button>
+                <button class="btn btn-danger" @onclick="CancelBooking">Si, cancelar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<BookingDto>? bookings;
+    private bool isLoading = true;
+    private bool showCancelConfirm;
+    private BookingDto? bookingToCancel;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            bookings = await Api.GetMyBookingsAsync();
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar las reservas");
+        }
+        isLoading = false;
+    }
+
+    private void ConfirmCancel(BookingDto booking)
+    {
+        bookingToCancel = booking;
+        showCancelConfirm = true;
+    }
+
+    private async Task CancelBooking()
+    {
+        if (bookingToCancel is null) return;
+
+        var result = await Api.CancelBookingAsync(bookingToCancel.Id);
+        if (result)
+        {
+            ToastService.Success("Reserva cancelada");
+            await LoadData();
+        }
+        else
+        {
+            ToastService.Error("No se pudo cancelar la reserva. Puede que ya haya pasado el tiempo limite de cancelacion.");
+        }
+
+        showCancelConfirm = false;
+        bookingToCancel = null;
+    }
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "confirmed" => "status-active",
+        "cancelled" => "status-inactive",
+        "completed" => "status-active",
+        _ => ""
+    };
+
+    private string GetStatusText(string status) => status switch
+    {
+        "confirmed" => "Confirmada",
+        "cancelled" => "Cancelada",
+        "completed" => "Completada",
+        _ => status
+    };
+}

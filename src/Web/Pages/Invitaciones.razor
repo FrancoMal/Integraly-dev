@@ -1,0 +1,283 @@
+@page "/invitaciones"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+
+<div class="view-header">
+    <h2>Invitaciones</h2>
+    <p class="view-subtitle">Administra las invitaciones para nuevos usuarios</p>
+</div>
+
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Invitaciones (@(invitations?.Count ?? 0))</h3>
+        <button class="btn btn-primary" @onclick="ShowCreateForm">+ Nueva Invitacion</button>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        @if (isLoading)
+        {
+            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+        }
+        else if (invitations is null || !invitations.Any())
+        {
+            <p class="text-muted" style="padding: 1.5rem;">No hay invitaciones</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Rol</th>
+                            <th>Creada por</th>
+                            <th>Estado</th>
+                            <th>Expira</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var inv in invitations.OrderByDescending(i => i.CreatedAt))
+                        {
+                            <tr>
+                                <td><strong>@inv.Email</strong></td>
+                                <td><span class="role-badge">@inv.RoleName</span></td>
+                                <td>@inv.CreatedByName</td>
+                                <td>
+                                    @if (inv.UsedAt.HasValue)
+                                    {
+                                        <span class="status-badge status-active">Usada</span>
+                                    }
+                                    else if (inv.IsExpired)
+                                    {
+                                        <span class="status-badge status-inactive">Expirada</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge status-active">Pendiente</span>
+                                    }
+                                </td>
+                                <td>@inv.ExpiresAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td class="actions-cell">
+                                    @if (!inv.UsedAt.HasValue && !inv.IsExpired)
+                                    {
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => CopyLink(inv.Token)" title="Copiar link">
+                                            Copiar Link
+                                        </button>
+                                        <button class="btn-icon btn-delete" @onclick="() => ConfirmDelete(inv)" title="Eliminar">
+                                            @SvgIcons.AlertCircle
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (showForm)
+{
+    <div class="modal-overlay" @onclick="CloseForm">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Nueva Invitacion</h3>
+                <button class="btn-close" @onclick="CloseForm">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="form-error">@formError</div>
+                }
+
+                <div class="form-group">
+                    <label class="form-label">Email del invitado</label>
+                    <input class="form-input" type="email" @bind="formEmail" placeholder="correo@ejemplo.com" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Rol</label>
+                    <select class="form-input" @bind="formRoleId">
+                        @if (roles is not null)
+                        {
+                            @foreach (var role in roles)
+                            {
+                                <option value="@role.Id">@role.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                <button class="btn btn-primary" @onclick="CreateInvitation" disabled="@isSaving">
+                    @(isSaving ? "Creando..." : "Crear Invitacion")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showDeleteConfirm)
+{
+    <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirmar eliminacion</h3>
+            </div>
+            <div class="modal-body">
+                <p>Estas seguro que queres eliminar la invitacion para <strong>@invToDelete?.Email</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showDeleteConfirm = false">Cancelar</button>
+                <button class="btn btn-danger" @onclick="DeleteInvitation">Eliminar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showLinkModal)
+{
+    <div class="modal-overlay" @onclick="() => showLinkModal = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Link de invitacion</h3>
+                <button class="btn-close" @onclick="() => showLinkModal = false">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Copia este link y envialelo al invitado:</p>
+                <input class="form-input" value="@invitationLink" readonly style="font-size: 0.85rem;" />
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" @onclick="() => showLinkModal = false">Cerrar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<InvitationDto>? invitations;
+    private List<RoleDto>? roles;
+    private bool isLoading = true;
+    private bool showForm;
+    private bool isSaving;
+    private string? formError;
+    private string formEmail = "";
+    private int formRoleId = 2;
+
+    private bool showDeleteConfirm;
+    private InvitationDto? invToDelete;
+
+    private bool showLinkModal;
+    private string invitationLink = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var invTask = Api.GetInvitationsAsync();
+            var rolesTask = Api.GetRolesAsync();
+            await Task.WhenAll(invTask, rolesTask);
+            invitations = invTask.Result;
+            roles = rolesTask.Result;
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar los datos");
+        }
+        isLoading = false;
+    }
+
+    private void ShowCreateForm()
+    {
+        formEmail = "";
+        formRoleId = roles?.FirstOrDefault()?.Id ?? 2;
+        formError = null;
+        showForm = true;
+    }
+
+    private void CloseForm()
+    {
+        showForm = false;
+        formError = null;
+    }
+
+    private async Task CreateInvitation()
+    {
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formEmail))
+        {
+            formError = "El email es obligatorio";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var request = new CreateInvitationRequest
+            {
+                Email = formEmail,
+                RoleId = formRoleId
+            };
+
+            var result = await Api.CreateInvitationAsync(request);
+            if (result is not null)
+            {
+                ToastService.Success("Invitacion creada");
+                showForm = false;
+                CopyLink(result.Token);
+                await LoadData();
+            }
+            else
+            {
+                formError = "Error al crear la invitacion. Puede que ya exista una invitacion para ese email.";
+            }
+        }
+        catch
+        {
+            formError = "Error al crear la invitacion";
+        }
+        isSaving = false;
+    }
+
+    private void CopyLink(string token)
+    {
+        var baseUrl = Navigation.BaseUri.TrimEnd('/');
+        invitationLink = $"{baseUrl}/registro?token={token}";
+        showLinkModal = true;
+    }
+
+    private void ConfirmDelete(InvitationDto inv)
+    {
+        invToDelete = inv;
+        showDeleteConfirm = true;
+    }
+
+    private async Task DeleteInvitation()
+    {
+        if (invToDelete is null) return;
+
+        var result = await Api.DeleteInvitationAsync(invToDelete.Id);
+        if (result)
+        {
+            ToastService.Success("Invitacion eliminada");
+            await LoadData();
+        }
+        else
+        {
+            ToastService.Error("Error al eliminar la invitacion");
+        }
+
+        showDeleteConfirm = false;
+        invToDelete = null;
+    }
+}
