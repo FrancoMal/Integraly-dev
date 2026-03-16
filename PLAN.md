@@ -17,7 +17,7 @@ Integraly.dev es una plataforma de gestion de VPS + tutorias 1 a 1 con instructo
 - El usuario ve los horarios libres y reserva (1 hora = 1 clase)
 - Cada reserva descuenta 1 token del pack del usuario
 - Si cancela con anticipacion (configurable, default 24hs), se le devuelve el token
-- La sesion se hace por Google Meet (se genera o asigna un link)
+- La sesion se hace por Google Meet (se genera un link unico por reserva)
 
 ## Sistema de packs / tokens
 
@@ -30,7 +30,7 @@ Integraly.dev es una plataforma de gestion de VPS + tutorias 1 a 1 con instructo
 
 - Solo se entra por invitacion (email)
 - El Admin invita tanto usuarios como instructores
-- El invitado recibe un mail con un link para registrarse
+- El invitado recibe un link para registrarse (expira en 7 dias)
 
 ## Datos de cada usuario
 
@@ -43,39 +43,43 @@ Integraly.dev es una plataforma de gestion de VPS + tutorias 1 a 1 con instructo
 ## Roadmap
 
 ### Fase 1 - Base de datos y roles
-- [x] Redisenar init.sql con tablas: Users, Invitations, Packs, Availability, Bookings, Settings
+- [x] Redisenar init.sql con tablas: Users, Invitations, TokenPacks, Availabilities, Bookings, AppSettings
 - [x] Adaptar AppDbContext.cs y crear modelos C#
 - [x] Adaptar login para 3 roles (Admin, Instructor, Usuario)
+- [x] Registro por invitacion unicamente
 
 ### Fase 2 - Sistema de invitaciones
-- [ ] Panel del Admin para crear invitaciones
-- [ ] Envio de email con link de registro
-- [ ] Pagina de registro para invitados
+- [x] Backend: InvitationService + InvitationsController
+- [x] Frontend: Pagina de invitaciones (admin)
+- [x] Pagina de registro publico por token
 
 ### Fase 3 - Panel de Admin
-- [ ] Listado de usuarios/instructores con filtros
-- [ ] Editar datos de cualquier usuario
-- [ ] Cargar packs de tokens a un usuario
-- [ ] Configuraciones generales
-- [ ] Vista de todas las reservas
+- [x] Listado de usuarios/instructores
+- [x] Editar datos de cualquier usuario (VpsInfo incluido)
+- [x] Cargar packs de tokens a un usuario
+- [x] Configuraciones generales (CancellationHours, BrandName)
+- [x] Vista de todas las reservas
 
 ### Fase 4 - Calendario del Instructor
-- [ ] Vista de calendario semanal
-- [ ] Marcar/desmarcar bloques de 1 hora
-- [ ] Ver reservas confirmadas
+- [x] Vista de calendario semanal (8-21h x 7 dias)
+- [x] Marcar/desmarcar bloques de 1 hora
+- [x] Ver reservas confirmadas
 
 ### Fase 5 - Reservas del Usuario
-- [ ] Ver tokens disponibles
-- [ ] Ver horarios disponibles de instructores
-- [ ] Reservar un bloque (descuenta 1 token)
-- [ ] Cancelar reserva (devuelve token si cumple anticipacion)
-- [ ] Ver info de VPS
+- [x] Ver tokens disponibles en dashboard
+- [x] Ver horarios disponibles de instructores
+- [x] Reservar un bloque (descuenta 1 token)
+- [x] Cancelar reserva (devuelve token si cumple anticipacion)
+- [x] Mis Reservas con historial
 
 ### Fase 6 - Integracion Google Meet
-- [ ] Generar o asignar link de Google Meet a cada reserva
-- [ ] Mostrar link a usuario e instructor
+- [x] Generar link unico de Google Meet al crear cada reserva
+- [x] Mostrar link a usuario e instructor en Mis Reservas
 
 ### Fase 7 - Pulir y publicar
-- [ ] Revisar diseno de todas las pantallas
-- [ ] Probar flujos completos
-- [ ] Publicar en produccion
+- [x] Verificar que API compila correctamente
+- [x] Verificar que frontend compila correctamente
+- [x] Verificar login y endpoints funcionan en desarrollo
+- [x] Corregir endpoints del dashboard
+- [x] Agregar VpsInfo a modelos frontend
+- [ ] Publicar en produccion (cuando el usuario lo pida)

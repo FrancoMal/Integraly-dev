@@ -10,6 +10,7 @@ public class UserManageDto
     public string? Phone { get; set; }
     public string Role { get; set; } = string.Empty;
     public int RoleId { get; set; }
+    public string? VpsInfo { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
 }
@@ -22,7 +23,8 @@ public class CreateUserRequest
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? Phone { get; set; }
-    public int RoleId { get; set; } = 2;
+    public int RoleId { get; set; } = 3;
+    public string? VpsInfo { get; set; }
 }
 
 public class UpdateUserRequest
@@ -33,4 +35,5 @@ public class UpdateUserRequest
     public string? Phone { get; set; }
     public int? RoleId { get; set; }
     public bool? IsActive { get; set; }
+    public string? VpsInfo { get; set; }
 }

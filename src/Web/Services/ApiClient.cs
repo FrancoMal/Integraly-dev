@@ -22,17 +22,17 @@ public class ApiClient
     // --- Dashboard ---
     public async Task<AdminDashboardDto?> GetAdminDashboardAsync()
     {
-        return await GetAsync<AdminDashboardDto>("/api/dashboard/admin");
+        return await GetAsync<AdminDashboardDto>("/api/dashboard");
     }
 
     public async Task<InstructorDashboardDto?> GetInstructorDashboardAsync()
     {
-        return await GetAsync<InstructorDashboardDto>("/api/dashboard/instructor");
+        return await GetAsync<InstructorDashboardDto>("/api/dashboard");
     }
 
     public async Task<UserDashboardDto?> GetUserDashboardAsync()
     {
-        return await GetAsync<UserDashboardDto>("/api/dashboard/user");
+        return await GetAsync<UserDashboardDto>("/api/dashboard");
     }
 
     public async Task<UserDto?> GetMeAsync()
