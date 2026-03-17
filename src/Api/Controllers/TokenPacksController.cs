@@ -12,10 +12,12 @@ namespace Api.Controllers;
 public class TokenPacksController : ControllerBase
 {
     private readonly TokenPackService _tokenPackService;
+    private readonly AuditLogService _auditLogService;
 
-    public TokenPacksController(TokenPackService tokenPackService)
+    public TokenPacksController(TokenPackService tokenPackService, AuditLogService auditLogService)
     {
         _tokenPackService = tokenPackService;
+        _auditLogService = auditLogService;
     }
 
     [HttpGet]
@@ -55,7 +57,27 @@ public class TokenPacksController : ControllerBase
         if (userId is null) return Unauthorized();
 
         var pack = await _tokenPackService.CreateAsync(request.UserId, request.TotalTokens, request.Description, userId.Value);
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("TokenPack", pack.Id.ToString(), "create",
+            $"{pack.UserName} - {pack.TotalTokens} tokens", username);
+
         return Created($"/api/tokenpacks/{pack.Id}", pack);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateTokenPackRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var pack = await _tokenPackService.UpdateAsync(id, request.RemainingTokens, request.Description);
+        if (pack is null) return NotFound();
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("TokenPack", id.ToString(), "update",
+            $"remaining={request.RemainingTokens}, description={request.Description}", username);
+
+        return Ok(pack);
     }
 
     private bool IsAdmin()
@@ -67,5 +89,10 @@ public class TokenPacksController : ControllerBase
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return claim is not null ? int.Parse(claim) : null;
+    }
+
+    private string GetUsername()
+    {
+        return User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("username")?.Value ?? "unknown";
     }
 }

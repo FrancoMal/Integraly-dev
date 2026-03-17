@@ -12,10 +12,12 @@ namespace Api.Controllers;
 public class BookingsController : ControllerBase
 {
     private readonly BookingService _bookingService;
+    private readonly AuditLogService _auditLogService;
 
-    public BookingsController(BookingService bookingService)
+    public BookingsController(BookingService bookingService, AuditLogService auditLogService)
     {
         _bookingService = bookingService;
+        _auditLogService = auditLogService;
     }
 
     [HttpGet]
@@ -64,6 +66,10 @@ public class BookingsController : ControllerBase
         if (booking is null)
             return BadRequest(new { message = error });
 
+        var username = GetUsername();
+        await _auditLogService.LogAsync("Booking", booking.Id.ToString(), "create",
+            $"user {userId.Value} with instructor {request.InstructorId}", username);
+
         return Created($"/api/bookings/{booking.Id}", booking);
     }
 
@@ -77,6 +83,9 @@ public class BookingsController : ControllerBase
 
         if (!success)
             return BadRequest(new { message = error });
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("Booking", id.ToString(), "cancel", null, username);
 
         return NoContent();
     }
@@ -104,5 +113,10 @@ public class BookingsController : ControllerBase
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return claim is not null ? int.Parse(claim) : null;
+    }
+
+    private string GetUsername()
+    {
+        return User.FindFirst(ClaimTypes.Name)?.Value ?? User.FindFirst("username")?.Value ?? "unknown";
     }
 }

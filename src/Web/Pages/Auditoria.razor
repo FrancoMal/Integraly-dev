@@ -1,0 +1,176 @@
+@page "/auditoria"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <h2>Auditoria</h2>
+    <p class="view-subtitle">Registro de actividad del sistema</p>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Desde</label>
+                <input class="form-input" type="date" @bind="filterFrom" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Hasta</label>
+                <input class="form-input" type="date" @bind="filterTo" />
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Tipo</label>
+                <select class="form-input" @bind="filterEntityType">
+                    <option value="">Todos</option>
+                    <option value="User">Usuario</option>
+                    <option value="Invitation">Invitacion</option>
+                    <option value="TokenPack">Pack de Clases</option>
+                    <option value="Booking">Reserva</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" @onclick="Search" style="height: fit-content;">
+                Buscar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3>Registros (@total)</h3>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        @if (isLoading)
+        {
+            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+        }
+        else if (logs is null || !logs.Any())
+        {
+            <p class="text-muted" style="padding: 1.5rem;">No hay registros para los filtros seleccionados</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>ID</th>
+                            <th>Accion</th>
+                            <th>Cambios</th>
+                            <th>Usuario</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var log in logs)
+                        {
+                            <tr>
+                                <td>@log.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td><span class="role-badge">@log.EntityType</span></td>
+                                <td>@log.EntityId</td>
+                                <td>
+                                    <span class="status-badge @GetActionClass(log.Action)">@log.Action</span>
+                                </td>
+                                <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@log.Changes">
+                                    @(string.IsNullOrEmpty(log.Changes) ? "-" : log.Changes)
+                                </td>
+                                <td>@(log.UserName ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.5rem;">
+                <span class="text-muted">Pagina @currentPage de @totalPages</span>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-sm btn-secondary" @onclick="PrevPage" disabled="@(currentPage <= 1)">
+                        Anterior
+                    </button>
+                    <button class="btn btn-sm btn-secondary" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
+                        Siguiente
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<AuditLogDto>? logs;
+    private bool isLoading = true;
+    private int total;
+    private int currentPage = 1;
+    private int pageSize = 50;
+    private int totalPages => (int)Math.Ceiling((double)total / pageSize);
+
+    private DateTime filterFrom = DateTime.Now.AddDays(-30);
+    private DateTime filterTo = DateTime.Now;
+    private string filterEntityType = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var entityType = string.IsNullOrEmpty(filterEntityType) ? null : filterEntityType;
+            var result = await Api.GetAuditLogsAsync(filterFrom, filterTo.AddDays(1), entityType, currentPage);
+            if (result is not null)
+            {
+                logs = result.Logs;
+                total = result.Total;
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar los registros de auditoria");
+        }
+        isLoading = false;
+    }
+
+    private async Task Search()
+    {
+        currentPage = 1;
+        await LoadData();
+    }
+
+    private async Task PrevPage()
+    {
+        if (currentPage > 1)
+        {
+            currentPage--;
+            await LoadData();
+        }
+    }
+
+    private async Task NextPage()
+    {
+        if (currentPage < totalPages)
+        {
+            currentPage++;
+            await LoadData();
+        }
+    }
+
+    private string GetActionClass(string action)
+    {
+        return action switch
+        {
+            "create" => "status-active",
+            "update" => "status-active",
+            "delete" => "status-inactive",
+            "cancel" => "status-inactive",
+            _ => ""
+        };
+    }
+}

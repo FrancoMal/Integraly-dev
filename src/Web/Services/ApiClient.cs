@@ -202,6 +202,21 @@ public class ApiClient
         return await GetAsync<List<AvailableSlotDto>>($"/api/bookings/available-slots?instructorId={instructorId}&date={date:yyyy-MM-dd}");
     }
 
+    public async Task<TokenPackDto?> UpdateTokenPackAsync(int id, object request)
+    {
+        return await PutAsync<TokenPackDto>($"/api/tokenpacks/{id}", request);
+    }
+
+    // --- Audit Logs ---
+    public async Task<AuditLogListResponse?> GetAuditLogsAsync(DateTime? from = null, DateTime? to = null, string? entityType = null, int page = 1)
+    {
+        var url = $"/api/audit-logs?page={page}";
+        if (from.HasValue) url += $"&from={from.Value:yyyy-MM-ddTHH:mm:ss}";
+        if (to.HasValue) url += $"&to={to.Value:yyyy-MM-ddTHH:mm:ss}";
+        if (!string.IsNullOrEmpty(entityType)) url += $"&entityType={entityType}";
+        return await GetAsync<AuditLogListResponse>(url);
+    }
+
     // --- Settings ---
     public async Task<Dictionary<string, string>?> GetSettingsAsync()
     {
@@ -212,6 +227,16 @@ public class ApiClient
     {
         var result = await PutAsync<object>($"/api/settings/{key}", new { Value = value });
         return result != null;
+    }
+
+    public async Task<bool> SendTestEmailAsync(string to)
+    {
+        try
+        {
+            await PostAsync<object>("/api/settings/test-email", new { to });
+            return true;
+        }
+        catch { return false; }
     }
 
     // --- Register (public, no auth) ---

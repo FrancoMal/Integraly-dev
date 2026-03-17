@@ -43,10 +43,10 @@
             </NavGroup>
         }
 
-        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("config"))
+        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config"))
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("config"))">
+                      HasActiveChild="@(IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("config"))">
                 @if (HasPerm("usuarios"))
                 {
                     <NavItem Href="usuarios" Label="Usuarios" Icon="@SvgIcons.Users"
@@ -71,6 +71,11 @@
                 {
                     <NavItem Href="todas-reservas" Label="Todas las Reservas" Icon="@SvgIcons.List"
                              IsActive="@IsActive("todas-reservas")" OnClick="@(() => NavigateTo("todas-reservas"))" />
+                }
+                @if (HasPerm("auditoria"))
+                {
+                    <NavItem Href="auditoria" Label="Auditoria" Icon="@SvgIcons.History"
+                             IsActive="@IsActive("auditoria")" OnClick="@(() => NavigateTo("auditoria"))" />
                 }
                 @if (HasPerm("config"))
                 {
@@ -150,6 +155,7 @@
         { "invitaciones", "invitaciones" },
         { "packs", "packs" },
         { "todas-reservas", "todas-reservas" },
+        { "auditoria", "auditoria" },
         { "config", "config" },
         { "perfil", "" } // perfil always allowed
     };

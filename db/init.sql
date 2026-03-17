@@ -224,7 +224,7 @@ GO
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
 (1, 'dashboard'), (1, 'calendario'), (1, 'reservar'), (1, 'mis-reservas'),
 (1, 'usuarios'), (1, 'invitaciones'), (1, 'packs'), (1, 'todas-reservas'),
-(1, 'config'), (1, 'perfil');
+(1, 'auditoria'), (1, 'config'), (1, 'perfil');
 GO
 
 -- Seed instructor permissions
@@ -263,6 +263,49 @@ GO
 IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SidebarBgColor')
 BEGIN
     INSERT INTO AppSettings ([Key], [Value]) VALUES ('SidebarBgColor', '#1a1a2e');
+END
+GO
+
+-- Seed SMTP settings
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpHost')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpHost', 'mail.integraly.com');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpPort')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpPort', '587');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpSenderName')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpSenderName', 'Integraly');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpSenderEmail')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpSenderEmail', 'ventas@integraly.com');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpUser')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpUser', 'ventas@integraly.com');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpPassword')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpPassword', 'Ajmg1245');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpUseSsl')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpUseSsl', 'false');
 END
 GO
 

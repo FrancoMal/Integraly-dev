@@ -10,7 +10,7 @@
 
 <div class="card">
     <div class="card-header">
-        <h3>Ajustes</h3>
+        <h3>Ajustes Generales</h3>
     </div>
     <div class="card-body">
         @if (isLoading)
@@ -45,6 +45,79 @@
     </div>
 </div>
 
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h3>Configuracion SMTP (Email)</h3>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            @if (!string.IsNullOrEmpty(smtpMessage))
+            {
+                <div class="@(smtpMessageSuccess ? "form-success" : "form-error")">@smtpMessage</div>
+            }
+
+            <div class="form-group">
+                <label class="form-label">Servidor SMTP</label>
+                <input class="form-input" @bind="smtpHost" placeholder="mail.ejemplo.com" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Puerto SMTP</label>
+                <input class="form-input" type="number" @bind="smtpPort" min="1" max="65535" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Nombre del remitente</label>
+                <input class="form-input" @bind="smtpSenderName" placeholder="Integraly" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email del remitente</label>
+                <input class="form-input" type="email" @bind="smtpSenderEmail" placeholder="ventas@ejemplo.com" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Usuario SMTP</label>
+                <input class="form-input" @bind="smtpUser" placeholder="ventas@ejemplo.com" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Contrasena SMTP</label>
+                <input class="form-input" type="password" @bind="smtpPassword" />
+            </div>
+
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="smtpSsl" @bind="smtpUseSsl" />
+                <label for="smtpSsl" class="form-label" style="margin: 0;">Usar SSL</label>
+            </div>
+
+            <div class="form-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <button class="btn btn-primary" @onclick="SaveSmtpSettings" disabled="@isSmtpSaving">
+                    @(isSmtpSaving ? "Guardando..." : "Guardar SMTP")
+                </button>
+            </div>
+
+            <hr style="margin: 1.5rem 0; border-color: rgba(255,255,255,0.1);" />
+
+            <h4 style="margin-bottom: 1rem;">Enviar email de prueba</h4>
+            <div class="form-group" style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 200px;">
+                    <label class="form-label">Email de destino</label>
+                    <input class="form-input" type="email" @bind="testEmailTo" placeholder="test@ejemplo.com" />
+                </div>
+                <button class="btn btn-secondary" @onclick="SendTestEmail" disabled="@isSendingTest" style="height: fit-content;">
+                    @(isSendingTest ? "Enviando..." : "Enviar prueba")
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
 @code {
     private bool isLoading = true;
     private bool isSaving;
@@ -53,6 +126,22 @@
 
     private string brandName = "Integraly";
     private int cancellationHours = 24;
+
+    // SMTP fields
+    private string smtpHost = "";
+    private int smtpPort = 587;
+    private string smtpSenderName = "Integraly";
+    private string smtpSenderEmail = "";
+    private string smtpUser = "";
+    private string smtpPassword = "";
+    private bool smtpUseSsl;
+    private bool isSmtpSaving;
+    private string? smtpMessage;
+    private bool smtpMessageSuccess;
+
+    // Test email
+    private string testEmailTo = "";
+    private bool isSendingTest;
 
     protected override async Task OnInitializedAsync()
     {
@@ -71,6 +160,22 @@
                     brandName = bn;
                 if (settings.TryGetValue("CancellationHours", out var ch) && int.TryParse(ch, out var hours))
                     cancellationHours = hours;
+
+                // SMTP
+                if (settings.TryGetValue("SmtpHost", out var sh))
+                    smtpHost = sh;
+                if (settings.TryGetValue("SmtpPort", out var sp) && int.TryParse(sp, out var port))
+                    smtpPort = port;
+                if (settings.TryGetValue("SmtpSenderName", out var sn))
+                    smtpSenderName = sn;
+                if (settings.TryGetValue("SmtpSenderEmail", out var se))
+                    smtpSenderEmail = se;
+                if (settings.TryGetValue("SmtpUser", out var su))
+                    smtpUser = su;
+                if (settings.TryGetValue("SmtpPassword", out var spw))
+                    smtpPassword = spw;
+                if (settings.TryGetValue("SmtpUseSsl", out var ssl))
+                    smtpUseSsl = ssl == "true";
             }
         }
         catch
@@ -109,5 +214,70 @@
         }
 
         isSaving = false;
+    }
+
+    private async Task SaveSmtpSettings()
+    {
+        smtpMessage = null;
+        isSmtpSaving = true;
+
+        try
+        {
+            var results = new List<bool>();
+            results.Add(await Api.UpdateSettingAsync("SmtpHost", smtpHost));
+            results.Add(await Api.UpdateSettingAsync("SmtpPort", smtpPort.ToString()));
+            results.Add(await Api.UpdateSettingAsync("SmtpSenderName", smtpSenderName));
+            results.Add(await Api.UpdateSettingAsync("SmtpSenderEmail", smtpSenderEmail));
+            results.Add(await Api.UpdateSettingAsync("SmtpUser", smtpUser));
+            results.Add(await Api.UpdateSettingAsync("SmtpPassword", smtpPassword));
+            results.Add(await Api.UpdateSettingAsync("SmtpUseSsl", smtpUseSsl ? "true" : "false"));
+
+            if (results.All(r => r))
+            {
+                smtpMessage = "Configuracion SMTP guardada correctamente";
+                smtpMessageSuccess = true;
+                ToastService.Success("SMTP guardado");
+            }
+            else
+            {
+                smtpMessage = "Error al guardar algunos ajustes SMTP";
+                smtpMessageSuccess = false;
+            }
+        }
+        catch
+        {
+            smtpMessage = "Error al guardar la configuracion SMTP";
+            smtpMessageSuccess = false;
+        }
+
+        isSmtpSaving = false;
+    }
+
+    private async Task SendTestEmail()
+    {
+        if (string.IsNullOrWhiteSpace(testEmailTo))
+        {
+            ToastService.Error("Ingresa un email de destino");
+            return;
+        }
+
+        isSendingTest = true;
+        try
+        {
+            var result = await Api.SendTestEmailAsync(testEmailTo);
+            if (result)
+            {
+                ToastService.Success("Email de prueba enviado correctamente");
+            }
+            else
+            {
+                ToastService.Error("Error al enviar el email. Verifica la configuracion SMTP.");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al enviar el email de prueba");
+        }
+        isSendingTest = false;
     }
 }

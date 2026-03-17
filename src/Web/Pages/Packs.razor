@@ -34,6 +34,7 @@
                             <th>Descripcion</th>
                             <th>Creado por</th>
                             <th>Fecha</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -50,6 +51,11 @@
                                 <td>@(string.IsNullOrEmpty(pack.Description) ? "-" : pack.Description)</td>
                                 <td>@pack.CreatedByName</td>
                                 <td>@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                <td class="actions-cell">
+                                    <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditForm(pack)" title="Editar">
+                                        Editar
+                                    </button>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -107,6 +113,45 @@
     </div>
 }
 
+@if (showEditForm)
+{
+    <div class="modal-overlay" @onclick="CloseEditForm">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Editar Pack</h3>
+                <button class="btn-close" @onclick="CloseEditForm">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(editFormError))
+                {
+                    <div class="form-error">@editFormError</div>
+                }
+
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    <input class="form-input" value="@editPackUserName" disabled />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Clases restantes</label>
+                    <input class="form-input" type="number" @bind="editRemainingTokens" min="0" max="10000" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Descripcion</label>
+                    <input class="form-input" @bind="editDescription" placeholder="Descripcion del pack" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseEditForm">Cancelar</button>
+                <button class="btn btn-primary" @onclick="SaveEdit" disabled="@isEditSaving">
+                    @(isEditSaving ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<TokenPackDto>? packs;
     private List<UserManageDto>? users;
@@ -118,6 +163,15 @@
     private int formUserId;
     private int formTokens = 4;
     private string formDescription = "";
+
+    // Edit form
+    private bool showEditForm;
+    private bool isEditSaving;
+    private string? editFormError;
+    private int editPackId;
+    private string editPackUserName = "";
+    private int editRemainingTokens;
+    private string editDescription = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -200,5 +254,51 @@
             formError = "Error al crear el pack";
         }
         isSaving = false;
+    }
+
+    private void ShowEditForm(TokenPackDto pack)
+    {
+        editPackId = pack.Id;
+        editPackUserName = pack.UserName;
+        editRemainingTokens = pack.RemainingTokens;
+        editDescription = pack.Description ?? "";
+        editFormError = null;
+        showEditForm = true;
+    }
+
+    private void CloseEditForm()
+    {
+        showEditForm = false;
+        editFormError = null;
+    }
+
+    private async Task SaveEdit()
+    {
+        editFormError = null;
+        isEditSaving = true;
+        try
+        {
+            var result = await Api.UpdateTokenPackAsync(editPackId, new
+            {
+                RemainingTokens = editRemainingTokens,
+                Description = editDescription
+            });
+
+            if (result is not null)
+            {
+                ToastService.Success("Pack actualizado correctamente");
+                showEditForm = false;
+                await LoadData();
+            }
+            else
+            {
+                editFormError = "Error al actualizar el pack";
+            }
+        }
+        catch
+        {
+            editFormError = "Error al actualizar el pack";
+        }
+        isEditSaving = false;
     }
 }

@@ -1,5 +1,6 @@
 using Api.Data;
 using Api.Models;
+using Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,18 @@ public class SettingsController : ControllerBase
         return Ok();
     }
 
+    [HttpPost("test-email")]
+    public async Task<IActionResult> TestEmail([FromBody] TestEmailRequest request, [FromServices] EmailService emailService)
+    {
+        var result = await emailService.SendEmailAsync(
+            request.To,
+            "Integraly - Email de prueba",
+            "<h2>Email de prueba</h2><p>Si recibes este email, la configuracion SMTP esta funcionando correctamente.</p><p>— Integraly</p>"
+        );
+        if (result) return Ok(new { message = "Email enviado correctamente" });
+        return BadRequest(new { message = "Error al enviar el email. Verifica la configuracion SMTP." });
+    }
+
     [HttpPut("{key}")]
     public async Task<IActionResult> Update(string key, [FromBody] SettingUpdateDto dto)
     {
@@ -106,4 +119,9 @@ public class SettingsController : ControllerBase
 public class SettingUpdateDto
 {
     public string Value { get; set; } = string.Empty;
+}
+
+public class TestEmailRequest
+{
+    public string To { get; set; } = string.Empty;
 }

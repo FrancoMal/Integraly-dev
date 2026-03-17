@@ -20,6 +20,7 @@ public static class MenuDefinition
             new MenuItem("invitaciones", "Invitaciones", "/invitaciones"),
             new MenuItem("packs", "Packs", "/packs"),
             new MenuItem("todas-reservas", "Todas las Reservas", "/todas-reservas"),
+            new MenuItem("auditoria", "Auditoria", "/auditoria"),
             new MenuItem("config", "Configuracion", "/config")
         }),
         new MenuGroup("cuenta", "Cuenta", new[]

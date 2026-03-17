@@ -18,3 +18,5 @@ public record CreateTokenPackRequest(
     [Required][Range(1, 10000)] int TotalTokens,
     [MaxLength(500)] string? Description
 );
+
+public record UpdateTokenPackRequest(int? RemainingTokens, string? Description);

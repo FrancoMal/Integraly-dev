@@ -83,6 +83,16 @@ public class TokenPackService
         );
     }
 
+    public async Task<TokenPackDto?> UpdateAsync(int id, int? remainingTokens, string? description)
+    {
+        var pack = await _db.TokenPacks.Include(p => p.User).Include(p => p.CreatedByUser).FirstOrDefaultAsync(p => p.Id == id);
+        if (pack is null) return null;
+        if (remainingTokens.HasValue) pack.RemainingTokens = remainingTokens.Value;
+        if (description is not null) pack.Description = description;
+        await _db.SaveChangesAsync();
+        return new TokenPackDto(pack.Id, pack.UserId, pack.User?.Username ?? "", pack.TotalTokens, pack.RemainingTokens, pack.CreatedByUser?.Username ?? "", pack.Description, pack.CreatedAt);
+    }
+
     public async Task<int> GetAvailableTokensAsync(int userId)
     {
         return await _db.TokenPacks

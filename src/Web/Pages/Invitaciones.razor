@@ -232,7 +232,7 @@
             var result = await Api.CreateInvitationAsync(request);
             if (result is not null)
             {
-                ToastService.Success("Invitacion creada");
+                ToastService.Success("Invitacion creada y email enviado");
                 showForm = false;
                 CopyLink(result.Token);
                 await LoadData();
@@ -251,8 +251,10 @@
 
     private void CopyLink(string token)
     {
-        var baseUrl = Navigation.BaseUri.TrimEnd('/');
-        invitationLink = $"{baseUrl}/registro?token={token}";
+        // Always point to /panel/registro for registration
+        var uri = new Uri(Navigation.BaseUri);
+        var baseUrl = $"{uri.Scheme}://{uri.Authority}";
+        invitationLink = $"{baseUrl}/panel/registro?token={token}";
         showLinkModal = true;
     }
 
