@@ -63,7 +63,7 @@ public class ApiClient
 
     public async Task<List<UserManageDto>?> GetInstructorsAsync()
     {
-        return await GetAsync<List<UserManageDto>>("/api/users?role=instructor");
+        return await GetAsync<List<UserManageDto>>("/api/users/instructors");
     }
 
     // --- Roles ---

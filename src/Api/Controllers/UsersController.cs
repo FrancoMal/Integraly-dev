@@ -27,6 +27,14 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("instructors")]
+    public async Task<IActionResult> GetInstructors()
+    {
+        var users = await _userService.GetAllAsync();
+        var instructors = users.Where(u => u.Role == "instructor" && u.IsActive).ToList();
+        return Ok(instructors);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(int id)
     {

@@ -204,12 +204,11 @@
 
         try
         {
-            var usersTask = Api.GetUsersAsync();
+            var instructorsTask = Api.GetInstructorsAsync();
             var dashTask = Api.GetUserDashboardAsync();
-            await Task.WhenAll(usersTask, dashTask);
+            await Task.WhenAll(instructorsTask, dashTask);
 
-            var allUsers = usersTask.Result;
-            instructors = allUsers?.Where(u => u.Role?.ToLower() == "instructor" && u.IsActive).ToList() ?? new();
+            instructors = instructorsTask.Result ?? new();
 
             var dash = dashTask.Result;
             if (dash is not null)
