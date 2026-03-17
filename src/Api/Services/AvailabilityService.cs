@@ -63,6 +63,29 @@ public class AvailabilityService
     {
         var results = new List<AvailabilityDto>();
 
+        // Build a set of (DayOfWeek, StartHour) from the incoming active slots
+        var activeKeys = new HashSet<string>(
+            slots.Where(s => s.IsActive).Select(s => $"{s.DayOfWeek}-{s.StartHour}")
+        );
+
+        // Get all existing availabilities for this instructor
+        var existing = await _db.Availabilities
+            .Where(a => a.InstructorId == instructorId)
+            .ToListAsync();
+
+        // Deactivate slots that are NOT in the new list
+        foreach (var ex in existing)
+        {
+            var key = $"{ex.DayOfWeek}-{ex.StartHour}";
+            if (!activeKeys.Contains(key) && ex.IsActive)
+            {
+                ex.IsActive = false;
+            }
+        }
+
+        await _db.SaveChangesAsync();
+
+        // Upsert the sent slots
         foreach (var slot in slots)
         {
             var result = await SetAvailabilityAsync(instructorId, slot.DayOfWeek, slot.StartHour, slot.IsActive);

@@ -3712,3 +3712,140 @@ textarea.form-input {
 
 /* Text colors */
 .text-success { color: #059669; font-weight: 600; }
+
+/* ============================================================
+   Compact Calendar Grid
+   ============================================================ */
+.calendar-compact {
+  font-size: 0.8rem;
+}
+.calendar-compact th {
+  padding: 4px 2px !important;
+  font-size: 0.75rem;
+}
+.calendar-compact td {
+  padding: 4px !important;
+  min-width: 50px;
+  height: 34px;
+}
+.calendar-past {
+  background: #f8f9fa !important;
+  color: #ccc !important;
+  cursor: default !important;
+}
+
+/* ============================================================
+   Week Navigator
+   ============================================================ */
+.week-navigator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.week-label {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 180px;
+  text-align: center;
+}
+
+/* ============================================================
+   Instructor Filter Chips
+   ============================================================ */
+.instructor-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.instructor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.25rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: white;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.instructor-chip:hover {
+  border-color: var(--text-muted);
+}
+.instructor-chip.active {
+  font-weight: 600;
+}
+.instructor-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Reservar Calendar Slots
+   ============================================================ */
+.reservar-grid td {
+  vertical-align: middle;
+  position: relative;
+}
+.calendar-slot-available {
+  background: rgba(16, 185, 129, 0.05) !important;
+}
+.calendar-slot-available:hover {
+  background: rgba(16, 185, 129, 0.12) !important;
+}
+.slot-badges {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.slot-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.slot-count {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  display: block;
+  line-height: 1;
+}
+
+/* ============================================================
+   Modal Instructor Selection
+   ============================================================ */
+.modal-instructor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.modal-instructor-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.modal-instructor-btn:hover {
+  background: #f0f4f8;
+}
+.modal-instructor-btn.selected {
+  background: var(--primary-bg);
+  border-color: var(--primary);
+  font-weight: 600;
+}

@@ -23,13 +23,13 @@
         else
         {
             <div class="table-responsive">
-                <table class="data-table calendar-grid">
+                <table class="data-table calendar-grid calendar-compact">
                     <thead>
                         <tr>
-                            <th>Hora</th>
+                            <th style="width: 50px;">Hora</th>
                             @foreach (var day in dayNames)
                             {
-                                <th style="text-align: center;">@day</th>
+                                <th style="text-align: center; width: 50px;">@day</th>
                             }
                         </tr>
                     </thead>
@@ -42,12 +42,13 @@
                                 @for (int day = 1; day <= 7; day++)
                                 {
                                     var d = day;
-                                    var key = $"{d}-{h}";
+                                    var dow = d == 7 ? 0 : d;
+                                    var key = $"{dow}-{h}";
                                     var isActive = activeSlots.Contains(key);
                                     var hasBooking = bookedSlots.Contains(key);
-                                    <td style="text-align: center; cursor: pointer; padding: 0.5rem;"
+                                    <td style="text-align: center; cursor: pointer; padding: 4px;"
                                         class="@(hasBooking ? "calendar-booked" : isActive ? "calendar-active" : "calendar-inactive")"
-                                        @onclick="() => ToggleSlot(d, h)">
+                                        @onclick="() => ToggleSlot(dow, h)">
                                         @if (hasBooking)
                                         {
                                             <span title="Reservado">@SvgIcons.CheckCircle</span>
@@ -105,7 +106,6 @@
                 foreach (var b in bookings.Where(b => b.Status == "confirmed"))
                 {
                     var dayOfWeek = (int)b.ScheduledDate.DayOfWeek;
-                    if (dayOfWeek == 0) dayOfWeek = 7; // Sunday = 7
                     bookedSlots.Add($"{dayOfWeek}-{b.StartHour}");
                 }
             }
@@ -134,20 +134,17 @@
         try
         {
             var slots = new List<SetAvailabilityRequest>();
-            for (int day = 1; day <= 7; day++)
+            foreach (var key in activeSlots)
             {
-                for (int hour = 8; hour <= 21; hour++)
+                var parts = key.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[0], out var dow) && int.TryParse(parts[1], out var hour))
                 {
-                    var key = $"{day}-{hour}";
-                    if (activeSlots.Contains(key))
+                    slots.Add(new SetAvailabilityRequest
                     {
-                        slots.Add(new SetAvailabilityRequest
-                        {
-                            DayOfWeek = day,
-                            StartHour = hour,
-                            IsActive = true
-                        });
-                    }
+                        DayOfWeek = dow,
+                        StartHour = hour,
+                        IsActive = true
+                    });
                 }
             }
 

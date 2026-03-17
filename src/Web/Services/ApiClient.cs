@@ -136,23 +136,23 @@ public class ApiClient
 
     public async Task<InvitationDto?> GetInvitationByTokenAsync(string token)
     {
-        return await GetAsync<InvitationDto>($"/api/invitations/by-token/{token}");
+        return await GetAsync<InvitationDto>($"/api/invitations/token/{token}");
     }
 
     // --- Token Packs ---
     public async Task<List<TokenPackDto>?> GetAllTokenPacksAsync()
     {
-        return await GetAsync<List<TokenPackDto>>("/api/token-packs");
+        return await GetAsync<List<TokenPackDto>>("/api/tokenpacks");
     }
 
     public async Task<List<TokenPackDto>?> GetMyTokenPacksAsync()
     {
-        return await GetAsync<List<TokenPackDto>>("/api/token-packs/mine");
+        return await GetAsync<List<TokenPackDto>>("/api/tokenpacks/my");
     }
 
     public async Task<TokenPackDto?> CreateTokenPackAsync(CreateTokenPackRequest request)
     {
-        return await PostAsync<TokenPackDto>("/api/token-packs", request);
+        return await PostAsync<TokenPackDto>("/api/tokenpacks", request);
     }
 
     // --- Availability ---
@@ -163,12 +163,12 @@ public class ApiClient
 
     public async Task<List<AvailabilityDto>?> GetMyAvailabilityAsync()
     {
-        return await GetAsync<List<AvailabilityDto>>("/api/availability/mine");
+        return await GetAsync<List<AvailabilityDto>>("/api/availability/my");
     }
 
     public async Task<List<AvailabilityDto>?> SetAvailabilityAsync(List<SetAvailabilityRequest> slots)
     {
-        return await PostAsync<List<AvailabilityDto>>("/api/availability", slots);
+        return await PutAsync<List<AvailabilityDto>>("/api/availability", slots);
     }
 
     // --- Bookings ---
@@ -179,7 +179,7 @@ public class ApiClient
 
     public async Task<List<BookingDto>?> GetMyBookingsAsync()
     {
-        return await GetAsync<List<BookingDto>>("/api/bookings/mine");
+        return await GetAsync<List<BookingDto>>("/api/bookings/my");
     }
 
     public async Task<BookingDto?> CreateBookingAsync(CreateBookingRequest request)
@@ -190,6 +190,11 @@ public class ApiClient
     public async Task<bool> CancelBookingAsync(int id)
     {
         return await DeleteAsync($"/api/bookings/{id}");
+    }
+
+    public async Task<List<BookingDto>?> GetWeekBookingsAsync(DateTime from, DateTime to)
+    {
+        return await GetAsync<List<BookingDto>>($"/api/bookings/week?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
     }
 
     public async Task<List<AvailableSlotDto>?> GetAvailableSlotsAsync(int instructorId, DateTime date)
@@ -212,7 +217,7 @@ public class ApiClient
     // --- Register (public, no auth) ---
     public async Task<bool> RegisterWithInvitationAsync(object request)
     {
-        var response = await _http.PostAsJsonAsync("/api/auth/register", request);
+        var response = await _http.PostAsJsonAsync("/api/auth/register-invitation", request);
         return response.IsSuccessStatusCode;
     }
 

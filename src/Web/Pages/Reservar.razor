@@ -5,7 +5,7 @@
 
 <div class="view-header">
     <h2>Reservar Clase</h2>
-    <p class="view-subtitle">Selecciona un instructor, fecha y horario para reservar tu clase</p>
+    <p class="view-subtitle">Explora los horarios disponibles de todos los instructores y reserva tu clase</p>
 </div>
 
 @if (remainingTokens.HasValue)
@@ -19,90 +19,141 @@
     </div>
 }
 
-<div class="card">
+<div class="card" style="margin-bottom: 1rem;">
     <div class="card-body">
+        <div class="week-navigator">
+            <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek">&lt; Anterior</button>
+            <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
+            <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente &gt;</button>
+        </div>
+    </div>
+</div>
+
+@if (instructors is not null && instructors.Count > 0)
+{
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-body" style="padding: 0.75rem 1rem;">
+            <div class="instructor-filters">
+                <span style="font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem;">Filtrar instructores:</span>
+                @foreach (var inst in instructors)
+                {
+                    var id = inst.Id;
+                    var isChecked = selectedInstructorIds.Contains(id);
+                    var color = GetInstructorColor(id);
+                    <label class="instructor-chip @(isChecked ? "active" : "")" style="@(isChecked ? $"background: {color}22; border-color: {color}; color: {color};" : "")">
+                        <input type="checkbox" checked="@isChecked" @onchange="() => ToggleInstructor(id)" style="display:none;" />
+                        <span class="instructor-dot" style="background: @color;"></span>
+                        @($"{inst.FirstName} {inst.LastName}".Trim())
+                    </label>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card">
+    <div class="card-body" style="padding: 0.5rem;">
         @if (isLoading)
         {
-            <p class="text-muted">Cargando...</p>
+            <p class="text-muted" style="padding: 1rem;">Cargando...</p>
         }
         else
         {
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label">Instructor</label>
-                    <select class="form-input" @onchange="OnInstructorChanged">
-                        <option value="">-- Seleccionar instructor --</option>
-                        @if (instructors is not null)
-                        {
-                            @foreach (var inst in instructors)
+            <div class="table-responsive">
+                <table class="data-table calendar-compact reservar-grid">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">Hora</th>
+                            @for (int i = 0; i < 7; i++)
                             {
-                                <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim()) (@inst.Username)</option>
+                                var date = weekStart.AddDays(i);
+                                <th style="text-align: center; width: 80px;">
+                                    <div style="font-size: 0.75rem;">@dayNames[i]</div>
+                                    <div style="font-size: 0.7rem; font-weight: 400; color: var(--text-muted);">@date.ToString("dd/M")</div>
+                                </th>
                             }
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Fecha</label>
-                    <input class="form-input" type="date" value="@selectedDate.ToString("yyyy-MM-dd")"
-                           min="@DateTime.Today.ToString("yyyy-MM-dd")"
-                           @onchange="OnDateChanged" />
-                </div>
-            </div>
-
-            @if (selectedInstructorId > 0 && availableSlots is not null)
-            {
-                <h4 style="margin-top: 1.5rem; margin-bottom: 1rem;">Horarios disponibles para @selectedDate.ToString("dd/MM/yyyy")</h4>
-
-                @if (!availableSlots.Any(s => s.IsAvailable))
-                {
-                    <p class="text-muted">No hay horarios disponibles para esta fecha. Proba con otro dia u otro instructor.</p>
-                }
-                else
-                {
-                    <div class="slots-grid">
-                        @foreach (var slot in availableSlots.Where(s => s.IsAvailable))
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int hour = 8; hour <= 21; hour++)
                         {
-                            <button class="btn @(selectedHour == slot.StartHour ? "btn-primary" : "btn-secondary")"
-                                    @onclick="() => selectedHour = slot.StartHour">
-                                @($"{slot.StartHour:00}:00 - {slot.StartHour + 1:00}:00")
-                            </button>
+                            var h = hour;
+                            <tr>
+                                <td style="font-size: 0.75rem; font-weight: 600; padding: 4px;">@($"{h:00}:00")</td>
+                                @for (int i = 0; i < 7; i++)
+                                {
+                                    var date = weekStart.AddDays(i);
+                                    var dayKey = $"{date:yyyy-MM-dd}-{h}";
+                                    var available = GetAvailableInstructors(date, h);
+                                    var isPast = date.Date < DateTime.Today || (date.Date == DateTime.Today && h <= DateTime.Now.Hour);
+                                    <td style="text-align: center; padding: 4px; cursor: @(available.Count > 0 && !isPast ? "pointer" : "default");"
+                                        class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "")"
+                                        @onclick="() => OnSlotClick(date, h)">
+                                        @if (!isPast && available.Count > 0)
+                                        {
+                                            <div class="slot-badges">
+                                                @foreach (var inst in available)
+                                                {
+                                                    var color = GetInstructorColor(inst.Id);
+                                                    <span class="slot-dot" style="background: @color;" title="@($"{inst.FirstName} {inst.LastName}".Trim())"></span>
+                                                }
+                                            </div>
+                                            <span class="slot-count">@available.Count</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
                         }
-                    </div>
-
-                    @if (selectedHour.HasValue)
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem;">
+                @if (instructors is not null)
+                {
+                    @foreach (var inst in instructors.Where(i => selectedInstructorIds.Contains(i.Id)))
                     {
-                        <div style="margin-top: 1.5rem;">
-                            <button class="btn btn-primary" @onclick="ConfirmBooking" disabled="@isBooking">
-                                @(isBooking ? "Reservando..." : "Confirmar Reserva")
-                            </button>
-                        </div>
+                        var color = GetInstructorColor(inst.Id);
+                        <span style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="slot-dot" style="background: @color;"></span>
+                            @($"{inst.FirstName} {inst.LastName}".Trim())
+                        </span>
                     }
                 }
-            }
+            </div>
         }
     </div>
 </div>
 
-@if (showConfirmDialog)
+@if (showModal)
 {
-    <div class="modal-overlay" @onclick="() => showConfirmDialog = false">
+    <div class="modal-overlay" @onclick="() => showModal = false">
         <div class="modal-card modal-small" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h3>Confirmar reserva</h3>
+                <h3>Reservar clase</h3>
             </div>
             <div class="modal-body">
-                <p>Vas a reservar una clase:</p>
-                <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
-                    <li><strong>Instructor:</strong> @selectedInstructorName</li>
-                    <li><strong>Fecha:</strong> @selectedDate.ToString("dd/MM/yyyy")</li>
-                    <li><strong>Horario:</strong> @($"{selectedHour:00}:00 - {selectedHour + 1:00}:00")</li>
-                </ul>
-                <p>Se descontara 1 clase de tu pack. Confirmar?</p>
+                <p style="margin-bottom: 0.75rem;">
+                    <strong>@modalDate.ToString("dddd dd/MM/yyyy")</strong> a las <strong>@($"{modalHour:00}:00 - {modalHour + 1:00}:00")</strong>
+                </p>
+                <p style="font-size: 0.85rem; margin-bottom: 0.75rem;">Selecciona un instructor:</p>
+                <div class="modal-instructor-list">
+                    @foreach (var inst in modalInstructors)
+                    {
+                        var id = inst.Id;
+                        var color = GetInstructorColor(id);
+                        var name = $"{inst.FirstName} {inst.LastName}".Trim();
+                        <button class="modal-instructor-btn @(modalSelectedInstructorId == id ? "selected" : "")"
+                                style="border-left: 3px solid @color;"
+                                @onclick="() => { modalSelectedInstructorId = id; modalSelectedInstructorName = name; }">
+                            @name (@inst.Username)
+                        </button>
+                    }
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showConfirmDialog = false">Cancelar</button>
-                <button class="btn btn-primary" @onclick="DoBooking" disabled="@isBooking">
-                    @(isBooking ? "Reservando..." : "Confirmar")
+                <button class="btn btn-secondary" @onclick="() => showModal = false">Cancelar</button>
+                <button class="btn btn-primary" @onclick="DoBooking" disabled="@(isBooking || modalSelectedInstructorId == 0)">
+                    @(isBooking ? "Reservando..." : "Confirmar Reserva")
                 </button>
             </div>
         </div>
@@ -112,18 +163,45 @@
 @code {
     private bool isLoading = true;
     private bool isBooking;
-    private bool showConfirmDialog;
     private int? remainingTokens;
 
     private List<UserManageDto>? instructors;
-    private int selectedInstructorId;
-    private string selectedInstructorName = "";
-    private DateTime selectedDate = DateTime.Today;
-    private int? selectedHour;
-    private List<AvailableSlotDto>? availableSlots;
+    private HashSet<int> selectedInstructorIds = new();
+    private Dictionary<int, List<AvailabilityDto>> instructorAvailability = new();
+    private List<BookingDto>? weekBookings;
+
+    private DateTime weekStart;
+    private DateTime weekEnd;
+    private string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    // Modal state
+    private bool showModal;
+    private DateTime modalDate;
+    private int modalHour;
+    private List<UserManageDto> modalInstructors = new();
+    private int modalSelectedInstructorId;
+    private string modalSelectedInstructorName = "";
+
+    // Colors for instructors
+    private string[] instructorColors = { "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
 
     protected override async Task OnInitializedAsync()
     {
+        // Start on current week (Monday)
+        var today = DateTime.Today;
+        var dayOfWeek = (int)today.DayOfWeek;
+        var daysToMonday = dayOfWeek == 0 ? 6 : dayOfWeek - 1;
+        weekStart = today.AddDays(-daysToMonday);
+        weekEnd = weekStart.AddDays(6);
+
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        StateHasChanged();
+
         try
         {
             var usersTask = Api.GetUsersAsync();
@@ -131,95 +209,148 @@
             await Task.WhenAll(usersTask, dashTask);
 
             var allUsers = usersTask.Result;
-            instructors = allUsers?.Where(u => u.Role?.ToLower() == "instructor" && u.IsActive).ToList();
+            instructors = allUsers?.Where(u => u.Role?.ToLower() == "instructor" && u.IsActive).ToList() ?? new();
 
             var dash = dashTask.Result;
             if (dash is not null)
                 remainingTokens = dash.RemainingTokens;
+
+            // Select all instructors by default
+            selectedInstructorIds = new HashSet<int>(instructors.Select(i => i.Id));
+
+            // Load availability for each instructor in parallel
+            var availTasks = instructors.Select(async inst =>
+            {
+                var avail = await Api.GetInstructorAvailabilityAsync(inst.Id);
+                return (inst.Id, Availability: avail ?? new List<AvailabilityDto>());
+            }).ToList();
+
+            var results = await Task.WhenAll(availTasks);
+            instructorAvailability = results.ToDictionary(r => r.Id, r => r.Availability);
+
+            // Load week bookings
+            await LoadWeekBookings();
         }
         catch
         {
             ToastService.Error("Error al cargar los datos");
         }
+
         isLoading = false;
     }
 
-    private async Task OnInstructorChanged(ChangeEventArgs e)
-    {
-        selectedHour = null;
-        availableSlots = null;
-
-        if (int.TryParse(e.Value?.ToString(), out var id))
-        {
-            selectedInstructorId = id;
-            var inst = instructors?.FirstOrDefault(i => i.Id == id);
-            selectedInstructorName = inst != null ? $"{inst.FirstName} {inst.LastName}".Trim() : "";
-            await LoadSlots();
-        }
-        else
-        {
-            selectedInstructorId = 0;
-            selectedInstructorName = "";
-        }
-    }
-
-    private async Task OnDateChanged(ChangeEventArgs e)
-    {
-        selectedHour = null;
-        if (DateTime.TryParse(e.Value?.ToString(), out var date))
-        {
-            selectedDate = date;
-            if (selectedInstructorId > 0)
-                await LoadSlots();
-        }
-    }
-
-    private async Task LoadSlots()
+    private async Task LoadWeekBookings()
     {
         try
         {
-            availableSlots = await Api.GetAvailableSlotsAsync(selectedInstructorId, selectedDate);
+            weekBookings = await Api.GetWeekBookingsAsync(weekStart, weekEnd);
         }
         catch
         {
-            ToastService.Error("Error al cargar horarios disponibles");
-            availableSlots = null;
+            weekBookings = new();
         }
     }
 
-    private void ConfirmBooking()
+    private string GetInstructorColor(int instructorId)
     {
-        if (!selectedHour.HasValue || selectedInstructorId == 0) return;
+        if (instructors is null) return instructorColors[0];
+        var index = instructors.FindIndex(i => i.Id == instructorId);
+        return index >= 0 ? instructorColors[index % instructorColors.Length] : instructorColors[0];
+    }
+
+    private List<UserManageDto> GetAvailableInstructors(DateTime date, int hour)
+    {
+        if (instructors is null) return new();
+
+        var dayOfWeek = (int)date.DayOfWeek;
+        var result = new List<UserManageDto>();
+
+        foreach (var inst in instructors)
+        {
+            if (!selectedInstructorIds.Contains(inst.Id)) continue;
+
+            // Check if instructor has availability for this DayOfWeek + Hour
+            if (!instructorAvailability.TryGetValue(inst.Id, out var avail)) continue;
+            var hasSlot = avail.Any(a => a.DayOfWeek == dayOfWeek && a.StartHour == hour && a.IsActive);
+            if (!hasSlot) continue;
+
+            // Check if there's already a booking for this instructor at this date+hour
+            var isBooked = weekBookings?.Any(b =>
+                b.InstructorId == inst.Id &&
+                b.ScheduledDate.Date == date.Date &&
+                b.StartHour == hour) ?? false;
+            if (isBooked) continue;
+
+            result.Add(inst);
+        }
+
+        return result;
+    }
+
+    private void ToggleInstructor(int id)
+    {
+        if (selectedInstructorIds.Contains(id))
+            selectedInstructorIds.Remove(id);
+        else
+            selectedInstructorIds.Add(id);
+    }
+
+    private async Task PreviousWeek()
+    {
+        weekStart = weekStart.AddDays(-7);
+        weekEnd = weekEnd.AddDays(-7);
+        await LoadWeekBookings();
+    }
+
+    private async Task NextWeek()
+    {
+        weekStart = weekStart.AddDays(7);
+        weekEnd = weekEnd.AddDays(7);
+        await LoadWeekBookings();
+    }
+
+    private void OnSlotClick(DateTime date, int hour)
+    {
+        var isPast = date.Date < DateTime.Today || (date.Date == DateTime.Today && hour <= DateTime.Now.Hour);
+        if (isPast) return;
+
+        var available = GetAvailableInstructors(date, hour);
+        if (available.Count == 0) return;
+
+        modalDate = date;
+        modalHour = hour;
+        modalInstructors = available;
+        modalSelectedInstructorId = available.Count == 1 ? available[0].Id : 0;
+        modalSelectedInstructorName = available.Count == 1 ? $"{available[0].FirstName} {available[0].LastName}".Trim() : "";
+        showModal = true;
+    }
+
+    private async Task DoBooking()
+    {
+        if (modalSelectedInstructorId == 0) return;
         if (remainingTokens.HasValue && remainingTokens <= 0)
         {
             ToastService.Error("No tenes clases disponibles. Pedile al administrador que te cargue un pack.");
             return;
         }
-        showConfirmDialog = true;
-    }
-
-    private async Task DoBooking()
-    {
-        if (!selectedHour.HasValue || selectedInstructorId == 0) return;
 
         isBooking = true;
         try
         {
             var request = new CreateBookingRequest
             {
-                InstructorId = selectedInstructorId,
-                ScheduledDate = selectedDate,
-                StartHour = selectedHour.Value
+                InstructorId = modalSelectedInstructorId,
+                ScheduledDate = modalDate,
+                StartHour = modalHour
             };
 
             var result = await Api.CreateBookingAsync(request);
             if (result is not null)
             {
-                ToastService.Success("Clase reservada correctamente");
-                showConfirmDialog = false;
-                selectedHour = null;
+                ToastService.Success($"Clase reservada con {modalSelectedInstructorName}");
+                showModal = false;
                 if (remainingTokens.HasValue) remainingTokens--;
-                await LoadSlots();
+                await LoadWeekBookings();
             }
             else
             {

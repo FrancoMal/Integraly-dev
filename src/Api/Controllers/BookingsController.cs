@@ -81,6 +81,13 @@ public class BookingsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("week")]
+    public async Task<IActionResult> GetWeekBookings([FromQuery] DateTime from, [FromQuery] DateTime to)
+    {
+        var bookings = await _bookingService.GetByDateRangeAsync(from, to);
+        return Ok(bookings);
+    }
+
     [HttpGet("available-slots")]
     public async Task<IActionResult> GetAvailableSlots([FromQuery] int instructorId, [FromQuery] DateTime date)
     {

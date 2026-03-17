@@ -181,6 +181,22 @@ public class BookingService
         return (true, null);
     }
 
+    public async Task<List<BookingDto>> GetByDateRangeAsync(DateTime from, DateTime to)
+    {
+        return await _db.Bookings
+            .Include(b => b.User)
+            .Include(b => b.Instructor)
+            .Where(b => b.ScheduledDate >= from.Date && b.ScheduledDate <= to.Date && b.Status == "confirmed")
+            .OrderBy(b => b.ScheduledDate)
+            .ThenBy(b => b.StartHour)
+            .Select(b => new BookingDto(
+                b.Id, b.UserId, b.User != null ? b.User.Username : "",
+                b.InstructorId, b.Instructor != null ? b.Instructor.Username : "",
+                b.ScheduledDate, b.StartHour, b.Status, b.MeetLink, b.CreatedAt
+            ))
+            .ToListAsync();
+    }
+
     public async Task<List<AvailableSlotDto>> GetAvailableSlotsAsync(int instructorId, DateTime date)
     {
         var dayOfWeek = (int)date.DayOfWeek;
