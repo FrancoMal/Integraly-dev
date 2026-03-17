@@ -71,10 +71,10 @@
                         {
                             <tr>
                                 <td>@log.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                <td><span class="role-badge">@log.EntityType</span></td>
+                                <td><span class="audit-type audit-type-@(log.EntityType.ToLower())">@GetEntityLabel(log.EntityType)</span></td>
                                 <td>@log.EntityId</td>
                                 <td>
-                                    <span class="status-badge @GetActionClass(log.Action)">@log.Action</span>
+                                    <span class="audit-action audit-action-@(log.Action.ToLower())">@GetActionLabel(log.Action)</span>
                                 </td>
                                 <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="@log.Changes">
                                     @(string.IsNullOrEmpty(log.Changes) ? "-" : log.Changes)
@@ -162,15 +162,21 @@
         }
     }
 
-    private string GetActionClass(string action)
+    private string GetEntityLabel(string entityType) => entityType switch
     {
-        return action switch
-        {
-            "create" => "status-active",
-            "update" => "status-active",
-            "delete" => "status-inactive",
-            "cancel" => "status-inactive",
-            _ => ""
-        };
-    }
+        "User" => "Usuario",
+        "Invitation" => "Invitacion",
+        "TokenPack" => "Pack",
+        "Booking" => "Reserva",
+        _ => entityType
+    };
+
+    private string GetActionLabel(string action) => action switch
+    {
+        "create" => "Creacion",
+        "update" => "Edicion",
+        "delete" => "Eliminacion",
+        "cancel" => "Cancelacion",
+        _ => action
+    };
 }

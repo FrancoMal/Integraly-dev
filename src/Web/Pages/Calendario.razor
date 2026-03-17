@@ -51,11 +51,11 @@
                                         @onclick="() => ToggleSlot(dow, h)">
                                         @if (hasBooking)
                                         {
-                                            <span title="Reservado">@SvgIcons.CheckCircle</span>
+                                            <span class="cal-icon booked" title="Reservado">&#10003;</span>
                                         }
                                         else if (isActive)
                                         {
-                                            <span title="Disponible">@SvgIcons.Check</span>
+                                            <span class="cal-icon active" title="Disponible">&#10003;</span>
                                         }
                                     </td>
                                 }
