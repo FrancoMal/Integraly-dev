@@ -228,37 +228,6 @@ public class ApiClient
         return await PutAsync<TokenPackDto>($"/api/tokenpacks/{id}", request);
     }
 
-    // --- Fichajes (Time Entries) ---
-    public async Task<List<TimeEntryDto>?> GetMyTimeEntriesAsync(DateTime from, DateTime to)
-    {
-        return await GetAsync<List<TimeEntryDto>>($"/api/fichajes/my?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
-    }
-
-    public async Task<List<TimeEntryDto>?> GetTimeEntriesAsync(int instructorId, DateTime from, DateTime to)
-    {
-        return await GetAsync<List<TimeEntryDto>>($"/api/fichajes?instructorId={instructorId}&from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
-    }
-
-    public async Task<List<InstructorListItemDto>?> GetFichajeInstructorsAsync()
-    {
-        return await GetAsync<List<InstructorListItemDto>>("/api/fichajes/instructors");
-    }
-
-    public async Task<TimeEntryDto?> CreateTimeEntryAsync(CreateTimeEntryRequest request)
-    {
-        return await PostAsync<TimeEntryDto>("/api/fichajes", request);
-    }
-
-    public async Task<TimeEntryDto?> UpdateTimeEntryAsync(int id, UpdateTimeEntryRequest request)
-    {
-        return await PutAsync<TimeEntryDto>($"/api/fichajes/{id}", request);
-    }
-
-    public async Task<bool> DeleteTimeEntryAsync(int id)
-    {
-        return await DeleteAsync($"/api/fichajes/{id}");
-    }
-
     // --- Audit Logs ---
     public async Task<AuditLogListResponse?> GetAuditLogsAsync(DateTime? from = null, DateTime? to = null, string? entityType = null, int page = 1)
     {

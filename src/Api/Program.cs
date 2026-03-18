@@ -49,7 +49,6 @@ builder.Services.AddScoped<InvitationService>();
 builder.Services.AddScoped<TokenPackService>();
 builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<BookingService>();
-builder.Services.AddScoped<FichajeService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHttpClient();
 

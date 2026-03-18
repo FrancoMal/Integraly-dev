@@ -4088,29 +4088,6 @@ textarea.form-input {
   }
 }
 
-/* === Fichajes (Time Entries) === */
-.fichaje-entry {
-  background: rgba(59, 130, 246, 0.08);
-  border-left: 2px solid var(--info, #3b82f6);
-}
-
-.fichaje-start {
-  background: rgba(59, 130, 246, 0.12);
-}
-
-.fichaje-continue {
-  background: rgba(59, 130, 246, 0.05);
-}
-
-.fichaje-clickable {
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.fichaje-clickable:hover {
-  background: rgba(59, 130, 246, 0.15) !important;
-}
-
 /* === Admin Calendar === */
 .cal-entry {
   font-size: 0.65rem;
@@ -4143,12 +4120,6 @@ textarea.form-input {
   color: #065f46;
 }
 
-.cal-fichaje {
-  background: rgba(245, 158, 11, 0.12);
-  border-left-color: #f59e0b;
-  color: #92400e;
-}
-
 .cal-disponibilidad {
   background: rgba(16, 185, 129, 0.06);
   color: #059669;
@@ -4166,12 +4137,6 @@ textarea.form-input {
   background: #3b82f6;
   color: white;
   border-color: #3b82f6;
-}
-
-.btn-filter-fichajes {
-  background: #f59e0b;
-  color: white;
-  border-color: #f59e0b;
 }
 
 .btn-filter-disponibilidad {

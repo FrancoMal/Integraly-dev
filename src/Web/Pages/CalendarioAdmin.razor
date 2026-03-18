@@ -8,7 +8,7 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
         <div>
             <h2>Calendario General</h2>
-            <p class="view-subtitle">Vista completa de reservas, fichajes y disponibilidad</p>
+            <p class="view-subtitle">Vista completa de reservas y disponibilidad</p>
         </div>
         <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
     </div>
@@ -22,9 +22,6 @@
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                 <button class="btn btn-sm @(showReservas ? "btn-filter-reservas" : "btn-secondary")" @onclick="() => { showReservas = !showReservas; }">
                     Reservas
-                </button>
-                <button class="btn btn-sm @(showFichajes ? "btn-filter-fichajes" : "btn-secondary")" @onclick="() => { showFichajes = !showFichajes; }">
-                    Fichajes
                 </button>
                 <button class="btn btn-sm @(showDisponibilidad ? "btn-filter-disponibilidad" : "btn-secondary")" @onclick="() => { showDisponibilidad = !showDisponibilidad; }">
                     Disponibilidad
@@ -65,10 +62,6 @@
     <div style="display:flex;align-items:center;gap:4px;">
         <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(59,130,246,0.12);border-left:3px solid #3b82f6;"></span>
         Reserva
-    </div>
-    <div style="display:flex;align-items:center;gap:4px;">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.12);border-left:3px solid #f59e0b;"></span>
-        Fichaje
     </div>
     <div style="display:flex;align-items:center;gap:4px;">
         <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);"></span>
@@ -115,9 +108,8 @@ else
                                     var date = weekStart.AddDays(d);
                                     var isToday = date.Date == DateTime.Today;
                                     var bookings = GetBookingsAt(date, hour);
-                                    var fichajes = GetFichajesAt(date, hour);
                                     var availableInstructors = GetAvailableAt(date, hour);
-                                    var totalEntries = bookings.Count + fichajes.Count + (availableInstructors.Count > 0 ? 1 : 0);
+                                    var totalEntries = bookings.Count + (availableInstructors.Count > 0 ? 1 : 0);
 
                                     <td class="admin-cal-cell @(isToday ? "today-col" : "")"
                                         @onclick="() => OpenModal(date, hour)"
@@ -140,19 +132,6 @@ else
                                             @if (bookings.Count > 2)
                                             {
                                                 <div class="cal-entry-more">+@(bookings.Count - 2) mas</div>
-                                            }
-                                        }
-                                        @if (showFichajes)
-                                        {
-                                            @foreach (var f in fichajes.Take(2))
-                                            {
-                                                <div class="cal-entry cal-fichaje" title="@f.InstructorName: @f.Description">
-                                                    @TruncateName(f.InstructorName)
-                                                </div>
-                                            }
-                                            @if (fichajes.Count > 2)
-                                            {
-                                                <div class="cal-entry-more">+@(fichajes.Count - 2) mas</div>
                                             }
                                         }
                                     </td>
@@ -216,7 +195,6 @@ else
             <div class="modal-body" style="max-height:400px;overflow-y:auto;">
                 @{
                     var mBookings = GetBookingsAt(modalDate, modalHour);
-                    var mFichajes = GetFichajesAt(modalDate, modalHour);
                     var mAvail = GetAvailableAt(modalDate, modalHour);
                 }
 
@@ -240,24 +218,6 @@ else
                     </div>
                 }
 
-                @if (mFichajes.Count > 0)
-                {
-                    <div style="margin-bottom:1rem;">
-                        <h4 style="font-size:0.85rem;color:#f59e0b;margin-bottom:0.5rem;">Fichajes (@mFichajes.Count)</h4>
-                        @foreach (var f in mFichajes)
-                        {
-                            <div style="padding:0.4rem 0.6rem;margin-bottom:0.4rem;border-radius:6px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;font-size:0.8rem;">
-                                <div style="font-weight:600;">@f.InstructorName</div>
-                                <div style="color:var(--text-secondary);font-size:0.75rem;">@($"{f.StartHour}:00 - {f.EndHour}:00")</div>
-                                @if (!string.IsNullOrEmpty(f.Description))
-                                {
-                                    <div style="color:var(--text-muted);font-size:0.75rem;margin-top:2px;">@f.Description</div>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
-
                 @if (mAvail.Count > 0)
                 {
                     <div>
@@ -271,7 +231,7 @@ else
                     </div>
                 }
 
-                @if (mBookings.Count == 0 && mFichajes.Count == 0 && mAvail.Count == 0)
+                @if (mBookings.Count == 0 && mAvail.Count == 0)
                 {
                     <p class="text-muted" style="font-size:0.85rem;">No hay datos para este horario.</p>
                 }
@@ -287,14 +247,12 @@ else
     // Data
     private List<UserManageDto>? instructors;
     private List<BookingDto>? weekBookings;
-    private Dictionary<int, List<TimeEntryDto>> instructorFichajes = new();
     private Dictionary<int, List<AvailabilityDto>> instructorAvailability = new();
     private Dictionary<int, List<WeekAvailabilityDto>> instructorWeekOverrides = new();
 
     // Filters
     private HashSet<int> selectedInstructorIds = new();
     private bool showReservas = true;
-    private bool showFichajes = true;
     private bool showDisponibilidad = true;
     private int filterUserId = 0;
     private Dictionary<int, string> uniqueUsers = new();
@@ -356,10 +314,9 @@ else
     {
         try
         {
-            // Load bookings, fichajes, and week overrides in parallel
+            // Load bookings and week overrides in parallel
             var bookingsTask = Api.GetWeekBookingsAsync(weekStart, weekEnd);
 
-            var fichajesTasks = new List<Task<(int Id, List<TimeEntryDto> Entries)>>();
             var overridesTasks = new List<Task<(int Id, List<WeekAvailabilityDto> Overrides)>>();
 
             if (instructors is not null)
@@ -367,11 +324,6 @@ else
                 foreach (var inst in instructors)
                 {
                     var id = inst.Id;
-                    fichajesTasks.Add(Task.Run(async () =>
-                    {
-                        var entries = await Api.GetTimeEntriesAsync(id, weekStart, weekEnd);
-                        return (id, Entries: entries ?? new List<TimeEntryDto>());
-                    }));
                     overridesTasks.Add(Task.Run(async () =>
                     {
                         var overrides = await Api.GetWeekAvailabilityAsync(id, weekStart, weekEnd);
@@ -381,10 +333,8 @@ else
             }
 
             weekBookings = await bookingsTask;
-            var fichajesResults = await Task.WhenAll(fichajesTasks);
             var overridesResults = await Task.WhenAll(overridesTasks);
 
-            instructorFichajes = fichajesResults.ToDictionary(r => r.Id, r => r.Entries);
             instructorWeekOverrides = overridesResults.ToDictionary(r => r.Id, r => r.Overrides);
 
             // Build unique users list from bookings
@@ -414,22 +364,6 @@ else
             selectedInstructorIds.Contains(b.InstructorId) &&
             (filterUserId == 0 || b.UserId == filterUserId)
         ).ToList();
-    }
-
-    private List<TimeEntryDto> GetFichajesAt(DateTime date, int hour)
-    {
-        if (!showFichajes) return new();
-        var result = new List<TimeEntryDto>();
-        foreach (var instId in selectedInstructorIds)
-        {
-            if (instructorFichajes.TryGetValue(instId, out var entries))
-            {
-                result.AddRange(entries.Where(e =>
-                    e.Date.Date == date.Date &&
-                    e.StartHour <= hour && e.EndHour > hour));
-            }
-        }
-        return result;
     }
 
     private List<UserManageDto> GetAvailableAt(DateTime date, int hour)
