@@ -124,6 +124,7 @@ button {
 .login-header h1 {
   font-size: 1.5rem;
   font-weight: 700;
+  font-family: 'Syne', sans-serif;
   margin-bottom: 0.25rem;
 }
 
@@ -264,6 +265,7 @@ button {
 .sidebar-brand-text {
   font-size: 1.1rem;
   font-weight: 700;
+  font-family: 'Syne', sans-serif;
   color: #ffffff;
   white-space: nowrap;
 }
@@ -690,6 +692,7 @@ button {
 .topbar-title {
   font-size: 1rem;
   font-weight: 600;
+  font-family: 'Syne', sans-serif;
   color: var(--text-primary);
 }
 
