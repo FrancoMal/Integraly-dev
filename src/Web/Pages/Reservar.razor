@@ -105,23 +105,43 @@
                                 @for (int i = 0; i < 7; i++)
                                 {
                                     var date = weekStart.AddDays(i);
-                                    var dayKey = $"{date:yyyy-MM-dd}-{h}";
-                                    var available = GetAvailableInstructors(date, h);
                                     var isPast = date.Date < DateTime.Today || (date.Date == DateTime.Today && h <= DateTime.Now.Hour);
-                                    var slotColor = GetAvailabilityColor(available.Count);
-                                    <td style="text-align: center; padding: 4px; cursor: @(available.Count > 0 && !isPast ? "pointer" : "default");"
-                                        class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "")"
-                                        @onclick="() => OnSlotClick(date, h)">
-                                        @if (!isPast && available.Count > 0)
-                                        {
-                                            <div class="slot-grad-icon" title="@available.Count instructor@(available.Count > 1 ? "es" : "") disponible@(available.Count > 1 ? "s" : "")">
-                                                <svg viewBox="0 0 24 24" width="22" height="22" fill="@slotColor" xmlns="http://www.w3.org/2000/svg">
-                                                    <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
-                                                </svg>
-                                                <span class="slot-grad-count" style="color: @slotColor;">@available.Count</span>
+                                    var myBooking = GetMyBookingAt(date, h);
+                                    var available = GetAvailableInstructors(date, h);
+
+                                    @if (myBooking is not null)
+                                    {
+                                        var isCompleted = myBooking.Status == "completed";
+                                        var instName = myBooking.InstructorName;
+                                        <td style="text-align: center; padding: 4px; cursor: default;"
+                                            class="@(isCompleted ? "calendar-slot-completed" : "calendar-slot-booked")"
+                                            title="@(isCompleted ? $"Clase realizada con {instName}" : $"Reservada con {instName}")">
+                                            <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+                                                @if (isCompleted)
+                                                {
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                }
+                                                else
+                                                {
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                }
+                                                <span style="font-size: 0.6rem; line-height: 1; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@instName</span>
                                             </div>
-                                        }
-                                    </td>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td style="text-align: center; padding: 4px; cursor: @(available.Count > 0 && !isPast ? "pointer" : "default");"
+                                            class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "")"
+                                            @onclick="() => OnSlotClick(date, h)">
+                                            @if (!isPast && available.Count > 0)
+                                            {
+                                                <div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:28px;" title="Clase disponible">
+                                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>
+                                                </div>
+                                            }
+                                        </td>
+                                    }
                                 }
                             </tr>
                         }
@@ -130,16 +150,16 @@
             </div>
             <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem; align-items: center;">
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#10b981"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
-                    Alta (@greenMin+)
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>
+                    Disponible
                 </span>
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#f59e0b"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
-                    Media (@yellowMin-@(greenMin-1))
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;"></span>
+                    Reservada
                 </span>
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#ef4444"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
-                    Baja (1-@(yellowMin-1))
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #10b981;"></span>
+                    Realizada
                 </span>
             </div>
         }
@@ -194,6 +214,7 @@
     private Dictionary<int, List<AvailabilityDto>> instructorAvailability = new();
     private Dictionary<int, List<WeekAvailabilityDto>> instructorWeekOverrides = new();
     private List<BookingDto>? weekBookings;
+    private List<BookingDto>? myBookings;
 
     private DateTime weekStart;
     private DateTime weekEnd;
@@ -209,10 +230,6 @@
 
     // Colors for instructors
     private string[] instructorColors = { "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
-
-    // Availability color thresholds
-    private int greenMin = 3;
-    private int yellowMin = 2;
 
     protected override async Task OnInitializedAsync()
     {
@@ -235,8 +252,7 @@
         {
             var instructorsTask = Api.GetInstructorsAsync();
             var dashTask = Api.GetUserDashboardAsync();
-            var settingsTask = Api.GetSettingsAsync();
-            await Task.WhenAll(instructorsTask, dashTask, settingsTask);
+            await Task.WhenAll(instructorsTask, dashTask);
 
             instructors = instructorsTask.Result ?? new();
 
@@ -246,13 +262,6 @@
                 remainingTokens = dash.RemainingTokens;
                 bookedClasses = dash.BookedClasses;
                 usedClasses = dash.UsedClasses;
-            }
-
-            var settings = settingsTask.Result;
-            if (settings is not null)
-            {
-                if (settings.TryGetValue("AvailabilityGreenMin", out var gm) && int.TryParse(gm, out var gv)) greenMin = gv;
-                if (settings.TryGetValue("AvailabilityYellowMin", out var ym) && int.TryParse(ym, out var yv)) yellowMin = yv;
             }
 
             // Select all instructors by default
@@ -283,7 +292,14 @@
     {
         try
         {
-            weekBookings = await Api.GetWeekBookingsAsync(weekStart, weekEnd);
+            var weekTask = Api.GetWeekBookingsAsync(weekStart, weekEnd);
+            var myTask = Api.GetMyBookingsAsync();
+            await Task.WhenAll(weekTask, myTask);
+            weekBookings = weekTask.Result;
+            var allMyBookings = myTask.Result ?? new();
+            myBookings = allMyBookings.Where(b =>
+                b.ScheduledDate.Date >= weekStart.Date && b.ScheduledDate.Date <= weekEnd.Date
+                && (b.Status == "confirmed" || b.Status == "completed")).ToList();
 
             // Reload week overrides for all instructors
             if (instructors is not null)
@@ -422,6 +438,7 @@
                 ToastService.Success($"Clase reservada con {modalSelectedInstructorName}");
                 showModal = false;
                 if (remainingTokens.HasValue) remainingTokens--;
+                bookedClasses++;
                 await LoadWeekData();
             }
             else
@@ -436,10 +453,9 @@
         isBooking = false;
     }
 
-    private string GetAvailabilityColor(int count)
+    private BookingDto? GetMyBookingAt(DateTime date, int hour)
     {
-        if (count >= greenMin) return "#10b981";  // green
-        if (count >= yellowMin) return "#f59e0b"; // yellow/amber
-        return "#ef4444"; // red
+        return myBookings?.FirstOrDefault(b =>
+            b.ScheduledDate.Date == date.Date && b.StartHour == hour);
     }
 }
