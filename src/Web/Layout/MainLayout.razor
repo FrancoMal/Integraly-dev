@@ -10,7 +10,7 @@
 <aside class="sidebar @(sidebarOpen ? "open" : "") @(sidebarCollapsed ? "collapsed" : "")" id="sidebar">
     <div class="sidebar-brand">
         <span class="sidebar-brand-icon">@SvgIcons.Brand</span>
-        <span class="sidebar-brand-text">Integraly</span>
+        <span class="sidebar-brand-text">integraly<span class="brand-dot">.dev</span></span>
         <button class="sidebar-collapse-btn" @onclick="ToggleCollapse" title="@(sidebarCollapsed ? "Expandir menu" : "Colapsar menu")">
             <span class="sidebar-collapse-icon">@(sidebarCollapsed ? SvgIcons.ChevronRight : SvgIcons.ChevronLeft)</span>
         </button>
@@ -130,7 +130,7 @@
             <button class="topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Abrir menu">
                 @SvgIcons.Menu
             </button>
-            <h1 class="topbar-title">Integraly</h1>
+            <h1 class="topbar-title">integraly<span class="brand-dot">.dev</span></h1>
         </div>
         <div class="topbar-actions">
             <button class="topbar-btn" @onclick="Refresh" title="Actualizar">
