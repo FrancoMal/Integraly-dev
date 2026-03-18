@@ -11,6 +11,7 @@ public record ProfileDto(
     string? Phone,
     string Role,
     string? VpsInfo,
+    string Timezone,
     DateTime CreatedAt
 );
 
@@ -18,7 +19,8 @@ public record UpdateProfileRequest(
     [MaxLength(100)] string? FirstName,
     [MaxLength(100)] string? LastName,
     [EmailAddress][MaxLength(255)] string? Email,
-    [MaxLength(50)] string? Phone
+    [MaxLength(50)] string? Phone,
+    [MaxLength(100)] string? Timezone
 );
 
 public record ChangePasswordRequest(

@@ -6,6 +6,7 @@ public class UserDto
     public string Username { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public string Timezone { get; set; } = "America/Argentina/Buenos_Aires";
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
 }

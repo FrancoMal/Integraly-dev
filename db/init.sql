@@ -60,6 +60,7 @@ BEGIN
         Phone NVARCHAR(50) NULL,
         RoleId INT NOT NULL DEFAULT 3,
         VpsInfo NVARCHAR(MAX) NULL,
+        Timezone NVARCHAR(100) DEFAULT 'America/Argentina/Buenos_Aires',
         CreatedAt DATETIME2 DEFAULT GETDATE(),
         IsActive BIT DEFAULT 1,
         CONSTRAINT FK_Users_Roles FOREIGN KEY (RoleId) REFERENCES Roles(Id)
@@ -72,6 +73,14 @@ IF EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
    AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'VpsInfo')
 BEGIN
     ALTER TABLE Users ADD VpsInfo NVARCHAR(MAX) NULL;
+END
+GO
+
+-- Add Timezone column if it doesn't exist
+IF EXISTS (SELECT * FROM sysobjects WHERE name='Users' AND xtype='U')
+   AND NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Users') AND name = 'Timezone')
+BEGIN
+    ALTER TABLE Users ADD Timezone NVARCHAR(100) DEFAULT 'America/Argentina/Buenos_Aires';
 END
 GO
 
@@ -267,6 +276,12 @@ END
 GO
 
 -- Seed SMTP settings
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'DefaultTimezone')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('DefaultTimezone', 'America/Argentina/Buenos_Aires');
+END
+GO
+
 IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'SmtpHost')
 BEGIN
     INSERT INTO AppSettings ([Key], [Value]) VALUES ('SmtpHost', 'mail.integraly.com');

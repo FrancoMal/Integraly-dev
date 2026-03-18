@@ -77,7 +77,7 @@ public class AuthService
     private async Task SaveSessionAsync(AuthResponse data)
     {
         await _js.InvokeVoidAsync("localStorage.setItem", TokenKey, data.Token);
-        var userJson = JsonSerializer.Serialize(new UserInfo { Username = data.Username, Role = data.Role, Permissions = data.Permissions ?? new() });
+        var userJson = JsonSerializer.Serialize(new UserInfo { Username = data.Username, Role = data.Role, Timezone = data.Timezone ?? "America/Argentina/Buenos_Aires", Permissions = data.Permissions ?? new() });
         await _js.InvokeVoidAsync("localStorage.setItem", UserKey, userJson);
         await _js.InvokeVoidAsync("localStorage.setItem", ExpiryKey, data.ExpiresAt.ToString("O"));
     }
@@ -94,5 +94,6 @@ public class UserInfo
 {
     public string Username { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public string Timezone { get; set; } = "America/Argentina/Buenos_Aires";
     public List<string> Permissions { get; set; } = new();
 }

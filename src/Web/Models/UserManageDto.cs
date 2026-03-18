@@ -11,6 +11,7 @@ public class UserManageDto
     public string Role { get; set; } = string.Empty;
     public int RoleId { get; set; }
     public string? VpsInfo { get; set; }
+    public string Timezone { get; set; } = "America/Argentina/Buenos_Aires";
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
 }
@@ -25,6 +26,7 @@ public class CreateUserRequest
     public string? Phone { get; set; }
     public int RoleId { get; set; } = 3;
     public string? VpsInfo { get; set; }
+    public string? Timezone { get; set; }
 }
 
 public class UpdateUserRequest
@@ -36,4 +38,5 @@ public class UpdateUserRequest
     public int? RoleId { get; set; }
     public bool? IsActive { get; set; }
     public string? VpsInfo { get; set; }
+    public string? Timezone { get; set; }
 }

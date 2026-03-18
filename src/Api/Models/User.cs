@@ -38,6 +38,9 @@ public class User
 
     public string? VpsInfo { get; set; }
 
+    [MaxLength(100)]
+    public string Timezone { get; set; } = "America/Argentina/Buenos_Aires";
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public bool IsActive { get; set; } = true;

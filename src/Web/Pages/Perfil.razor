@@ -3,6 +3,7 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 @inject NavigationManager Navigation
+@inject TimezoneService TzService
 
 <div class="view-header">
     <h2>Mi Perfil</h2>
@@ -50,6 +51,16 @@
                 <div class="form-group">
                     <label class="form-label">Telefono</label>
                     <input class="form-input" @bind="phone" placeholder="+54 11 1234-5678" />
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Zona horaria</label>
+                    <select class="form-input" @bind="timezone">
+                        @foreach (var tz in TimezoneService.GetTimezones())
+                        {
+                            <option value="@tz.Id">@tz.Label</option>
+                        }
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -109,6 +120,7 @@
     private string lastName = "";
     private string email = "";
     private string phone = "";
+    private string timezone = "America/Argentina/Buenos_Aires";
     private bool isSavingProfile;
     private string? profileMessage;
     private bool profileSuccess;
@@ -138,6 +150,7 @@
                 lastName = profile.LastName ?? "";
                 email = profile.Email;
                 phone = profile.Phone ?? "";
+                timezone = profile.Timezone ?? "America/Argentina/Buenos_Aires";
             }
         }
         catch
@@ -167,7 +180,8 @@
                 FirstName = firstName,
                 LastName = lastName,
                 Email = email,
-                Phone = phone
+                Phone = phone,
+                Timezone = timezone
             };
 
             var result = await Api.UpdateProfileAsync(request);

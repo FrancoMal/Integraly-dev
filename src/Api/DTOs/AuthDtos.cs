@@ -19,6 +19,7 @@ public record AuthResponse(
     string Token,
     string Username,
     string Role,
+    string Timezone,
     DateTime ExpiresAt,
     List<string> Permissions
 );
@@ -29,6 +30,7 @@ public record UserDto(
     string Email,
     string Role,
     string? VpsInfo,
+    string Timezone,
     DateTime CreatedAt,
     bool IsActive
 );

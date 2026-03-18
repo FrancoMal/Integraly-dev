@@ -4,6 +4,7 @@
 @inject ToastService ToastService
 @inject IJSRuntime JS
 @inject ApiClient Api
+@inject TimezoneService TzService
 @implements IDisposable
 
 <aside class="sidebar @(sidebarOpen ? "open" : "") @(sidebarCollapsed ? "collapsed" : "")" id="sidebar">
@@ -170,6 +171,7 @@
             username = user.Username;
             role = user.Role;
             permissions = user.Permissions ?? new();
+            TzService.SetTimezone(user.Timezone ?? "America/Argentina/Buenos_Aires");
 
             // Redirect to correct panel based on role
             if (role == "admin" && !IsAdminPanel)

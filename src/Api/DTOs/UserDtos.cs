@@ -12,6 +12,7 @@ public record UserListDto(
     string Role,
     int RoleId,
     string? VpsInfo,
+    string Timezone,
     DateTime CreatedAt,
     bool IsActive
 );
@@ -24,7 +25,8 @@ public record CreateUserRequest(
     [MaxLength(100)] string? LastName,
     [MaxLength(50)] string? Phone,
     [Required] int RoleId,
-    string? VpsInfo
+    string? VpsInfo,
+    string? Timezone
 );
 
 public record UpdateUserRequest(
@@ -34,5 +36,6 @@ public record UpdateUserRequest(
     [MaxLength(50)] string? Phone,
     int? RoleId,
     bool? IsActive,
-    string? VpsInfo
+    string? VpsInfo,
+    string? Timezone
 );

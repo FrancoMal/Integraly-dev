@@ -31,6 +31,17 @@
             </div>
 
             <div class="form-group">
+                <label class="form-label">Zona horaria por defecto</label>
+                <select class="form-input" @bind="defaultTimezone">
+                    @foreach (var tz in TimezoneService.GetTimezones())
+                    {
+                        <option value="@tz.Id">@tz.Label</option>
+                    }
+                </select>
+                <small class="text-muted">Zona horaria para usuarios nuevos. Cada usuario puede cambiarla en su perfil.</small>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label">Horas minimas para cancelar una reserva</label>
                 <input class="form-input" type="number" @bind="cancellationHours" min="0" max="72" />
                 <small class="text-muted">Cuantas horas antes de la clase se puede cancelar (0 = cancelacion libre)</small>
@@ -125,6 +136,7 @@
     private bool messageSuccess;
 
     private string brandName = "Integraly";
+    private string defaultTimezone = "America/Argentina/Buenos_Aires";
     private int cancellationHours = 24;
 
     // SMTP fields
@@ -158,6 +170,8 @@
             {
                 if (settings.TryGetValue("BrandName", out var bn))
                     brandName = bn;
+                if (settings.TryGetValue("DefaultTimezone", out var dtz))
+                    defaultTimezone = dtz;
                 if (settings.TryGetValue("CancellationHours", out var ch) && int.TryParse(ch, out var hours))
                     cancellationHours = hours;
 
@@ -193,9 +207,10 @@
         try
         {
             var r1 = await Api.UpdateSettingAsync("BrandName", brandName);
-            var r2 = await Api.UpdateSettingAsync("CancellationHours", cancellationHours.ToString());
+            var r2 = await Api.UpdateSettingAsync("DefaultTimezone", defaultTimezone);
+            var r3 = await Api.UpdateSettingAsync("CancellationHours", cancellationHours.ToString());
 
-            if (r1 && r2)
+            if (r1 && r2 && r3)
             {
                 message = "Configuracion guardada correctamente";
                 messageSuccess = true;

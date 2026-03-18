@@ -20,17 +20,9 @@ public class UserService
             .Include(u => u.RoleNav)
             .OrderByDescending(u => u.CreatedAt)
             .Select(u => new UserListDto(
-                u.Id,
-                u.Username,
-                u.Email,
-                u.FirstName,
-                u.LastName,
-                u.Phone,
+                u.Id, u.Username, u.Email, u.FirstName, u.LastName, u.Phone,
                 u.RoleNav != null ? u.RoleNav.Name : "usuario",
-                u.RoleId,
-                u.VpsInfo,
-                u.CreatedAt,
-                u.IsActive
+                u.RoleId, u.VpsInfo, u.Timezone, u.CreatedAt, u.IsActive
             ))
             .ToListAsync();
     }
@@ -41,17 +33,9 @@ public class UserService
             .Include(u => u.RoleNav)
             .Where(u => u.Id == id)
             .Select(u => new UserListDto(
-                u.Id,
-                u.Username,
-                u.Email,
-                u.FirstName,
-                u.LastName,
-                u.Phone,
+                u.Id, u.Username, u.Email, u.FirstName, u.LastName, u.Phone,
                 u.RoleNav != null ? u.RoleNav.Name : "usuario",
-                u.RoleId,
-                u.VpsInfo,
-                u.CreatedAt,
-                u.IsActive
+                u.RoleId, u.VpsInfo, u.Timezone, u.CreatedAt, u.IsActive
             ))
             .FirstOrDefaultAsync();
     }
@@ -60,7 +44,6 @@ public class UserService
     {
         if (await _db.Users.AnyAsync(u => u.Username == request.Username))
             return null;
-
         if (await _db.Users.AnyAsync(u => u.Email == request.Email))
             return null;
 
@@ -77,6 +60,7 @@ public class UserService
             Phone = request.Phone,
             RoleId = request.RoleId,
             VpsInfo = request.VpsInfo,
+            Timezone = request.Timezone ?? "America/Argentina/Buenos_Aires",
             CreatedAt = DateTime.UtcNow,
             IsActive = true
         };
@@ -85,9 +69,8 @@ public class UserService
         await _db.SaveChangesAsync();
 
         return new UserListDto(
-            user.Id, user.Username, user.Email,
-            user.FirstName, user.LastName, user.Phone,
-            role.Name, user.RoleId, user.VpsInfo, user.CreatedAt, user.IsActive
+            user.Id, user.Username, user.Email, user.FirstName, user.LastName, user.Phone,
+            role.Name, user.RoleId, user.VpsInfo, user.Timezone, user.CreatedAt, user.IsActive
         );
     }
 
@@ -101,6 +84,7 @@ public class UserService
         if (request.Phone is not null) user.Phone = request.Phone;
         if (request.IsActive.HasValue) user.IsActive = request.IsActive.Value;
         if (request.VpsInfo is not null) user.VpsInfo = request.VpsInfo;
+        if (request.Timezone is not null) user.Timezone = request.Timezone;
 
         if (request.Email is not null && request.Email != user.Email)
         {
@@ -120,9 +104,8 @@ public class UserService
 
         var roleName = user.RoleNav?.Name ?? "usuario";
         return new UserListDto(
-            user.Id, user.Username, user.Email,
-            user.FirstName, user.LastName, user.Phone,
-            roleName, user.RoleId, user.VpsInfo, user.CreatedAt, user.IsActive
+            user.Id, user.Username, user.Email, user.FirstName, user.LastName, user.Phone,
+            roleName, user.RoleId, user.VpsInfo, user.Timezone, user.CreatedAt, user.IsActive
         );
     }
 
@@ -130,7 +113,6 @@ public class UserService
     {
         var user = await _db.Users.FindAsync(id);
         if (user is null) return false;
-
         _db.Users.Remove(user);
         await _db.SaveChangesAsync();
         return true;

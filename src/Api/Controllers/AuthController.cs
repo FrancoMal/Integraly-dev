@@ -77,6 +77,7 @@ public class AuthController : ControllerBase
                 Email: user.Email,
                 Role: user.RoleNav?.Name ?? "usuario",
                 VpsInfo: user.VpsInfo,
+                Timezone: user.Timezone,
                 CreatedAt: user.CreatedAt,
                 IsActive: user.IsActive
             ));
@@ -110,6 +111,7 @@ public class AuthController : ControllerBase
                 Phone: user.Phone,
                 Role: user.RoleNav?.Name ?? "usuario",
                 VpsInfo: user.VpsInfo,
+                Timezone: user.Timezone,
                 CreatedAt: user.CreatedAt
             ));
         }
@@ -143,6 +145,7 @@ public class AuthController : ControllerBase
             if (request.FirstName is not null) user.FirstName = request.FirstName;
             if (request.LastName is not null) user.LastName = request.LastName;
             if (request.Phone is not null) user.Phone = request.Phone;
+            if (request.Timezone is not null) user.Timezone = request.Timezone;
 
             await _db.SaveChangesAsync();
 
@@ -155,6 +158,7 @@ public class AuthController : ControllerBase
                 Phone: user.Phone,
                 Role: user.RoleNav?.Name ?? "usuario",
                 VpsInfo: user.VpsInfo,
+                Timezone: user.Timezone,
                 CreatedAt: user.CreatedAt
             ));
         }

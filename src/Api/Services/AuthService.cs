@@ -123,6 +123,7 @@ public class AuthService
             Token: new JwtSecurityTokenHandler().WriteToken(token),
             Username: user.Username,
             Role: roleName,
+            Timezone: user.Timezone,
             ExpiresAt: expiresAt,
             Permissions: permissions
         );
