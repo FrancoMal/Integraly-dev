@@ -138,8 +138,12 @@
                                             @onclick="() => OnSlotClick(date, h)">
                                             @if (!isPast && available.Count > 0)
                                             {
-                                                <div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:28px;" title="Clase disponible">
-                                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>
+                                                <div style="display:flex;align-items:center;justify-content:flex-start;gap:3px;flex-wrap:wrap;height:100%;min-height:28px;padding:2px;" title="@available.Count instructor@(available.Count > 1 ? "es" : "") disponible@(available.Count > 1 ? "s" : "")">
+                                                    @foreach (var inst in available)
+                                                    {
+                                                        var color = GetInstructorColor(inst.Id);
+                                                        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:@color;"></span>
+                                                    }
                                                 </div>
                                             }
                                         </td>
