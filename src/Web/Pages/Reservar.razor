@@ -111,11 +111,13 @@
 
                                     @if (myBooking is not null)
                                     {
-                                        var isCompleted = myBooking.Status == "completed";
-                                        var instName = myBooking.InstructorName;
-                                        <td style="text-align: center; padding: 4px; cursor: default;"
+                                        var booking = myBooking;
+                                        var isCompleted = booking.Status == "completed";
+                                        var instName = booking.InstructorName;
+                                        <td style="text-align: center; padding: 4px; cursor: pointer;"
                                             class="@(isCompleted ? "calendar-slot-completed" : "calendar-slot-booked")"
-                                            title="@(isCompleted ? $"Clase realizada con {instName}" : $"Reservada con {instName}")">
+                                            title="@(isCompleted ? $"Clase realizada con {instName}" : $"Reservada con {instName}")"
+                                            @onclick="() => ShowBookingDetail(booking)">
                                             <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
                                                 @if (isCompleted)
                                                 {
@@ -202,6 +204,74 @@
     </div>
 }
 
+@if (showDetailModal && detailBooking is not null)
+{
+    <div class="modal-overlay" @onclick="() => showDetailModal = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Detalle de clase</h3>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+                    @if (detailBooking.Status == "completed")
+                    {
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);color:#10b981;padding:4px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+                            @SvgIcons.CheckCircle Realizada
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.12);color:#3b82f6;padding:4px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+                            @SvgIcons.Calendar Reservada
+                        </span>
+                    }
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.Calendar</span>
+                        <span><strong>Fecha:</strong> @detailBooking.ScheduledDate.ToString("dddd dd/MM/yyyy")</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.Clock</span>
+                        <span><strong>Horario:</strong> @($"{detailBooking.StartHour:00}:00 - {detailBooking.StartHour + 1:00}:00")</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.User</span>
+                        <span><strong>Instructor:</strong> @detailBooking.InstructorName</span>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(detailBooking.MeetLink))
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.ExternalLink</span>
+                            <a href="@detailBooking.MeetLink" target="_blank" rel="noopener" class="btn btn-sm" style="background:#10b981;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                                Unirse a la clase
+                            </a>
+                        </div>
+                    }
+                    else if (detailBooking.Status == "confirmed")
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.ExternalLink</span>
+                            <span style="font-size:0.85rem;color:var(--text-muted);">El link de Meet se asignara antes de la clase</span>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showDetailModal = false">Cerrar</button>
+                @if (detailBooking.Status == "confirmed")
+                {
+                    <button class="btn btn-danger" @onclick="CancelBooking" disabled="@isCancelling">
+                        @(isCancelling ? "Cancelando..." : "Cancelar Reserva")
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private bool isLoading = true;
     private bool isBooking;
@@ -227,6 +297,11 @@
     private List<UserManageDto> modalInstructors = new();
     private int modalSelectedInstructorId;
     private string modalSelectedInstructorName = "";
+
+    // Detail modal state
+    private bool showDetailModal;
+    private BookingDto? detailBooking;
+    private bool isCancelling;
 
     // Colors for instructors
     private string[] instructorColors = { "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
@@ -457,5 +532,39 @@
     {
         return myBookings?.FirstOrDefault(b =>
             b.ScheduledDate.Date == date.Date && b.StartHour == hour);
+    }
+
+    private void ShowBookingDetail(BookingDto booking)
+    {
+        detailBooking = booking;
+        showDetailModal = true;
+    }
+
+    private async Task CancelBooking()
+    {
+        if (detailBooking is null) return;
+
+        isCancelling = true;
+        try
+        {
+            var success = await Api.CancelBookingAsync(detailBooking.Id);
+            if (success)
+            {
+                ToastService.Success("Reserva cancelada");
+                showDetailModal = false;
+                if (remainingTokens.HasValue) remainingTokens++;
+                bookedClasses--;
+                await LoadWeekData();
+            }
+            else
+            {
+                ToastService.Error("No se pudo cancelar la reserva");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cancelar la reserva");
+        }
+        isCancelling = false;
     }
 }
