@@ -3725,6 +3725,8 @@ textarea.form-input {
    ============================================================ */
 .calendar-compact {
   font-size: 0.8rem;
+  table-layout: fixed;
+  width: 100%;
 }
 .calendar-compact th {
   padding: 4px 2px !important;
@@ -4155,10 +4157,9 @@ textarea.form-input {
   bottom: -2px;
   left: 3px;
   right: 3px;
-  height: 2px;
-  background: white;
+  height: 2.5px;
+  background: #1e293b;
   border-radius: 1px;
-  box-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
 
 .cal-entry-more {
