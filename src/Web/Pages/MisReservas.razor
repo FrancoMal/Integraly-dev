@@ -134,32 +134,57 @@ else if (view == "week")
                                         var b = GetBookingAt(d, h);
                                         var isToday = d.Date == DateTime.Today;
                                         var isPast = d.Date < DateTime.Today || (d.Date == DateTime.Today && h < DateTime.Now.Hour);
-                                        <td style="text-align:center;padding:4px;font-size:0.75rem;@(isToday ? "background:rgba(16,185,129,0.03);" : "") @(isPast ? "opacity:0.5;" : "")"
-                                            class="@(b is not null ? (b.Status == "confirmed" ? "calendar-active" : "calendar-inactive") : "")">
-                                            @if (b is not null)
-                                            {
-                                                <div style="line-height:1.2;">
-                                                    <div style="font-weight:600;font-size:0.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;"
-                                                         title="@(isInstructor ? b.UserName : b.InstructorName)">
-                                                        @(isInstructor ? b.UserName : b.InstructorName)
-                                                    </div>
-                                                    @if (b.Status == "confirmed" && !string.IsNullOrEmpty(b.MeetLink))
+                                        @if (b is not null)
+                                        {
+                                            var booking = b;
+                                            var isCompleted = b.Status == "completed";
+                                            var isCancelled = b.Status == "cancelled";
+                                            <td style="text-align:center;padding:4px;font-size:0.75rem;cursor:pointer;@(isToday ? "background:rgba(16,185,129,0.03);" : "") @(isPast ? "opacity:0.5;" : "")"
+                                                class="@(isCompleted ? "calendar-slot-completed" : isCancelled ? "calendar-inactive" : "calendar-slot-booked")"
+                                                @onclick="() => ShowDetail(booking)">
+                                                <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+                                                    @if (isCompleted)
                                                     {
-                                                        <a href="@b.MeetLink" target="_blank" style="font-size:0.65rem;color:var(--primary);">Meet</a>
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                                                     }
-                                                    @if (b.Status == "cancelled")
+                                                    else if (isCancelled)
                                                     {
-                                                        <span style="font-size:0.6rem;color:var(--danger);">Cancel.</span>
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                                     }
+                                                    else
+                                                    {
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                    }
+                                                    <span style="font-size:0.6rem;line-height:1;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                                                        @(isInstructor ? booking.UserName : booking.InstructorName)
+                                                    </span>
                                                 </div>
-                                            }
-                                        </td>
+                                            </td>
+                                        }
+                                        else
+                                        {
+                                            <td style="text-align:center;padding:4px;font-size:0.75rem;@(isToday ? "background:rgba(16,185,129,0.03);" : "") @(isPast ? "opacity:0.5;" : "")"></td>
+                                        }
                                     }
                                 </tr>
                             }
                         }
                     </tbody>
                 </table>
+            </div>
+            <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem; align-items: center;">
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;"></span>
+                    Confirmada
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>
+                    Realizada
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;"></span>
+                    Cancelada
+                </span>
             </div>
         </div>
     </div>
@@ -215,17 +240,75 @@ else if (view == "month")
     </div>
 }
 
-@if (showCancelConfirm)
+@if (showDetailModal && detailBooking is not null)
 {
-    <div class="modal-overlay" @onclick="() => showCancelConfirm = false">
+    <div class="modal-overlay" @onclick="() => showDetailModal = false">
         <div class="modal-card modal-small" @onclick:stopPropagation="true">
-            <div class="modal-header"><h3>Cancelar reserva</h3></div>
+            <div class="modal-header">
+                <h3>Detalle de clase</h3>
+            </div>
             <div class="modal-body">
-                <p>Estas seguro que queres cancelar la clase del <strong>@bookingToCancel?.ScheduledDate.ToString("dd/MM/yyyy")</strong> a las <strong>@($"{bookingToCancel?.StartHour:00}:00")</strong>?</p>
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:1rem;">
+                    @if (detailBooking.Status == "completed")
+                    {
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(16,185,129,0.12);color:#10b981;padding:4px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+                            @SvgIcons.CheckCircle Realizada
+                        </span>
+                    }
+                    else if (detailBooking.Status == "cancelled")
+                    {
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(239,68,68,0.12);color:#ef4444;padding:4px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+                            @SvgIcons.AlertCircle Cancelada
+                        </span>
+                    }
+                    else
+                    {
+                        <span style="display:inline-flex;align-items:center;gap:4px;background:rgba(59,130,246,0.12);color:#3b82f6;padding:4px 10px;border-radius:20px;font-size:0.8rem;font-weight:600;">
+                            @SvgIcons.Calendar Confirmada
+                        </span>
+                    }
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.Calendar</span>
+                        <span><strong>Fecha:</strong> @detailBooking.ScheduledDate.ToString("dddd dd/MM/yyyy")</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.Clock</span>
+                        <span><strong>Horario:</strong> @($"{detailBooking.StartHour:00}:00 - {detailBooking.StartHour + 1:00}:00")</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.User</span>
+                        <span><strong>@(isInstructor ? "Alumno:" : "Instructor:")</strong> @(isInstructor ? detailBooking.UserName : detailBooking.InstructorName)</span>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(detailBooking.MeetLink) && detailBooking.Status != "cancelled")
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.ExternalLink</span>
+                            <a href="@detailBooking.MeetLink" target="_blank" rel="noopener" class="btn btn-sm" style="background:#10b981;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
+                                Unirse a la clase
+                            </a>
+                        </div>
+                    }
+                    else if (detailBooking.Status == "confirmed")
+                    {
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.ExternalLink</span>
+                            <span style="font-size:0.85rem;color:var(--text-muted);">El link de Meet se asignara antes de la clase</span>
+                        </div>
+                    }
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showCancelConfirm = false">No, volver</button>
-                <button class="btn btn-danger" @onclick="CancelBooking">Si, cancelar</button>
+                <button class="btn btn-secondary" @onclick="() => showDetailModal = false">Cerrar</button>
+                @if (detailBooking.Status == "confirmed" && !isInstructor)
+                {
+                    <button class="btn btn-danger" @onclick="CancelFromDetail" disabled="@isCancellingDetail">
+                        @(isCancellingDetail ? "Cancelando..." : "Cancelar Reserva")
+                    </button>
+                }
             </div>
         </div>
     </div>
@@ -236,6 +319,13 @@ else if (view == "month")
     private bool isLoading = true;
     private bool isInstructor;
     private string view = "list";
+
+    // Detail modal
+    private bool showDetailModal;
+    private BookingDto? detailBooking;
+    private bool isCancellingDetail;
+
+    // Legacy cancel (list view)
     private bool showCancelConfirm;
     private BookingDto? bookingToCancel;
 
@@ -267,6 +357,7 @@ else if (view == "month")
             bookings = await Api.GetMyBookingsAsync();
             var user = await Api.GetProfileAsync();
             isInstructor = user?.Role?.ToLower() == "instructor";
+            if (isInstructor && view == "list") view = "week";
         }
         catch
         {
@@ -305,6 +396,31 @@ else if (view == "month")
         else { ToastService.Error("No se pudo cancelar. Puede que ya haya pasado el tiempo limite."); }
         showCancelConfirm = false;
         bookingToCancel = null;
+    }
+
+    // Detail modal
+    private void ShowDetail(BookingDto booking)
+    {
+        detailBooking = booking;
+        showDetailModal = true;
+    }
+
+    private async Task CancelFromDetail()
+    {
+        if (detailBooking is null) return;
+        isCancellingDetail = true;
+        var result = await Api.CancelBookingAsync(detailBooking.Id);
+        if (result)
+        {
+            ToastService.Success("Reserva cancelada");
+            showDetailModal = false;
+            await LoadData();
+        }
+        else
+        {
+            ToastService.Error("No se pudo cancelar la reserva");
+        }
+        isCancellingDetail = false;
     }
 
     private string GetStatusClass(string s) => s switch { "confirmed" => "status-active", "cancelled" => "status-inactive", "completed" => "status-active", _ => "" };
