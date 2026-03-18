@@ -22,7 +22,7 @@
                      IsActive="@IsActive("")" OnClick="@(() => NavigateTo(""))" />
         }
 
-        @if (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas") || HasPerm("fichajes"))
+        @if (role != "admin" && (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas") || HasPerm("fichajes")))
         {
             <NavGroup Label="Tutorias" Icon="@SvgIcons.Calendar"
                       HasActiveChild="@(IsActive("calendario") || IsActive("reservar") || IsActive("mis-reservas") || IsActive("fichajes"))">
@@ -49,10 +49,15 @@
             </NavGroup>
         }
 
-        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config"))
+        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config") || role == "admin")
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("config"))">
+                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("config"))">
+                @if (role == "admin")
+                {
+                    <NavItem Href="calendario-admin" Label="Calendario" Icon="@SvgIcons.Calendar"
+                             IsActive="@IsActive("calendario-admin")" OnClick="@(() => NavigateTo("calendario-admin"))" />
+                }
                 @if (HasPerm("usuarios"))
                 {
                     <NavItem Href="usuarios" Label="Usuarios" Icon="@SvgIcons.Users"
@@ -154,6 +159,7 @@
     {
         { "", "dashboard" },
         { "calendario", "calendario" },
+        { "calendario-admin", "calendario-admin" },
         { "reservar", "reservar" },
         { "mis-reservas", "mis-reservas" },
         { "usuarios", "usuarios" },
@@ -221,7 +227,7 @@
         }
     }
 
-    private bool HasPerm(string key) => permissions.Contains(key);
+    private bool HasPerm(string key) => role == "admin" || permissions.Contains(key);
 
     public void Dispose()
     {

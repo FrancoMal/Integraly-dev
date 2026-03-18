@@ -4071,3 +4071,87 @@ textarea.form-input {
 .fichaje-clickable:hover {
   background: rgba(59, 130, 246, 0.15) !important;
 }
+
+/* === Admin Calendar === */
+.cal-entry {
+  font-size: 0.65rem;
+  line-height: 1.2;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-bottom: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-left: 3px solid transparent;
+}
+
+.cal-reserva {
+  background: rgba(59, 130, 246, 0.12);
+  border-left-color: #3b82f6;
+  color: #1e40af;
+}
+
+.cal-reserva.cancelled {
+  background: rgba(239, 68, 68, 0.08);
+  border-left-color: #ef4444;
+  color: #991b1b;
+  text-decoration: line-through;
+}
+
+.cal-reserva.completed {
+  background: rgba(16, 185, 129, 0.12);
+  border-left-color: #10b981;
+  color: #065f46;
+}
+
+.cal-fichaje {
+  background: rgba(245, 158, 11, 0.12);
+  border-left-color: #f59e0b;
+  color: #92400e;
+}
+
+.cal-disponibilidad {
+  background: rgba(16, 185, 129, 0.06);
+  color: #059669;
+  font-style: italic;
+}
+
+.cal-entry-more {
+  font-size: 0.6rem;
+  color: #64748b;
+  font-style: italic;
+  cursor: pointer;
+}
+
+.btn-filter-reservas {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.btn-filter-fichajes {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+
+.btn-filter-disponibilidad {
+  background: #10b981;
+  color: white;
+  border-color: #10b981;
+}
+
+.admin-cal-cell {
+  vertical-align: top;
+  cursor: pointer;
+  min-width: 90px;
+  padding: 2px !important;
+}
+
+.admin-cal-cell:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.admin-cal-cell.today-col {
+  background: rgba(16, 185, 129, 0.03);
+}

@@ -1,0 +1,501 @@
+@page "/calendario-admin"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+@inject TimezoneService TzService
+
+<div class="view-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <div>
+            <h2>Calendario General</h2>
+            <p class="view-subtitle">Vista completa de reservas, fichajes y disponibilidad</p>
+        </div>
+        <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
+    </div>
+</div>
+
+@* Filtros *@
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem;">
+        @* Fila 1: Filtros de tipo + navegacion de semana *@
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                <button class="btn btn-sm @(showReservas ? "btn-filter-reservas" : "btn-secondary")" @onclick="() => { showReservas = !showReservas; }">
+                    Reservas
+                </button>
+                <button class="btn btn-sm @(showFichajes ? "btn-filter-fichajes" : "btn-secondary")" @onclick="() => { showFichajes = !showFichajes; }">
+                    Fichajes
+                </button>
+                <button class="btn btn-sm @(showDisponibilidad ? "btn-filter-disponibilidad" : "btn-secondary")" @onclick="() => { showDisponibilidad = !showDisponibilidad; }">
+                    Disponibilidad
+                </button>
+            </div>
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek">&lt;</button>
+                <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">&gt;</button>
+            </div>
+        </div>
+
+        @* Fila 2: Filtro de instructores *@
+        @if (instructors is not null && instructors.Count > 0)
+        {
+            <div class="instructor-filters" style="margin-bottom:0.5rem;">
+                <span style="font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem;">Instructores:</span>
+                @foreach (var inst in instructors)
+                {
+                    var id = inst.Id;
+                    var isChecked = selectedInstructorIds.Contains(id);
+                    var color = GetInstructorColor(id);
+                    <label class="instructor-chip @(isChecked ? "active" : "")" style="@(isChecked ? $"background: {color}22; border-color: {color}; color: {color};" : "")">
+                        <input type="checkbox" checked="@isChecked" @onchange="() => ToggleInstructor(id)" style="display:none;" />
+                        <span class="instructor-dot" style="background: @color;"></span>
+                        @($"{inst.FirstName} {inst.LastName}".Trim())
+                    </label>
+                }
+            </div>
+        }
+
+        @* Fila 3: Filtro de alumno *@
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+            <label style="font-size:0.8rem;font-weight:600;">Alumno:</label>
+            <select class="form-input" style="width:auto;min-width:200px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterUserId" @onchange="OnUserFilterChanged">
+                <option value="0">Todos</option>
+                @foreach (var u in uniqueUsers)
+                {
+                    <option value="@u.Key">@u.Value</option>
+                }
+            </select>
+        </div>
+    </div>
+</div>
+
+@* Leyenda *@
+<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;font-size:0.75rem;align-items:center;">
+    <div style="display:flex;align-items:center;gap:4px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(59,130,246,0.12);border-left:3px solid #3b82f6;"></span>
+        Reserva
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(245,158,11,0.12);border-left:3px solid #f59e0b;"></span>
+        Fichaje
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);"></span>
+        Disponibilidad
+    </div>
+    <div style="display:flex;align-items:center;gap:4px;">
+        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(239,68,68,0.08);border-left:3px solid #ef4444;"></span>
+        Cancelada
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando datos del calendario...</p></div></div>
+}
+else
+{
+    @* Calendario semanal *@
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
+            <div class="table-responsive">
+                <table class="data-table calendar-compact">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;text-align:center;">Hora</th>
+                            @for (int d = 0; d < 7; d++)
+                            {
+                                var date = weekStart.AddDays(d);
+                                var isToday = date.Date == DateTime.Today;
+                                <th style="text-align:center;@(isToday ? "background:var(--primary-bg);color:var(--primary);" : "")">
+                                    @dayNames[d] @date.ToString("dd/M")
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int h = 7; h <= 22; h++)
+                        {
+                            var hour = h;
+                            <tr>
+                                <td style="text-align:center;font-weight:600;font-size:0.75rem;color:var(--text-secondary);">@($"{hour}:00")</td>
+                                @for (int d = 0; d < 7; d++)
+                                {
+                                    var date = weekStart.AddDays(d);
+                                    var isToday = date.Date == DateTime.Today;
+                                    var bookings = GetBookingsAt(date, hour);
+                                    var fichajes = GetFichajesAt(date, hour);
+                                    var availableInstructors = GetAvailableAt(date, hour);
+                                    var totalEntries = bookings.Count + fichajes.Count + (availableInstructors.Count > 0 ? 1 : 0);
+
+                                    <td class="admin-cal-cell @(isToday ? "today-col" : "")"
+                                        @onclick="() => OpenModal(date, hour)"
+                                        title="@($"{dayNames[(int)date.DayOfWeek == 0 ? 6 : (int)date.DayOfWeek - 1]} {date:dd/M} {hour}:00 - {totalEntries} items")">
+                                        @if (showDisponibilidad && availableInstructors.Count > 0)
+                                        {
+                                            <div class="cal-entry cal-disponibilidad" title="@string.Join(", ", availableInstructors.Select(i => $"{i.FirstName} {i.LastName}".Trim()))">
+                                                @availableInstructors.Count disp.
+                                            </div>
+                                        }
+                                        @if (showReservas)
+                                        {
+                                            @foreach (var b in bookings.Take(2))
+                                            {
+                                                <div class="cal-entry cal-reserva @(b.Status == "cancelled" ? "cancelled" : "") @(b.Status == "completed" ? "completed" : "")"
+                                                     title="@b.UserName con @b.InstructorName (@b.Status)">
+                                                    @TruncateName(b.UserName)
+                                                </div>
+                                            }
+                                            @if (bookings.Count > 2)
+                                            {
+                                                <div class="cal-entry-more">+@(bookings.Count - 2) mas</div>
+                                            }
+                                        }
+                                        @if (showFichajes)
+                                        {
+                                            @foreach (var f in fichajes.Take(2))
+                                            {
+                                                <div class="cal-entry cal-fichaje" title="@f.InstructorName: @f.Description">
+                                                    @TruncateName(f.InstructorName)
+                                                </div>
+                                            }
+                                            @if (fichajes.Count > 2)
+                                            {
+                                                <div class="cal-entry-more">+@(fichajes.Count - 2) mas</div>
+                                            }
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal de detalle *@
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:500px;">
+            <div class="modal-header">
+                <h3 style="margin:0;font-size:1rem;">@modalDate.ToString("dddd dd/MM/yyyy") — @($"{modalHour}:00")</h3>
+            </div>
+            <div class="modal-body" style="max-height:400px;overflow-y:auto;">
+                @{
+                    var mBookings = GetBookingsAt(modalDate, modalHour);
+                    var mFichajes = GetFichajesAt(modalDate, modalHour);
+                    var mAvail = GetAvailableAt(modalDate, modalHour);
+                }
+
+                @if (mBookings.Count > 0)
+                {
+                    <div style="margin-bottom:1rem;">
+                        <h4 style="font-size:0.85rem;color:#3b82f6;margin-bottom:0.5rem;">Reservas (@mBookings.Count)</h4>
+                        @foreach (var b in mBookings)
+                        {
+                            <div style="padding:0.4rem 0.6rem;margin-bottom:0.4rem;border-radius:6px;background:rgba(59,130,246,0.08);border-left:3px solid #3b82f6;font-size:0.8rem;">
+                                <div style="font-weight:600;">@b.UserName <span style="font-weight:400;color:var(--text-secondary);">con</span> @b.InstructorName</div>
+                                <div style="display:flex;gap:0.5rem;align-items:center;margin-top:2px;">
+                                    <span class="status-badge @(b.Status == "confirmed" ? "status-active" : "status-inactive")">@b.Status</span>
+                                    @if (!string.IsNullOrEmpty(b.MeetLink))
+                                    {
+                                        <a href="@b.MeetLink" target="_blank" style="font-size:0.75rem;color:var(--primary);">Meet</a>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (mFichajes.Count > 0)
+                {
+                    <div style="margin-bottom:1rem;">
+                        <h4 style="font-size:0.85rem;color:#f59e0b;margin-bottom:0.5rem;">Fichajes (@mFichajes.Count)</h4>
+                        @foreach (var f in mFichajes)
+                        {
+                            <div style="padding:0.4rem 0.6rem;margin-bottom:0.4rem;border-radius:6px;background:rgba(245,158,11,0.08);border-left:3px solid #f59e0b;font-size:0.8rem;">
+                                <div style="font-weight:600;">@f.InstructorName</div>
+                                <div style="color:var(--text-secondary);font-size:0.75rem;">@($"{f.StartHour}:00 - {f.EndHour}:00")</div>
+                                @if (!string.IsNullOrEmpty(f.Description))
+                                {
+                                    <div style="color:var(--text-muted);font-size:0.75rem;margin-top:2px;">@f.Description</div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (mAvail.Count > 0)
+                {
+                    <div>
+                        <h4 style="font-size:0.85rem;color:#10b981;margin-bottom:0.5rem;">Disponibilidad (@mAvail.Count instructores)</h4>
+                        @foreach (var inst in mAvail)
+                        {
+                            <div style="padding:0.3rem 0.6rem;margin-bottom:0.3rem;border-radius:6px;background:rgba(16,185,129,0.06);font-size:0.8rem;color:#059669;">
+                                @($"{inst.FirstName} {inst.LastName}".Trim())
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (mBookings.Count == 0 && mFichajes.Count == 0 && mAvail.Count == 0)
+                {
+                    <p class="text-muted" style="font-size:0.85rem;">No hay datos para este horario.</p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" @onclick="CloseModal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Data
+    private List<UserManageDto>? instructors;
+    private List<BookingDto>? weekBookings;
+    private Dictionary<int, List<TimeEntryDto>> instructorFichajes = new();
+    private Dictionary<int, List<AvailabilityDto>> instructorAvailability = new();
+    private Dictionary<int, List<WeekAvailabilityDto>> instructorWeekOverrides = new();
+
+    // Filters
+    private HashSet<int> selectedInstructorIds = new();
+    private bool showReservas = true;
+    private bool showFichajes = true;
+    private bool showDisponibilidad = true;
+    private int filterUserId = 0;
+    private Dictionary<int, string> uniqueUsers = new();
+
+    // Week nav
+    private DateTime weekStart;
+    private DateTime weekEnd;
+    private bool loading = true;
+
+    // Modal
+    private bool showModal = false;
+    private DateTime modalDate;
+    private int modalHour;
+
+    private static readonly string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    private static readonly string[] instructorColors = {
+        "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6",
+        "#ec4899", "#06b6d4", "#84cc16", "#f97316", "#6366f1"
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Start on Monday of current week
+        var today = DateTime.Today;
+        var diff = ((int)today.DayOfWeek + 6) % 7;
+        weekStart = today.AddDays(-diff);
+        weekEnd = weekStart.AddDays(6);
+
+        try
+        {
+            instructors = await Api.GetInstructorsAsync();
+            if (instructors is not null)
+            {
+                selectedInstructorIds = new HashSet<int>(instructors.Select(i => i.Id));
+
+                // Load general availability for all instructors in parallel
+                var availTasks = instructors.Select(async inst =>
+                {
+                    var avail = await Api.GetInstructorAvailabilityAsync(inst.Id);
+                    return (inst.Id, Availability: avail ?? new List<AvailabilityDto>());
+                }).ToList();
+                var availResults = await Task.WhenAll(availTasks);
+                instructorAvailability = availResults.ToDictionary(r => r.Id, r => r.Availability);
+            }
+
+            await LoadWeekData();
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar datos del calendario");
+        }
+
+        loading = false;
+    }
+
+    private async Task LoadWeekData()
+    {
+        try
+        {
+            // Load bookings, fichajes, and week overrides in parallel
+            var bookingsTask = Api.GetWeekBookingsAsync(weekStart, weekEnd);
+
+            var fichajesTasks = new List<Task<(int Id, List<TimeEntryDto> Entries)>>();
+            var overridesTasks = new List<Task<(int Id, List<WeekAvailabilityDto> Overrides)>>();
+
+            if (instructors is not null)
+            {
+                foreach (var inst in instructors)
+                {
+                    var id = inst.Id;
+                    fichajesTasks.Add(Task.Run(async () =>
+                    {
+                        var entries = await Api.GetTimeEntriesAsync(id, weekStart, weekEnd);
+                        return (id, Entries: entries ?? new List<TimeEntryDto>());
+                    }));
+                    overridesTasks.Add(Task.Run(async () =>
+                    {
+                        var overrides = await Api.GetWeekAvailabilityAsync(id, weekStart, weekEnd);
+                        return (id, Overrides: overrides ?? new List<WeekAvailabilityDto>());
+                    }));
+                }
+            }
+
+            weekBookings = await bookingsTask;
+            var fichajesResults = await Task.WhenAll(fichajesTasks);
+            var overridesResults = await Task.WhenAll(overridesTasks);
+
+            instructorFichajes = fichajesResults.ToDictionary(r => r.Id, r => r.Entries);
+            instructorWeekOverrides = overridesResults.ToDictionary(r => r.Id, r => r.Overrides);
+
+            // Build unique users list from bookings
+            uniqueUsers = new();
+            if (weekBookings is not null)
+            {
+                foreach (var b in weekBookings)
+                {
+                    if (!uniqueUsers.ContainsKey(b.UserId))
+                        uniqueUsers[b.UserId] = b.UserName;
+                }
+            }
+        }
+        catch
+        {
+            weekBookings = new();
+            ToastService.Error("Error al cargar datos de la semana");
+        }
+    }
+
+    private List<BookingDto> GetBookingsAt(DateTime date, int hour)
+    {
+        if (!showReservas || weekBookings is null) return new();
+        return weekBookings.Where(b =>
+            b.ScheduledDate.Date == date.Date &&
+            b.StartHour == hour &&
+            selectedInstructorIds.Contains(b.InstructorId) &&
+            (filterUserId == 0 || b.UserId == filterUserId)
+        ).ToList();
+    }
+
+    private List<TimeEntryDto> GetFichajesAt(DateTime date, int hour)
+    {
+        if (!showFichajes) return new();
+        var result = new List<TimeEntryDto>();
+        foreach (var instId in selectedInstructorIds)
+        {
+            if (instructorFichajes.TryGetValue(instId, out var entries))
+            {
+                result.AddRange(entries.Where(e =>
+                    e.Date.Date == date.Date &&
+                    e.StartHour <= hour && e.EndHour > hour));
+            }
+        }
+        return result;
+    }
+
+    private List<UserManageDto> GetAvailableAt(DateTime date, int hour)
+    {
+        if (!showDisponibilidad || instructors is null) return new();
+
+        var dayOfWeek = (int)date.DayOfWeek;
+        var result = new List<UserManageDto>();
+
+        foreach (var inst in instructors)
+        {
+            if (!selectedInstructorIds.Contains(inst.Id)) continue;
+
+            bool isAvailable;
+
+            if (instructorWeekOverrides.TryGetValue(inst.Id, out var overrides))
+            {
+                var weekOverride = overrides.FirstOrDefault(o => o.Date.Date == date.Date && o.StartHour == hour);
+                if (weekOverride is not null)
+                {
+                    isAvailable = weekOverride.IsActive;
+                }
+                else
+                {
+                    isAvailable = instructorAvailability.TryGetValue(inst.Id, out var avail)
+                        && avail.Any(a => a.DayOfWeek == dayOfWeek && a.StartHour == hour && a.IsActive);
+                }
+            }
+            else
+            {
+                isAvailable = instructorAvailability.TryGetValue(inst.Id, out var avail)
+                    && avail.Any(a => a.DayOfWeek == dayOfWeek && a.StartHour == hour && a.IsActive);
+            }
+
+            if (isAvailable)
+                result.Add(inst);
+        }
+
+        return result;
+    }
+
+    private string GetInstructorColor(int instructorId)
+    {
+        if (instructors is null) return instructorColors[0];
+        var index = instructors.FindIndex(i => i.Id == instructorId);
+        return index >= 0 ? instructorColors[index % instructorColors.Length] : instructorColors[0];
+    }
+
+    private void ToggleInstructor(int id)
+    {
+        if (selectedInstructorIds.Contains(id))
+            selectedInstructorIds.Remove(id);
+        else
+            selectedInstructorIds.Add(id);
+    }
+
+    private void OnUserFilterChanged(ChangeEventArgs e)
+    {
+        filterUserId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+    }
+
+    private async Task PreviousWeek()
+    {
+        weekStart = weekStart.AddDays(-7);
+        weekEnd = weekEnd.AddDays(-7);
+        loading = true;
+        StateHasChanged();
+        await LoadWeekData();
+        loading = false;
+    }
+
+    private async Task NextWeek()
+    {
+        weekStart = weekStart.AddDays(7);
+        weekEnd = weekEnd.AddDays(7);
+        loading = true;
+        StateHasChanged();
+        await LoadWeekData();
+        loading = false;
+    }
+
+    private void OpenModal(DateTime date, int hour)
+    {
+        modalDate = date;
+        modalHour = hour;
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private string TruncateName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "";
+        var parts = name.Split(' ');
+        if (parts.Length > 1)
+            return $"{parts[0]} {parts[1][0]}.";
+        return parts[0].Length > 8 ? parts[0][..8] + "." : parts[0];
+    }
+}
