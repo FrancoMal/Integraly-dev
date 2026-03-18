@@ -53,23 +53,11 @@
 
 @if (instructors is not null && instructors.Count > 0)
 {
-    <div class="card" style="margin-bottom: 1rem;">
-        <div class="card-body" style="padding: 0.75rem 1rem;">
-            <div class="instructor-filters">
-                <span style="font-size: 0.8rem; font-weight: 600; margin-right: 0.5rem;">Filtrar instructores:</span>
-                @foreach (var inst in instructors)
-                {
-                    var id = inst.Id;
-                    var isChecked = selectedInstructorIds.Contains(id);
-                    var color = GetInstructorColor(id);
-                    <label class="instructor-chip @(isChecked ? "active" : "")" style="@(isChecked ? $"background: {color}22; border-color: {color}; color: {color};" : "")">
-                        <input type="checkbox" checked="@isChecked" @onchange="() => ToggleInstructor(id)" style="display:none;" />
-                        <span class="instructor-dot" style="background: @color;"></span>
-                        @($"{inst.FirstName} {inst.LastName}".Trim())
-                    </label>
-                }
-            </div>
-        </div>
+    <div style="margin-bottom: 1rem;">
+        <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
+            @SvgIcons.Users
+            <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
+        </button>
     </div>
 }
 
@@ -171,6 +159,44 @@
         }
     </div>
 </div>
+
+@if (showInstructorModal)
+{
+    <div class="modal-overlay" @onclick="() => showInstructorModal = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:1rem;">Seleccionar instructores</h3>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-sm btn-secondary" @onclick="SelectAllInstructors">Todos</button>
+                    <button class="btn btn-sm btn-secondary" @onclick="SelectNoneInstructors">Ninguno</button>
+                </div>
+            </div>
+            <div class="modal-body" style="max-height:350px;overflow-y:auto;padding:0.75rem 1rem;">
+                @if (instructors is not null)
+                {
+                    @foreach (var inst in instructors)
+                    {
+                        var id = inst.Id;
+                        var isChecked = selectedInstructorIds.Contains(id);
+                        var color = GetInstructorColor(id);
+                        <label style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.4rem;border-radius:6px;cursor:pointer;transition:background 0.15s;@(isChecked ? $"background:{color}11;" : "")"
+                               class="instructor-modal-row">
+                            <input type="checkbox" checked="@isChecked" @onchange="() => ToggleInstructor(id)"
+                                   style="accent-color:@color;width:16px;height:16px;" />
+                            <span class="instructor-dot" style="background:@color;"></span>
+                            <span style="font-size:0.85rem;@(isChecked ? "font-weight:600;" : "color:var(--text-secondary);")">
+                                @($"{inst.FirstName} {inst.LastName}".Trim())
+                            </span>
+                        </label>
+                    }
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary btn-sm" @onclick="() => showInstructorModal = false">Listo</button>
+            </div>
+        </div>
+    </div>
+}
 
 @if (showModal)
 {
@@ -293,6 +319,9 @@
     private DateTime weekStart;
     private DateTime weekEnd;
     private string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    // Instructor modal
+    private bool showInstructorModal;
 
     // Modal state
     private bool showModal;
@@ -460,6 +489,17 @@
             selectedInstructorIds.Remove(id);
         else
             selectedInstructorIds.Add(id);
+    }
+
+    private void SelectAllInstructors()
+    {
+        if (instructors is not null)
+            selectedInstructorIds = new HashSet<int>(instructors.Select(i => i.Id));
+    }
+
+    private void SelectNoneInstructors()
+    {
+        selectedInstructorIds = new();
     }
 
     private async Task PreviousWeek()

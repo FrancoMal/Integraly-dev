@@ -3791,9 +3791,12 @@ textarea.form-input {
 /* ============================================================
    Reservar Calendar Slots
    ============================================================ */
-.reservar-grid td {
+.reservar-grid td,
+.reservar-grid th {
   vertical-align: middle;
   position: relative;
+  border-left: 1px solid var(--border, #e5e7eb) !important;
+  border-right: 1px solid var(--border, #e5e7eb) !important;
 }
 .calendar-slot-available {
   background: rgba(16, 185, 129, 0.05) !important;
