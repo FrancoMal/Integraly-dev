@@ -92,19 +92,18 @@
                                     var dayKey = $"{date:yyyy-MM-dd}-{h}";
                                     var available = GetAvailableInstructors(date, h);
                                     var isPast = date.Date < DateTime.Today || (date.Date == DateTime.Today && h <= DateTime.Now.Hour);
+                                    var slotColor = GetAvailabilityColor(available.Count);
                                     <td style="text-align: center; padding: 4px; cursor: @(available.Count > 0 && !isPast ? "pointer" : "default");"
                                         class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "")"
                                         @onclick="() => OnSlotClick(date, h)">
                                         @if (!isPast && available.Count > 0)
                                         {
-                                            <div class="slot-badges">
-                                                @foreach (var inst in available)
-                                                {
-                                                    var color = GetInstructorColor(inst.Id);
-                                                    <span class="slot-dot" style="background: @color;" title="@($"{inst.FirstName} {inst.LastName}".Trim())"></span>
-                                                }
+                                            <div class="slot-grad-icon" title="@available.Count instructor@(available.Count > 1 ? "es" : "") disponible@(available.Count > 1 ? "s" : "")">
+                                                <svg viewBox="0 0 24 24" width="22" height="22" fill="@slotColor" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+                                                </svg>
+                                                <span class="slot-grad-count" style="color: @slotColor;">@available.Count</span>
                                             </div>
-                                            <span class="slot-count">@available.Count</span>
                                         }
                                     </td>
                                 }
@@ -113,18 +112,19 @@
                     </tbody>
                 </table>
             </div>
-            <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem;">
-                @if (instructors is not null)
-                {
-                    @foreach (var inst in instructors.Where(i => selectedInstructorIds.Contains(i.Id)))
-                    {
-                        var color = GetInstructorColor(inst.Id);
-                        <span style="display: inline-flex; align-items: center; gap: 4px;">
-                            <span class="slot-dot" style="background: @color;"></span>
-                            @($"{inst.FirstName} {inst.LastName}".Trim())
-                        </span>
-                    }
-                }
+            <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem; align-items: center;">
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#10b981"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+                    Alta (@greenMin+)
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#f59e0b"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+                    Media (@yellowMin-@(greenMin-1))
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="#ef4444"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2-1.09V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+                    Baja (1-@(yellowMin-1))
+                </span>
             </div>
         }
     </div>
@@ -192,6 +192,10 @@
     // Colors for instructors
     private string[] instructorColors = { "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
 
+    // Availability color thresholds
+    private int greenMin = 3;
+    private int yellowMin = 2;
+
     protected override async Task OnInitializedAsync()
     {
         // Start on current week (Monday)
@@ -213,13 +217,21 @@
         {
             var instructorsTask = Api.GetInstructorsAsync();
             var dashTask = Api.GetUserDashboardAsync();
-            await Task.WhenAll(instructorsTask, dashTask);
+            var settingsTask = Api.GetSettingsAsync();
+            await Task.WhenAll(instructorsTask, dashTask, settingsTask);
 
             instructors = instructorsTask.Result ?? new();
 
             var dash = dashTask.Result;
             if (dash is not null)
                 remainingTokens = dash.RemainingTokens;
+
+            var settings = settingsTask.Result;
+            if (settings is not null)
+            {
+                if (settings.TryGetValue("AvailabilityGreenMin", out var gm) && int.TryParse(gm, out var gv)) greenMin = gv;
+                if (settings.TryGetValue("AvailabilityYellowMin", out var ym) && int.TryParse(ym, out var yv)) yellowMin = yv;
+            }
 
             // Select all instructors by default
             selectedInstructorIds = new HashSet<int>(instructors.Select(i => i.Id));
@@ -400,5 +412,12 @@
             ToastService.Error("Error al reservar la clase");
         }
         isBooking = false;
+    }
+
+    private string GetAvailabilityColor(int count)
+    {
+        if (count >= greenMin) return "#10b981";  // green
+        if (count >= yellowMin) return "#f59e0b"; // yellow/amber
+        return "#ef4444"; // red
     }
 }

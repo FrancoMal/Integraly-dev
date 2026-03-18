@@ -276,6 +276,19 @@ END
 GO
 
 -- Seed SMTP settings
+-- Availability thresholds (for color coding in Reservar)
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'AvailabilityGreenMin')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('AvailabilityGreenMin', '3');
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'AvailabilityYellowMin')
+BEGIN
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('AvailabilityYellowMin', '2');
+END
+GO
+
 IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'DefaultTimezone')
 BEGIN
     INSERT INTO AppSettings ([Key], [Value]) VALUES ('DefaultTimezone', 'America/Argentina/Buenos_Aires');

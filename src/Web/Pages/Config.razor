@@ -41,6 +41,20 @@
                 <small class="text-muted">Zona horaria para usuarios nuevos. Cada usuario puede cambiarla en su perfil.</small>
             </div>
 
+            <h4 style="margin-top: 1.5rem; margin-bottom: 0.75rem;">Indicador de disponibilidad</h4>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Verde desde (instructores disponibles)</label>
+                    <input class="form-input" type="number" @bind="greenMin" min="1" max="20" />
+                    <small class="text-muted">Si hay esta cantidad o mas, el icono es verde</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Amarillo desde</label>
+                    <input class="form-input" type="number" @bind="yellowMin" min="1" max="20" />
+                    <small class="text-muted">Si hay esta cantidad o mas (pero menos que verde), es amarillo. Menos es rojo.</small>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Horas minimas para cancelar una reserva</label>
                 <input class="form-input" type="number" @bind="cancellationHours" min="0" max="72" />
@@ -137,6 +151,8 @@
 
     private string brandName = "Integraly";
     private string defaultTimezone = "America/Argentina/Buenos_Aires";
+    private int greenMin = 3;
+    private int yellowMin = 2;
     private int cancellationHours = 24;
 
     // SMTP fields
@@ -172,6 +188,10 @@
                     brandName = bn;
                 if (settings.TryGetValue("DefaultTimezone", out var dtz))
                     defaultTimezone = dtz;
+                if (settings.TryGetValue("AvailabilityGreenMin", out var gm) && int.TryParse(gm, out var gv))
+                    greenMin = gv;
+                if (settings.TryGetValue("AvailabilityYellowMin", out var ym) && int.TryParse(ym, out var yv))
+                    yellowMin = yv;
                 if (settings.TryGetValue("CancellationHours", out var ch) && int.TryParse(ch, out var hours))
                     cancellationHours = hours;
 
@@ -208,9 +228,11 @@
         {
             var r1 = await Api.UpdateSettingAsync("BrandName", brandName);
             var r2 = await Api.UpdateSettingAsync("DefaultTimezone", defaultTimezone);
-            var r3 = await Api.UpdateSettingAsync("CancellationHours", cancellationHours.ToString());
+            var r3 = await Api.UpdateSettingAsync("AvailabilityGreenMin", greenMin.ToString());
+            var r4 = await Api.UpdateSettingAsync("AvailabilityYellowMin", yellowMin.ToString());
+            var r5 = await Api.UpdateSettingAsync("CancellationHours", cancellationHours.ToString());
 
-            if (r1 && r2 && r3)
+            if (r1 && r2 && r3 && r4 && r5)
             {
                 message = "Configuracion guardada correctamente";
                 messageSuccess = true;
