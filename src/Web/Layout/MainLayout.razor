@@ -100,7 +100,10 @@
         <div class="sidebar-user-avatar">@SvgIcons.User</div>
         <div class="sidebar-user-info">
             <span class="sidebar-user-name">@username</span>
-            <span class="sidebar-user-role">@role</span>
+            @if (role != "usuario")
+            {
+                <span class="sidebar-user-role">@role</span>
+            }
         </div>
         <button class="sidebar-menu-btn" @onclick="ToggleUserMenu" @onclick:stopPropagation="true" title="Menu">
             <span class="sidebar-menu-icon @(userMenuOpen ? "rotated" : "")">@SvgIcons.ChevronUp</span>

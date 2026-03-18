@@ -16,11 +16,27 @@
 
 @if (remainingTokens.HasValue)
 {
-    <div class="stat-card" style="margin-bottom: 1.5rem; display: inline-flex;">
-        <div class="stat-card-icon primary">@SvgIcons.Package</div>
-        <div class="stat-card-info">
-            <span class="stat-card-value">@remainingTokens</span>
-            <span class="stat-card-label">Clases disponibles</span>
+    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+        <div class="stat-card" style="display: inline-flex;">
+            <div class="stat-card-icon primary">@SvgIcons.Package</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@remainingTokens</span>
+                <span class="stat-card-label">Clases disponibles</span>
+            </div>
+        </div>
+        <div class="stat-card" style="display: inline-flex;">
+            <div class="stat-card-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">@SvgIcons.Calendar</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@bookedClasses</span>
+                <span class="stat-card-label">Clases reservadas</span>
+            </div>
+        </div>
+        <div class="stat-card" style="display: inline-flex;">
+            <div class="stat-card-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">@SvgIcons.CheckCircle</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@usedClasses</span>
+                <span class="stat-card-label">Clases realizadas</span>
+            </div>
         </div>
     </div>
 }
@@ -170,6 +186,8 @@
     private bool isLoading = true;
     private bool isBooking;
     private int? remainingTokens;
+    private int bookedClasses;
+    private int usedClasses;
 
     private List<UserManageDto>? instructors;
     private HashSet<int> selectedInstructorIds = new();
@@ -224,7 +242,11 @@
 
             var dash = dashTask.Result;
             if (dash is not null)
+            {
                 remainingTokens = dash.RemainingTokens;
+                bookedClasses = dash.BookedClasses;
+                usedClasses = dash.UsedClasses;
+            }
 
             var settings = settingsTask.Result;
             if (settings is not null)

@@ -15,5 +15,7 @@ public record InstructorDashboardDto(
 
 public record UserDashboardDto(
     int RemainingTokens,
-    int UpcomingBookings
+    int UpcomingBookings,
+    int BookedClasses,
+    int UsedClasses
 );

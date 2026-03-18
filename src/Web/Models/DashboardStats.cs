@@ -19,4 +19,6 @@ public class UserDashboardDto
 {
     public int RemainingTokens { get; set; }
     public int UpcomingBookings { get; set; }
+    public int BookedClasses { get; set; }
+    public int UsedClasses { get; set; }
 }

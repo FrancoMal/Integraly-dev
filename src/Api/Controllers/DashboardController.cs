@@ -74,8 +74,14 @@ public class DashboardController : ControllerBase
             b.UserId == userId
             && b.Status == "confirmed"
             && b.ScheduledDate >= DateTime.UtcNow.Date);
+        var bookedClasses = await _db.Bookings.CountAsync(b =>
+            b.UserId == userId
+            && b.Status == "confirmed");
+        var usedClasses = await _db.Bookings.CountAsync(b =>
+            b.UserId == userId
+            && b.Status == "completed");
 
-        return new UserDashboardDto(remainingTokens, upcomingBookings);
+        return new UserDashboardDto(remainingTokens, upcomingBookings, bookedClasses, usedClasses);
     }
 
     private int? GetUserId()
