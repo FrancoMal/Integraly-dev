@@ -112,14 +112,18 @@ else
                                     var totalEntries = bookings.Count + (availableInstructors.Count > 0 ? 1 : 0);
 
                                     <td class="admin-cal-cell @(isToday ? "today-col" : "")"
-                                        @onclick="() => OpenModal(date, hour)"
-                                        title="@($"{dayNames[(int)date.DayOfWeek == 0 ? 6 : (int)date.DayOfWeek - 1]} {date:dd/M} {hour}:00 - {totalEntries} items")">
+                                        @onclick="() => OpenModal(date, hour)">
                                         @if (showDisponibilidad && availableInstructors.Count > 0)
                                         {
                                             <div class="cal-instructor-dots">
                                                 @foreach (var inst in availableInstructors)
                                                 {
-                                                    <span class="instructor-circle" style="background:@GetInstructorColor(inst.Id);" title="@($"{inst.FirstName} {inst.LastName}".Trim())">
+                                                    var booking = showReservas ? bookings.FirstOrDefault(b => b.InstructorId == inst.Id) : null;
+                                                    var hasBooking = booking is not null;
+                                                    var tooltip = hasBooking
+                                                        ? $"{inst.FirstName} {inst.LastName} — Clase con {booking!.UserName} ({booking.Status})"
+                                                        : $"{inst.FirstName} {inst.LastName} — Disponible";
+                                                    <span class="instructor-circle @(hasBooking ? "has-booking" : "")" style="background:@GetInstructorColor(inst.Id);" title="@tooltip">
                                                         @GetInitials(inst)
                                                     </span>
                                                 }
@@ -127,16 +131,13 @@ else
                                         }
                                         @if (showReservas)
                                         {
-                                            @foreach (var b in bookings.Take(2))
+                                            @* Mostrar reservas de instructores NO disponibles en este horario *@
+                                            @foreach (var b in bookings.Where(b => !availableInstructors.Any(i => i.Id == b.InstructorId)).Take(2))
                                             {
                                                 <div class="cal-entry cal-reserva @(b.Status == "cancelled" ? "cancelled" : "") @(b.Status == "completed" ? "completed" : "")"
                                                      title="@b.UserName con @b.InstructorName (@b.Status)">
                                                     @TruncateName(b.UserName)
                                                 </div>
-                                            }
-                                            @if (bookings.Count > 2)
-                                            {
-                                                <div class="cal-entry-more">+@(bookings.Count - 2) mas</div>
                                             }
                                         }
                                     </td>

@@ -4129,8 +4129,8 @@ textarea.form-input {
 .cal-instructor-dots {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  justify-content: center;
+  gap: 3px;
+  justify-content: flex-start;
 }
 
 .instructor-circle {
@@ -4145,6 +4145,20 @@ textarea.form-input {
   font-weight: 700;
   line-height: 1;
   flex-shrink: 0;
+  position: relative;
+  cursor: default;
+}
+
+.instructor-circle.has-booking::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 3px;
+  right: 3px;
+  height: 2px;
+  background: white;
+  border-radius: 1px;
+  box-shadow: 0 0 2px rgba(0,0,0,0.3);
 }
 
 .cal-entry-more {
