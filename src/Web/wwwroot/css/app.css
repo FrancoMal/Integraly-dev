@@ -3728,6 +3728,11 @@ textarea.form-input {
   min-width: 50px;
   height: 34px;
 }
+.calendar-compact td,
+.calendar-compact th {
+  border-left: 2px solid var(--border, #d1d5db) !important;
+  border-right: 2px solid var(--border, #d1d5db) !important;
+}
 .calendar-past {
   background: #f8f9fa !important;
   color: #ccc !important;
@@ -3795,8 +3800,6 @@ textarea.form-input {
 .reservar-grid th {
   vertical-align: middle;
   position: relative;
-  border-left: 1px solid var(--border, #e5e7eb) !important;
-  border-right: 1px solid var(--border, #e5e7eb) !important;
 }
 .calendar-slot-available {
   background: rgba(16, 185, 129, 0.05) !important;
