@@ -8,84 +8,209 @@
     <p class="view-subtitle">Configura tus horarios disponibles para clases</p>
 </div>
 
-<div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h3>Disponibilidad semanal</h3>
-        <button class="btn btn-primary" @onclick="SaveAvailability" disabled="@isSaving">
-            @(isSaving ? "Guardando..." : "Guardar Cambios")
-        </button>
-    </div>
-    <div class="card-body">
-        @if (isLoading)
-        {
-            <p class="text-muted">Cargando...</p>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="data-table calendar-grid calendar-compact">
-                    <thead>
-                        <tr>
-                            <th style="width: 50px;">Hora</th>
-                            @foreach (var day in dayNames)
-                            {
-                                <th style="text-align: center; width: 50px;">@day</th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int hour = 8; hour <= 21; hour++)
-                        {
-                            var h = hour;
-                            <tr>
-                                <td><strong>@($"{h:00}:00")</strong></td>
-                                @for (int day = 1; day <= 7; day++)
-                                {
-                                    var d = day;
-                                    var dow = d == 7 ? 0 : d;
-                                    var key = $"{dow}-{h}";
-                                    var isActive = activeSlots.Contains(key);
-                                    var hasBooking = bookedSlots.Contains(key);
-                                    <td style="text-align: center; cursor: pointer; padding: 4px;"
-                                        class="@(hasBooking ? "calendar-booked" : isActive ? "calendar-active" : "calendar-inactive")"
-                                        @onclick="() => ToggleSlot(dow, h)">
-                                        @if (hasBooking)
-                                        {
-                                            <span class="cal-icon booked" title="Reservado">&#10003;</span>
-                                        }
-                                        else if (isActive)
-                                        {
-                                            <span class="cal-icon active" title="Disponible">&#10003;</span>
-                                        }
-                                    </td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <div style="margin-top: 1rem; display: flex; gap: 1.5rem; font-size: 0.85rem;">
-                <span><span class="calendar-legend calendar-active-legend"></span> Disponible</span>
-                <span><span class="calendar-legend calendar-booked-legend"></span> Reservado</span>
-                <span><span class="calendar-legend calendar-inactive-legend"></span> No disponible</span>
-            </div>
-        }
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem;">
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn @(mode == "general" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => SwitchMode("general")'>
+                General
+            </button>
+            <button class="btn @(mode == "week" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => SwitchMode("week")'>
+                Por Semana
+            </button>
+        </div>
     </div>
 </div>
 
+@if (mode == "general")
+{
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Disponibilidad semanal</h3>
+            <button class="btn btn-primary" @onclick="SaveGeneralAvailability" disabled="@isSaving">
+                @(isSaving ? "Guardando..." : "Guardar Cambios")
+            </button>
+        </div>
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <p class="text-muted">Cargando...</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table calendar-grid calendar-compact">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Hora</th>
+                                @foreach (var day in dayNames)
+                                {
+                                    <th style="text-align: center; width: 50px;">@day</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int hour = 8; hour <= 21; hour++)
+                            {
+                                var h = hour;
+                                <tr>
+                                    <td><strong>@($"{h:00}:00")</strong></td>
+                                    @for (int day = 1; day <= 7; day++)
+                                    {
+                                        var d = day;
+                                        var dow = d == 7 ? 0 : d;
+                                        var key = $"{dow}-{h}";
+                                        var isActive = generalSlots.Contains(key);
+                                        var hasBooking = bookedSlots.Contains(key);
+                                        <td style="text-align: center; cursor: pointer; padding: 4px;"
+                                            class="@(hasBooking ? "calendar-booked" : isActive ? "calendar-active" : "calendar-inactive")"
+                                            @onclick="() => ToggleGeneralSlot(dow, h)">
+                                            @if (hasBooking)
+                                            {
+                                                <span class="cal-icon booked" title="Reservado">&#10003;</span>
+                                            }
+                                            else if (isActive)
+                                            {
+                                                <span class="cal-icon active" title="Disponible">&#10003;</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 1.5rem; font-size: 0.85rem;">
+                    <span><span class="calendar-legend calendar-active-legend"></span> Disponible</span>
+                    <span><span class="calendar-legend calendar-booked-legend"></span> Reservado</span>
+                    <span><span class="calendar-legend calendar-inactive-legend"></span> No disponible</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-body">
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek">&lt; Anterior</button>
+                <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente &gt;</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Disponibilidad - Semana del @weekStart.ToString("dd/MM")</h3>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn btn-secondary btn-sm" @onclick="ResetWeek">Restablecer semana</button>
+                <button class="btn btn-primary btn-sm" @onclick="SaveWeekAvailability" disabled="@isSaving">
+                    @(isSaving ? "Guardando..." : "Guardar esta semana")
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (isLoading)
+            {
+                <p class="text-muted">Cargando...</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table calendar-grid calendar-compact">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Hora</th>
+                                @for (int i = 0; i < 7; i++)
+                                {
+                                    var date = weekStart.AddDays(i);
+                                    <th style="text-align: center; width: 60px;">
+                                        <div style="font-size: 0.75rem;">@dayNames[i]</div>
+                                        <div style="font-size: 0.7rem; font-weight: 400; color: var(--text-muted);">@date.ToString("dd/M")</div>
+                                    </th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int hour = 8; hour <= 21; hour++)
+                            {
+                                var h = hour;
+                                <tr>
+                                    <td><strong>@($"{h:00}:00")</strong></td>
+                                    @for (int i = 0; i < 7; i++)
+                                    {
+                                        var date = weekStart.AddDays(i);
+                                        var dateKey = $"{date:yyyy-MM-dd}-{h}";
+                                        var isActive = weekSlots.Contains(dateKey);
+                                        var isOverride = weekOverrideCells.Contains(dateKey);
+                                        var hasBooking = weekBookedSlots.Contains(dateKey);
+                                        <td style="text-align: center; cursor: pointer; padding: 4px; position: relative;"
+                                            class="@(hasBooking ? "calendar-booked" : isActive ? "calendar-active" : "calendar-inactive") @(isOverride ? "calendar-override" : "")"
+                                            @onclick="() => ToggleWeekSlot(date, h)">
+                                            @if (hasBooking)
+                                            {
+                                                <span class="cal-icon booked" title="Reservado">&#10003;</span>
+                                            }
+                                            else if (isActive)
+                                            {
+                                                <span class="cal-icon active" title="Disponible">&#10003;</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 1.5rem; font-size: 0.85rem; flex-wrap: wrap;">
+                    <span><span class="calendar-legend calendar-active-legend"></span> Disponible</span>
+                    <span><span class="calendar-legend calendar-booked-legend"></span> Reservado</span>
+                    <span><span class="calendar-legend calendar-inactive-legend"></span> No disponible</span>
+                    <span><span class="calendar-legend calendar-override-legend"></span> Modificado (difiere del general)</span>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @code {
+    private string mode = "general";
     private bool isLoading = true;
     private bool isSaving;
-    private HashSet<string> activeSlots = new();
+
+    // General mode
+    private HashSet<string> generalSlots = new(); // "dayOfWeek-hour"
     private HashSet<string> bookedSlots = new();
+
+    // Week mode
+    private DateTime weekStart;
+    private DateTime weekEnd;
+    private HashSet<string> weekSlots = new(); // "yyyy-MM-dd-hour" for active
+    private HashSet<string> weekOverrideCells = new(); // cells that differ from general
+    private HashSet<string> weekBookedSlots = new(); // "yyyy-MM-dd-hour" for booked
+
     private string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        var today = DateTime.Today;
+        var dow = (int)today.DayOfWeek;
+        var daysToMon = dow == 0 ? 6 : dow - 1;
+        weekStart = today.AddDays(-daysToMon);
+        weekEnd = weekStart.AddDays(6);
+
+        await LoadGeneralData();
     }
 
-    private async Task LoadData()
+    private async Task SwitchMode(string newMode)
+    {
+        mode = newMode;
+        if (mode == "week")
+            await LoadWeekData();
+    }
+
+    private async Task LoadGeneralData()
     {
         isLoading = true;
         try
@@ -93,7 +218,7 @@
             var availability = await Api.GetMyAvailabilityAsync();
             if (availability is not null)
             {
-                activeSlots = new HashSet<string>(
+                generalSlots = new HashSet<string>(
                     availability.Where(a => a.IsActive).Select(a => $"{a.DayOfWeek}-{a.StartHour}")
                 );
             }
@@ -117,24 +242,104 @@
         isLoading = false;
     }
 
-    private void ToggleSlot(int day, int hour)
+    private async Task LoadWeekData()
     {
-        var key = $"{day}-{hour}";
-        if (bookedSlots.Contains(key)) return; // Can't toggle booked slots
+        isLoading = true;
+        StateHasChanged();
+        try
+        {
+            // Ensure general data is loaded
+            if (generalSlots.Count == 0)
+            {
+                var availability = await Api.GetMyAvailabilityAsync();
+                if (availability is not null)
+                {
+                    generalSlots = new HashSet<string>(
+                        availability.Where(a => a.IsActive).Select(a => $"{a.DayOfWeek}-{a.StartHour}")
+                    );
+                }
+            }
 
-        if (activeSlots.Contains(key))
-            activeSlots.Remove(key);
-        else
-            activeSlots.Add(key);
+            // Load week overrides
+            var overrides = await Api.GetMyWeekAvailabilityAsync(weekStart, weekEnd);
+
+            // Load bookings for this week
+            var bookings = await Api.GetWeekBookingsAsync(weekStart, weekEnd);
+            weekBookedSlots = new HashSet<string>();
+            if (bookings is not null)
+            {
+                foreach (var b in bookings.Where(b => b.Status == "confirmed"))
+                {
+                    weekBookedSlots.Add($"{b.ScheduledDate:yyyy-MM-dd}-{b.StartHour}");
+                }
+            }
+
+            // Build merged view
+            weekSlots = new HashSet<string>();
+            weekOverrideCells = new HashSet<string>();
+
+            // Create a lookup of overrides by date+hour
+            var overrideLookup = new Dictionary<string, bool>();
+            if (overrides is not null)
+            {
+                foreach (var o in overrides)
+                {
+                    overrideLookup[$"{o.Date:yyyy-MM-dd}-{o.StartHour}"] = o.IsActive;
+                }
+            }
+
+            for (int i = 0; i < 7; i++)
+            {
+                var date = weekStart.AddDays(i);
+                var dow = (int)date.DayOfWeek;
+                for (int hour = 8; hour <= 21; hour++)
+                {
+                    var dateKey = $"{date:yyyy-MM-dd}-{hour}";
+                    var generalKey = $"{dow}-{hour}";
+                    var isActiveInGeneral = generalSlots.Contains(generalKey);
+
+                    if (overrideLookup.TryGetValue(dateKey, out var overrideActive))
+                    {
+                        // Override exists
+                        if (overrideActive)
+                            weekSlots.Add(dateKey);
+                        weekOverrideCells.Add(dateKey);
+                    }
+                    else
+                    {
+                        // Use general
+                        if (isActiveInGeneral)
+                            weekSlots.Add(dateKey);
+                    }
+                }
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar datos de la semana");
+        }
+        isLoading = false;
     }
 
-    private async Task SaveAvailability()
+    // General mode methods
+    private void ToggleGeneralSlot(int day, int hour)
+    {
+        var key = $"{day}-{hour}";
+        if (bookedSlots.Contains(key)) return;
+
+        if (generalSlots.Contains(key))
+            generalSlots.Remove(key);
+        else
+            generalSlots.Add(key);
+    }
+
+    private async Task SaveGeneralAvailability()
     {
         isSaving = true;
         try
         {
             var slots = new List<SetAvailabilityRequest>();
-            foreach (var key in activeSlots)
+            foreach (var key in generalSlots)
             {
                 var parts = key.Split('-');
                 if (parts.Length == 2 && int.TryParse(parts[0], out var dow) && int.TryParse(parts[1], out var hour))
@@ -163,5 +368,101 @@
             ToastService.Error("Error al guardar la disponibilidad");
         }
         isSaving = false;
+    }
+
+    // Week mode methods
+    private void ToggleWeekSlot(DateTime date, int hour)
+    {
+        var dateKey = $"{date:yyyy-MM-dd}-{hour}";
+        if (weekBookedSlots.Contains(dateKey)) return;
+
+        if (weekSlots.Contains(dateKey))
+            weekSlots.Remove(dateKey);
+        else
+            weekSlots.Add(dateKey);
+
+        // Update override indicator: check if this now differs from general
+        var dow = (int)date.DayOfWeek;
+        var generalKey = $"{dow}-{hour}";
+        var isActiveInGeneral = generalSlots.Contains(generalKey);
+        var isActiveInWeek = weekSlots.Contains(dateKey);
+
+        if (isActiveInWeek != isActiveInGeneral)
+            weekOverrideCells.Add(dateKey);
+        else
+            weekOverrideCells.Remove(dateKey);
+    }
+
+    private async Task SaveWeekAvailability()
+    {
+        isSaving = true;
+        try
+        {
+            // Only send slots that differ from general as overrides
+            var overrideSlots = new List<object>();
+            for (int i = 0; i < 7; i++)
+            {
+                var date = weekStart.AddDays(i);
+                var dow = (int)date.DayOfWeek;
+                for (int hour = 8; hour <= 21; hour++)
+                {
+                    var dateKey = $"{date:yyyy-MM-dd}-{hour}";
+                    var generalKey = $"{dow}-{hour}";
+                    var isActiveInWeek = weekSlots.Contains(dateKey);
+                    var isActiveInGeneral = generalSlots.Contains(generalKey);
+
+                    if (isActiveInWeek != isActiveInGeneral)
+                    {
+                        overrideSlots.Add(new { Date = date, StartHour = hour, IsActive = isActiveInWeek });
+                    }
+                }
+            }
+
+            var result = await Api.SetWeekAvailabilityAsync(weekStart, overrideSlots);
+            if (result is not null)
+            {
+                ToastService.Success("Disponibilidad de la semana guardada correctamente");
+                await LoadWeekData();
+            }
+            else
+            {
+                ToastService.Error("Error al guardar la disponibilidad");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar la disponibilidad");
+        }
+        isSaving = false;
+    }
+
+    private async Task ResetWeek()
+    {
+        isSaving = true;
+        try
+        {
+            await Api.SetWeekAvailabilityAsync(weekStart, new List<object>());
+            await LoadWeekData();
+            ToastService.Success("Semana restablecida al horario general");
+        }
+        catch
+        {
+            ToastService.Error("Error al restablecer la semana");
+        }
+        isSaving = false;
+    }
+
+    private async Task PreviousWeek()
+    {
+        weekStart = weekStart.AddDays(-7);
+        weekEnd = weekEnd.AddDays(-7);
+        await LoadWeekData();
+    }
+
+    private async Task NextWeek()
+    {
+        weekStart = weekStart.AddDays(7);
+        weekEnd = weekEnd.AddDays(7);
+        await LoadWeekData();
     }
 }

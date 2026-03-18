@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<TokenPack> TokenPacks => Set<TokenPack>();
     public DbSet<Availability> Availabilities => Set<Availability>();
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<WeekAvailability> WeekAvailabilities => Set<WeekAvailability>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,6 +88,15 @@ public class AppDbContext : DbContext
             entity.HasOne(a => a.Instructor)
                   .WithMany()
                   .HasForeignKey(a => a.InstructorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WeekAvailability>(entity =>
+        {
+            entity.HasIndex(w => new { w.InstructorId, w.Date, w.StartHour }).IsUnique();
+            entity.HasOne(w => w.Instructor)
+                  .WithMany()
+                  .HasForeignKey(w => w.InstructorId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

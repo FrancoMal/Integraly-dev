@@ -49,6 +49,36 @@ public class AvailabilityController : ControllerBase
         return Ok(results);
     }
 
+    // Get week overrides for an instructor
+    [HttpGet("week/{instructorId}")]
+    public async Task<IActionResult> GetWeekAvailability(int instructorId, [FromQuery] DateTime from, [FromQuery] DateTime to)
+    {
+        var availability = await _availabilityService.GetWeekAvailabilityAsync(instructorId, from, to);
+        return Ok(availability);
+    }
+
+    // Get my week overrides
+    [HttpGet("my-week")]
+    public async Task<IActionResult> GetMyWeekAvailability([FromQuery] DateTime from, [FromQuery] DateTime to)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!IsInstructor()) return Forbid();
+        var availability = await _availabilityService.GetWeekAvailabilityAsync(userId.Value, from, to);
+        return Ok(availability);
+    }
+
+    // Set week-specific overrides
+    [HttpPut("week")]
+    public async Task<IActionResult> SetWeekAvailability([FromBody] SetWeekAvailabilityRequest request)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!IsInstructor()) return Forbid();
+        var results = await _availabilityService.SetWeekAvailabilityAsync(userId.Value, request.WeekStart, request.Slots);
+        return Ok(results);
+    }
+
     private bool IsInstructor()
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;

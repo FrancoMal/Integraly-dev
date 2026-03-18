@@ -3920,3 +3920,27 @@ textarea.form-input {
   background: #fef3c7;
   color: #d97706;
 }
+
+/* Week mode override indicator */
+.calendar-override {
+  position: relative;
+}
+.calendar-override::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+.calendar-override-legend {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f59e0b;
+  margin-right: 4px;
+  vertical-align: middle;
+}

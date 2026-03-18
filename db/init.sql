@@ -309,5 +309,23 @@ BEGIN
 END
 GO
 
+-- WeekAvailabilities table (per-week overrides)
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WeekAvailabilities' AND xtype='U')
+BEGIN
+    CREATE TABLE WeekAvailabilities (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        InstructorId INT NOT NULL,
+        Date DATE NOT NULL,
+        StartHour INT NOT NULL,
+        IsActive BIT DEFAULT 1,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        CONSTRAINT FK_WeekAvailabilities_Instructor FOREIGN KEY (InstructorId) REFERENCES Users(Id),
+        CONSTRAINT CK_WeekAvailabilities_StartHour CHECK (StartHour >= 0 AND StartHour <= 23)
+    );
+    CREATE INDEX IX_WeekAvailabilities_InstructorId ON WeekAvailabilities (InstructorId);
+    CREATE UNIQUE INDEX IX_WeekAvailabilities_Unique ON WeekAvailabilities (InstructorId, Date, StartHour);
+END
+GO
+
 PRINT 'Database initialized successfully';
 GO

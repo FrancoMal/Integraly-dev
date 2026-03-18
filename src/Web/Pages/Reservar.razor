@@ -168,6 +168,7 @@
     private List<UserManageDto>? instructors;
     private HashSet<int> selectedInstructorIds = new();
     private Dictionary<int, List<AvailabilityDto>> instructorAvailability = new();
+    private Dictionary<int, List<WeekAvailabilityDto>> instructorWeekOverrides = new();
     private List<BookingDto>? weekBookings;
 
     private DateTime weekStart;
@@ -227,8 +228,8 @@
             var results = await Task.WhenAll(availTasks);
             instructorAvailability = results.ToDictionary(r => r.Id, r => r.Availability);
 
-            // Load week bookings
-            await LoadWeekBookings();
+            // Load week bookings and week overrides
+            await LoadWeekData();
         }
         catch
         {
@@ -238,11 +239,23 @@
         isLoading = false;
     }
 
-    private async Task LoadWeekBookings()
+    private async Task LoadWeekData()
     {
         try
         {
             weekBookings = await Api.GetWeekBookingsAsync(weekStart, weekEnd);
+
+            // Reload week overrides for all instructors
+            if (instructors is not null)
+            {
+                var tasks = instructors.Select(async inst =>
+                {
+                    var overrides = await Api.GetWeekAvailabilityAsync(inst.Id, weekStart, weekEnd);
+                    return (inst.Id, Overrides: overrides ?? new List<WeekAvailabilityDto>());
+                }).ToList();
+                var results = await Task.WhenAll(tasks);
+                instructorWeekOverrides = results.ToDictionary(r => r.Id, r => r.Overrides);
+            }
         }
         catch
         {
@@ -268,10 +281,30 @@
         {
             if (!selectedInstructorIds.Contains(inst.Id)) continue;
 
-            // Check if instructor has availability for this DayOfWeek + Hour
-            if (!instructorAvailability.TryGetValue(inst.Id, out var avail)) continue;
-            var hasSlot = avail.Any(a => a.DayOfWeek == dayOfWeek && a.StartHour == hour && a.IsActive);
-            if (!hasSlot) continue;
+            // Determine effective availability considering week overrides
+            bool isAvailable;
+
+            if (instructorWeekOverrides.TryGetValue(inst.Id, out var overrides))
+            {
+                var weekOverride = overrides.FirstOrDefault(o => o.Date.Date == date.Date && o.StartHour == hour);
+                if (weekOverride is not null)
+                {
+                    isAvailable = weekOverride.IsActive;
+                }
+                else
+                {
+                    // No override -> use general availability
+                    isAvailable = instructorAvailability.TryGetValue(inst.Id, out var avail)
+                        && avail.Any(a => a.DayOfWeek == dayOfWeek && a.StartHour == hour && a.IsActive);
+                }
+            }
+            else
+            {
+                isAvailable = instructorAvailability.TryGetValue(inst.Id, out var avail)
+                    && avail.Any(a => a.DayOfWeek == dayOfWeek && a.StartHour == hour && a.IsActive);
+            }
+
+            if (!isAvailable) continue;
 
             // Check if there's already a booking for this instructor at this date+hour
             var isBooked = weekBookings?.Any(b =>
@@ -298,14 +331,14 @@
     {
         weekStart = weekStart.AddDays(-7);
         weekEnd = weekEnd.AddDays(-7);
-        await LoadWeekBookings();
+        await LoadWeekData();
     }
 
     private async Task NextWeek()
     {
         weekStart = weekStart.AddDays(7);
         weekEnd = weekEnd.AddDays(7);
-        await LoadWeekBookings();
+        await LoadWeekData();
     }
 
     private void OnSlotClick(DateTime date, int hour)
@@ -349,7 +382,7 @@
                 ToastService.Success($"Clase reservada con {modalSelectedInstructorName}");
                 showModal = false;
                 if (remainingTokens.HasValue) remainingTokens--;
-                await LoadWeekBookings();
+                await LoadWeekData();
             }
             else
             {

@@ -9,11 +9,13 @@ public class BookingService
 {
     private readonly AppDbContext _db;
     private readonly TokenPackService _tokenPackService;
+    private readonly AvailabilityService _availabilityService;
 
-    public BookingService(AppDbContext db, TokenPackService tokenPackService)
+    public BookingService(AppDbContext db, TokenPackService tokenPackService, AvailabilityService availabilityService)
     {
         _db = db;
         _tokenPackService = tokenPackService;
+        _availabilityService = availabilityService;
     }
 
     public async Task<List<BookingDto>> GetByUserIdAsync(int userId)
@@ -86,15 +88,9 @@ public class BookingService
 
     public async Task<(BookingDto? Booking, string? Error)> CreateAsync(int userId, int instructorId, DateTime scheduledDate, int startHour)
     {
-        // Validate instructor has availability for that day/hour
-        var dayOfWeek = (int)scheduledDate.DayOfWeek;
-        var availability = await _db.Availabilities
-            .FirstOrDefaultAsync(a => a.InstructorId == instructorId
-                && a.DayOfWeek == dayOfWeek
-                && a.StartHour == startHour
-                && a.IsActive);
-
-        if (availability is null)
+        // Validate instructor has availability for that day/hour (considering week overrides)
+        var isAvailable = await _availabilityService.IsAvailableAtAsync(instructorId, scheduledDate, startHour);
+        if (!isAvailable)
             return (null, "El instructor no tiene disponibilidad en ese horario");
 
         // Validate slot not already taken
@@ -201,13 +197,27 @@ public class BookingService
     {
         var dayOfWeek = (int)date.DayOfWeek;
 
-        // Get all active availability for that day
-        var availabilities = await _db.Availabilities
-            .Where(a => a.InstructorId == instructorId
-                && a.DayOfWeek == dayOfWeek
-                && a.IsActive)
-            .OrderBy(a => a.StartHour)
+        // Get general availability for that day
+        var generalSlots = await _db.Availabilities
+            .Where(a => a.InstructorId == instructorId && a.DayOfWeek == dayOfWeek && a.IsActive)
+            .Select(a => a.StartHour)
             .ToListAsync();
+
+        // Get week overrides for that date
+        var weekOverrides = await _db.WeekAvailabilities
+            .Where(w => w.InstructorId == instructorId && w.Date == date.Date)
+            .ToListAsync();
+
+        // Build effective availability: start with general, apply overrides
+        var effectiveHours = new HashSet<int>(generalSlots);
+
+        foreach (var o in weekOverrides)
+        {
+            if (o.IsActive)
+                effectiveHours.Add(o.StartHour);
+            else
+                effectiveHours.Remove(o.StartHour);
+        }
 
         // Get confirmed bookings for that date
         var bookedHours = await _db.Bookings
@@ -217,11 +227,8 @@ public class BookingService
             .Select(b => b.StartHour)
             .ToListAsync();
 
-        return availabilities
-            .Select(a => new AvailableSlotDto(
-                a.StartHour,
-                !bookedHours.Contains(a.StartHour)
-            ))
+        return effectiveHours.OrderBy(h => h)
+            .Select(h => new AvailableSlotDto(h, !bookedHours.Contains(h)))
             .ToList();
     }
 }

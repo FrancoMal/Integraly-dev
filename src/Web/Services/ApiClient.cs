@@ -171,6 +171,22 @@ public class ApiClient
         return await PutAsync<List<AvailabilityDto>>("/api/availability", slots);
     }
 
+    // --- Week Availability ---
+    public async Task<List<WeekAvailabilityDto>?> GetMyWeekAvailabilityAsync(DateTime from, DateTime to)
+    {
+        return await GetAsync<List<WeekAvailabilityDto>>($"/api/availability/my-week?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
+    }
+
+    public async Task<List<WeekAvailabilityDto>?> GetWeekAvailabilityAsync(int instructorId, DateTime from, DateTime to)
+    {
+        return await GetAsync<List<WeekAvailabilityDto>>($"/api/availability/week/{instructorId}?from={from:yyyy-MM-dd}&to={to:yyyy-MM-dd}");
+    }
+
+    public async Task<List<WeekAvailabilityDto>?> SetWeekAvailabilityAsync(DateTime weekStart, List<object> slots)
+    {
+        return await PutAsync<List<WeekAvailabilityDto>>("/api/availability/week", new { weekStart, slots });
+    }
+
     // --- Bookings ---
     public async Task<List<BookingDto>?> GetAllBookingsAsync()
     {

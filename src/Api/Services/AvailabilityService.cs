@@ -94,4 +94,63 @@ public class AvailabilityService
 
         return results;
     }
+
+    // Get week-specific overrides for an instructor for a date range
+    public async Task<List<WeekAvailabilityDto>> GetWeekAvailabilityAsync(int instructorId, DateTime from, DateTime to)
+    {
+        return await _db.WeekAvailabilities
+            .Where(w => w.InstructorId == instructorId && w.Date >= from.Date && w.Date <= to.Date)
+            .OrderBy(w => w.Date).ThenBy(w => w.StartHour)
+            .Select(w => new WeekAvailabilityDto(w.Id, w.InstructorId, w.Date, w.StartHour, w.IsActive))
+            .ToListAsync();
+    }
+
+    // Set week-specific overrides - receives the full list of override slots for a week
+    public async Task<List<WeekAvailabilityDto>> SetWeekAvailabilityAsync(int instructorId, DateTime weekStart, List<WeekSlotRequest> slots)
+    {
+        var weekEnd = weekStart.AddDays(6);
+
+        // Get existing overrides for this week
+        var existing = await _db.WeekAvailabilities
+            .Where(w => w.InstructorId == instructorId && w.Date >= weekStart.Date && w.Date <= weekEnd.Date)
+            .ToListAsync();
+
+        // Remove all existing overrides for this week
+        _db.WeekAvailabilities.RemoveRange(existing);
+
+        // Add new overrides
+        foreach (var slot in slots)
+        {
+            _db.WeekAvailabilities.Add(new WeekAvailability
+            {
+                InstructorId = instructorId,
+                Date = slot.Date.Date,
+                StartHour = slot.StartHour,
+                IsActive = slot.IsActive,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        await _db.SaveChangesAsync();
+
+        return await GetWeekAvailabilityAsync(instructorId, weekStart, weekEnd);
+    }
+
+    // Check if instructor is available at a specific date+hour (considering overrides)
+    public async Task<bool> IsAvailableAtAsync(int instructorId, DateTime date, int startHour)
+    {
+        // First check week-specific override
+        var weekOverride = await _db.WeekAvailabilities
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.Date == date.Date && w.StartHour == startHour);
+
+        if (weekOverride is not null)
+            return weekOverride.IsActive;
+
+        // Fall back to general availability
+        var dayOfWeek = (int)date.DayOfWeek;
+        var general = await _db.Availabilities
+            .FirstOrDefaultAsync(a => a.InstructorId == instructorId && a.DayOfWeek == dayOfWeek && a.StartHour == startHour);
+
+        return general?.IsActive ?? false;
+    }
 }

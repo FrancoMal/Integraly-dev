@@ -15,3 +15,18 @@ public record SetAvailabilityRequest(
     [Required][Range(0, 23)] int StartHour,
     [Required] bool IsActive
 );
+
+public record WeekAvailabilityDto(int Id, int InstructorId, DateTime Date, int StartHour, bool IsActive);
+
+public class WeekSlotRequest
+{
+    public DateTime Date { get; set; }
+    public int StartHour { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class SetWeekAvailabilityRequest
+{
+    public DateTime WeekStart { get; set; }
+    public List<WeekSlotRequest> Slots { get; set; } = new();
+}

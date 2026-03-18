@@ -15,3 +15,12 @@ public class SetAvailabilityRequest
     public int StartHour { get; set; }
     public bool IsActive { get; set; }
 }
+
+public class WeekAvailabilityDto
+{
+    public int Id { get; set; }
+    public int InstructorId { get; set; }
+    public DateTime Date { get; set; }
+    public int StartHour { get; set; }
+    public bool IsActive { get; set; }
+}
