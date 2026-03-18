@@ -220,7 +220,7 @@
 
         if (RouteToMenuKey.TryGetValue(relativePath, out var menuKey))
         {
-            if (!string.IsNullOrEmpty(menuKey) && !permissions.Contains(menuKey))
+            if (!string.IsNullOrEmpty(menuKey) && !HasPerm(menuKey))
             {
                 Navigation.NavigateTo("");
             }
