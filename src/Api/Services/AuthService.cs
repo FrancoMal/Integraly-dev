@@ -30,7 +30,7 @@ public class AuthService
         if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
             return null;
 
-        return await GenerateAuthResponseAsync(user);
+        return await GenerateAuthResponse(user);
     }
 
     public async Task<AuthResponse?> RegisterWithInvitation(string token, string password, string firstName, string lastName, string? phone)
@@ -69,10 +69,10 @@ public class AuthService
 
         await _db.SaveChangesAsync();
 
-        return await GenerateAuthResponseAsync(user);
+        return await GenerateAuthResponse(user);
     }
 
-    private async Task<AuthResponse> GenerateAuthResponseAsync(User user)
+    public async Task<AuthResponse> GenerateAuthResponse(User user)
     {
         var expirationHours = _config.GetValue<int>("Jwt:ExpirationHours", 24);
         var expiresAt = DateTime.UtcNow.AddHours(expirationHours);

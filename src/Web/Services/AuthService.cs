@@ -10,6 +10,9 @@ public class AuthService
     private const string TokenKey = "tm_token";
     private const string UserKey = "tm_user";
     private const string ExpiryKey = "tm_expires";
+    private const string AdminTokenKey = "tm_admin_token";
+    private const string AdminUserKey = "tm_admin_user";
+    private const string AdminExpiryKey = "tm_admin_expires";
 
     private readonly HttpClient _http;
     private readonly IJSRuntime _js;
@@ -72,6 +75,44 @@ public class AuthService
         if (string.IsNullOrEmpty(expiresAt)) return true;
 
         return DateTime.TryParse(expiresAt, out var expiry) && expiry > DateTime.UtcNow;
+    }
+
+    public async Task ImpersonateAsync(AuthResponse data)
+    {
+        // Save current admin session
+        var token = await _js.InvokeAsync<string?>("localStorage.getItem", TokenKey);
+        var user = await _js.InvokeAsync<string?>("localStorage.getItem", UserKey);
+        var expiry = await _js.InvokeAsync<string?>("localStorage.getItem", ExpiryKey);
+        await _js.InvokeVoidAsync("localStorage.setItem", AdminTokenKey, token ?? "");
+        await _js.InvokeVoidAsync("localStorage.setItem", AdminUserKey, user ?? "");
+        await _js.InvokeVoidAsync("localStorage.setItem", AdminExpiryKey, expiry ?? "");
+
+        // Set impersonated user session
+        await SaveSessionAsync(data);
+    }
+
+    public async Task StopImpersonatingAsync()
+    {
+        // Restore admin session
+        var token = await _js.InvokeAsync<string?>("localStorage.getItem", AdminTokenKey);
+        var user = await _js.InvokeAsync<string?>("localStorage.getItem", AdminUserKey);
+        var expiry = await _js.InvokeAsync<string?>("localStorage.getItem", AdminExpiryKey);
+        if (!string.IsNullOrEmpty(token))
+        {
+            await _js.InvokeVoidAsync("localStorage.setItem", TokenKey, token);
+            await _js.InvokeVoidAsync("localStorage.setItem", UserKey, user ?? "");
+            await _js.InvokeVoidAsync("localStorage.setItem", ExpiryKey, expiry ?? "");
+        }
+        // Clear admin backup
+        await _js.InvokeVoidAsync("localStorage.removeItem", AdminTokenKey);
+        await _js.InvokeVoidAsync("localStorage.removeItem", AdminUserKey);
+        await _js.InvokeVoidAsync("localStorage.removeItem", AdminExpiryKey);
+    }
+
+    public async Task<bool> IsImpersonatingAsync()
+    {
+        var adminToken = await _js.InvokeAsync<string?>("localStorage.getItem", AdminTokenKey);
+        return !string.IsNullOrEmpty(adminToken);
     }
 
     private async Task SaveSessionAsync(AuthResponse data)

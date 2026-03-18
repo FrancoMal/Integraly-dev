@@ -196,6 +196,23 @@ public class AuthController : ControllerBase
         }
     }
 
+    [Authorize]
+    [HttpPost("impersonate/{userId}")]
+    public async Task<IActionResult> Impersonate(int userId)
+    {
+        // Only admins can impersonate
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (role != "admin")
+            return Forbid();
+
+        var targetUser = await _db.Users.Include(u => u.RoleNav).FirstOrDefaultAsync(u => u.Id == userId);
+        if (targetUser is null)
+            return NotFound(new { message = "User not found" });
+
+        var result = await _authService.GenerateAuthResponse(targetUser);
+        return Ok(result);
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier);

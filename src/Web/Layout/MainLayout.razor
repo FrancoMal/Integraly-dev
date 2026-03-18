@@ -141,6 +141,14 @@
     <div class="content">
         @Body
     </div>
+
+    @if (isImpersonating)
+    {
+        <div class="impersonate-bar">
+            <span>Estas viendo como <strong>@username</strong> (@role)</span>
+            <button class="btn btn-sm" style="background:white;color:#f59e0b;font-weight:600;" @onclick="StopImpersonating">Volver a Admin</button>
+        </div>
+    }
 </main>
 
 @if (sidebarOpen)
@@ -154,6 +162,7 @@
     private bool sidebarOpen;
     private bool sidebarCollapsed;
     private bool userMenuOpen;
+    private bool isImpersonating;
     private string username = "usuario";
     private string role = "user";
     private List<string> permissions = new();
@@ -179,6 +188,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        isImpersonating = await AuthService.IsImpersonatingAsync();
+
         var user = await AuthService.GetUserAsync();
         if (user is not null)
         {
@@ -186,6 +197,9 @@
             role = user.Role;
             permissions = user.Permissions ?? new();
             TzService.SetTimezone(user.Timezone ?? "America/Argentina/Buenos_Aires");
+
+            // Don't redirect if impersonating
+            if (isImpersonating) return;
 
             // Redirect to correct panel based on role
             if (role == "admin" && !IsAdminPanel)
@@ -270,6 +284,12 @@
     private void Refresh()
     {
         Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+    }
+
+    private async Task StopImpersonating()
+    {
+        await AuthService.StopImpersonatingAsync();
+        Navigation.NavigateTo("/admin/", forceLoad: true);
     }
 
     private async Task Logout()

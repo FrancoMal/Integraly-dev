@@ -2,6 +2,8 @@
 @attribute [Authorize]
 @inject ApiClient Api
 @inject ToastService ToastService
+@inject AuthService AuthService
+@inject NavigationManager Navigation
 
 <div class="card">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -52,6 +54,9 @@
                                     </button>
                                     @if (user.Username != "admin")
                                     {
+                                        <button class="btn-icon" style="color: var(--primary);" @onclick="() => ImpersonateUser(user)" title="Ver como este usuario">
+                                            @SvgIcons.User
+                                        </button>
                                         <button class="btn-icon btn-delete" @onclick="() => ConfirmDelete(user)" title="Eliminar">
                                             @SvgIcons.AlertCircle
                                         </button>
@@ -330,5 +335,27 @@
 
         showDeleteConfirm = false;
         userToDelete = null;
+    }
+
+    private async Task ImpersonateUser(UserManageDto user)
+    {
+        try
+        {
+            var result = await Api.ImpersonateUserAsync(user.Id);
+            if (result is not null)
+            {
+                await AuthService.ImpersonateAsync(result);
+                var targetPanel = user.Role?.ToLower() == "admin" ? "/admin/" : "/panel/";
+                Navigation.NavigateTo(targetPanel, forceLoad: true);
+            }
+            else
+            {
+                ToastService.Error("No se pudo acceder a la cuenta");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al acceder a la cuenta");
+        }
     }
 }

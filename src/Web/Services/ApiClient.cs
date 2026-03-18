@@ -61,6 +61,11 @@ public class ApiClient
         return await DeleteAsync($"/api/users/{id}");
     }
 
+    public async Task<AuthResponse?> ImpersonateUserAsync(int userId)
+    {
+        return await PostAsync<AuthResponse>($"/api/auth/impersonate/{userId}", new { });
+    }
+
     public async Task<List<UserManageDto>?> GetInstructorsAsync()
     {
         return await GetAsync<List<UserManageDto>>("/api/users/instructors");
