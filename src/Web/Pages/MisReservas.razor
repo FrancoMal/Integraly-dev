@@ -8,82 +8,218 @@
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
         <div>
             <h2>Mis Reservas</h2>
-            <p class="view-subtitle">Listado de tus clases reservadas</p>
+            <p class="view-subtitle">Visualiza tus clases reservadas</p>
         </div>
         <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-body" style="padding: 0;">
-        @if (isLoading)
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <div style="display: flex; gap: 0.5rem;">
+            <button class="btn @(view == "list" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => view = "list"'>Lista</button>
+            <button class="btn @(view == "week" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => { view = "week"; }'>Semanal</button>
+            <button class="btn @(view == "month" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => { view = "month"; }'>Mensual</button>
+        </div>
+        @if (view == "week")
         {
-            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PrevWeek">&lt;</button>
+                <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">&gt;</button>
+            </div>
         }
-        else if (bookings is null || !bookings.Any())
+        @if (view == "month")
         {
-            <p class="text-muted" style="padding: 1.5rem;">No tenes reservas todavia</p>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Horario</th>
-                            <th>Instructor</th>
-                            <th>Estado</th>
-                            <th>Link Meet</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var booking in bookings.OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour))
-                        {
-                            <tr>
-                                <td>@booking.ScheduledDate.ToString("dd/MM/yyyy")</td>
-                                <td>@($"{booking.StartHour:00}:00 - {booking.StartHour + 1:00}:00")</td>
-                                <td>@booking.InstructorName</td>
-                                <td>
-                                    <span class="status-badge @GetStatusClass(booking.Status)">
-                                        @GetStatusText(booking.Status)
-                                    </span>
-                                </td>
-                                <td>
-                                    @if (!string.IsNullOrEmpty(booking.MeetLink))
-                                    {
-                                        <a href="@booking.MeetLink" target="_blank" class="btn btn-sm btn-primary">Entrar</a>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">-</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (booking.Status == "confirmed" && booking.ScheduledDate >= DateTime.Today)
-                                    {
-                                        <button class="btn btn-sm btn-danger" @onclick="() => ConfirmCancel(booking)">
-                                            Cancelar
-                                        </button>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PrevMonth">&lt;</button>
+                <span class="week-label">@monthDate.ToString("MMMM yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextMonth">&gt;</button>
             </div>
         }
     </div>
 </div>
 
+@if (isLoading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando...</p></div></div>
+}
+else if (view == "list")
+{
+    @* === VISTA LISTA === *@
+    <div class="card">
+        <div class="card-body" style="padding: 0;">
+            @if (bookings is null || !bookings.Any())
+            {
+                <p class="text-muted" style="padding: 1.5rem;">No tenes reservas todavia</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Horario</th>
+                                <th>@(isInstructor ? "Alumno" : "Instructor")</th>
+                                <th>Estado</th>
+                                <th>Meet</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in bookings.OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour))
+                            {
+                                <tr>
+                                    <td>@b.ScheduledDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@($"{b.StartHour:00}:00 - {b.StartHour + 1:00}:00")</td>
+                                    <td>@(isInstructor ? b.UserName : b.InstructorName)</td>
+                                    <td><span class="status-badge @GetStatusClass(b.Status)">@GetStatusText(b.Status)</span></td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(b.MeetLink) && b.Status == "confirmed")
+                                        {
+                                            <a href="@b.MeetLink" target="_blank" class="btn btn-sm btn-primary">Entrar</a>
+                                        }
+                                        else { <span class="text-muted">-</span> }
+                                    </td>
+                                    <td>
+                                        @if (b.Status == "confirmed" && b.ScheduledDate >= DateTime.Today && !isInstructor)
+                                        {
+                                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmCancel(b)">Cancelar</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (view == "week")
+{
+    @* === VISTA SEMANAL === *@
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
+            <div class="table-responsive">
+                <table class="data-table calendar-compact">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">Hora</th>
+                            @for (int i = 0; i < 7; i++)
+                            {
+                                var d = weekStart.AddDays(i);
+                                var isToday = d.Date == DateTime.Today;
+                                <th style="text-align:center;@(isToday ? "background:var(--primary-bg);" : "")">
+                                    <div style="font-size:0.75rem;">@dayNames[i]</div>
+                                    <div style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">@d.ToString("dd/M")</div>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int hour = 7; hour <= 22; hour++)
+                        {
+                            var h = hour;
+                            var hasAny = false;
+                            @for (int i = 0; i < 7; i++) { if (GetBookingAt(weekStart.AddDays(i), h) is not null) { hasAny = true; break; } }
+                            @if (hasAny || (h >= 8 && h <= 21))
+                            {
+                                <tr>
+                                    <td style="font-size:0.75rem;font-weight:600;padding:4px;">@($"{h:00}:00")</td>
+                                    @for (int i = 0; i < 7; i++)
+                                    {
+                                        var d = weekStart.AddDays(i);
+                                        var b = GetBookingAt(d, h);
+                                        var isToday = d.Date == DateTime.Today;
+                                        var isPast = d.Date < DateTime.Today || (d.Date == DateTime.Today && h < DateTime.Now.Hour);
+                                        <td style="text-align:center;padding:4px;font-size:0.75rem;@(isToday ? "background:rgba(16,185,129,0.03);" : "") @(isPast ? "opacity:0.5;" : "")"
+                                            class="@(b is not null ? (b.Status == "confirmed" ? "calendar-active" : "calendar-inactive") : "")">
+                                            @if (b is not null)
+                                            {
+                                                <div style="line-height:1.2;">
+                                                    <div style="font-weight:600;font-size:0.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px;"
+                                                         title="@(isInstructor ? b.UserName : b.InstructorName)">
+                                                        @(isInstructor ? b.UserName : b.InstructorName)
+                                                    </div>
+                                                    @if (b.Status == "confirmed" && !string.IsNullOrEmpty(b.MeetLink))
+                                                    {
+                                                        <a href="@b.MeetLink" target="_blank" style="font-size:0.65rem;color:var(--primary);">Meet</a>
+                                                    }
+                                                    @if (b.Status == "cancelled")
+                                                    {
+                                                        <span style="font-size:0.6rem;color:var(--danger);">Cancel.</span>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else if (view == "month")
+{
+    @* === VISTA MENSUAL === *@
+    <div class="card">
+        <div class="card-body">
+            <div class="month-grid">
+                <div class="month-header">
+                    @foreach (var d in dayNames)
+                    {
+                        <div class="month-day-label">@d</div>
+                    }
+                </div>
+                <div class="month-body">
+                    @* Empty cells before first day *@
+                    @{ var firstDay = new DateTime(monthDate.Year, monthDate.Month, 1); }
+                    @{ var startDow = ((int)firstDay.DayOfWeek + 6) % 7; }
+                    @for (int i = 0; i < startDow; i++)
+                    {
+                        <div class="month-cell empty"></div>
+                    }
+                    @* Days of month *@
+                    @{ var daysInMonth = DateTime.DaysInMonth(monthDate.Year, monthDate.Month); }
+                    @for (int day = 1; day <= daysInMonth; day++)
+                    {
+                        var date = new DateTime(monthDate.Year, monthDate.Month, day);
+                        var dayBookings = GetBookingsForDate(date);
+                        var isToday = date.Date == DateTime.Today;
+                        <div class="month-cell @(isToday ? "today" : "") @(dayBookings.Count > 0 ? "has-bookings" : "")">
+                            <div class="month-cell-day">@day</div>
+                            @if (dayBookings.Count > 0)
+                            {
+                                @foreach (var b in dayBookings.Take(3))
+                                {
+                                    <div class="month-booking @(b.Status == "confirmed" ? "confirmed" : "cancelled")"
+                                         title="@($"{b.StartHour:00}:00 - {(isInstructor ? b.UserName : b.InstructorName)}")">
+                                        @($"{b.StartHour:00}:00") @(isInstructor ? b.UserName : b.InstructorName)
+                                    </div>
+                                }
+                                @if (dayBookings.Count > 3)
+                                {
+                                    <div class="month-booking more">+@(dayBookings.Count - 3) mas</div>
+                                }
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @if (showCancelConfirm)
 {
     <div class="modal-overlay" @onclick="() => showCancelConfirm = false">
         <div class="modal-card modal-small" @onclick:stopPropagation="true">
-            <div class="modal-header">
-                <h3>Cancelar reserva</h3>
-            </div>
+            <div class="modal-header"><h3>Cancelar reserva</h3></div>
             <div class="modal-body">
                 <p>Estas seguro que queres cancelar la clase del <strong>@bookingToCancel?.ScheduledDate.ToString("dd/MM/yyyy")</strong> a las <strong>@($"{bookingToCancel?.StartHour:00}:00")</strong>?</p>
             </div>
@@ -98,11 +234,28 @@
 @code {
     private List<BookingDto>? bookings;
     private bool isLoading = true;
+    private bool isInstructor;
+    private string view = "list";
     private bool showCancelConfirm;
     private BookingDto? bookingToCancel;
 
+    // Week navigation
+    private DateTime weekStart;
+    private DateTime weekEnd;
+    private string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    // Month navigation
+    private DateTime monthDate;
+
     protected override async Task OnInitializedAsync()
     {
+        var today = DateTime.Today;
+        var dow = (int)today.DayOfWeek;
+        var daysToMon = dow == 0 ? 6 : dow - 1;
+        weekStart = today.AddDays(-daysToMon);
+        weekEnd = weekStart.AddDays(6);
+        monthDate = new DateTime(today.Year, today.Month, 1);
+
         await LoadData();
     }
 
@@ -112,6 +265,8 @@
         try
         {
             bookings = await Api.GetMyBookingsAsync();
+            var user = await Api.GetProfileAsync();
+            isInstructor = user?.Role?.ToLower() == "instructor";
         }
         catch
         {
@@ -120,44 +275,38 @@
         isLoading = false;
     }
 
-    private void ConfirmCancel(BookingDto booking)
+    // Week helpers
+    private void PrevWeek() { weekStart = weekStart.AddDays(-7); weekEnd = weekEnd.AddDays(-7); }
+    private void NextWeek() { weekStart = weekStart.AddDays(7); weekEnd = weekEnd.AddDays(7); }
+
+    private BookingDto? GetBookingAt(DateTime date, int hour)
     {
-        bookingToCancel = booking;
-        showCancelConfirm = true;
+        return bookings?.FirstOrDefault(b => b.ScheduledDate.Date == date.Date && b.StartHour == hour);
     }
+
+    // Month helpers
+    private void PrevMonth() { monthDate = monthDate.AddMonths(-1); }
+    private void NextMonth() { monthDate = monthDate.AddMonths(1); }
+
+    private List<BookingDto> GetBookingsForDate(DateTime date)
+    {
+        return bookings?.Where(b => b.ScheduledDate.Date == date.Date)
+            .OrderBy(b => b.StartHour).ToList() ?? new();
+    }
+
+    // Cancel
+    private void ConfirmCancel(BookingDto booking) { bookingToCancel = booking; showCancelConfirm = true; }
 
     private async Task CancelBooking()
     {
         if (bookingToCancel is null) return;
-
         var result = await Api.CancelBookingAsync(bookingToCancel.Id);
-        if (result)
-        {
-            ToastService.Success("Reserva cancelada");
-            await LoadData();
-        }
-        else
-        {
-            ToastService.Error("No se pudo cancelar la reserva. Puede que ya haya pasado el tiempo limite de cancelacion.");
-        }
-
+        if (result) { ToastService.Success("Reserva cancelada"); await LoadData(); }
+        else { ToastService.Error("No se pudo cancelar. Puede que ya haya pasado el tiempo limite."); }
         showCancelConfirm = false;
         bookingToCancel = null;
     }
 
-    private string GetStatusClass(string status) => status switch
-    {
-        "confirmed" => "status-active",
-        "cancelled" => "status-inactive",
-        "completed" => "status-active",
-        _ => ""
-    };
-
-    private string GetStatusText(string status) => status switch
-    {
-        "confirmed" => "Confirmada",
-        "cancelled" => "Cancelada",
-        "completed" => "Completada",
-        _ => status
-    };
+    private string GetStatusClass(string s) => s switch { "confirmed" => "status-active", "cancelled" => "status-inactive", "completed" => "status-active", _ => "" };
+    private string GetStatusText(string s) => s switch { "confirmed" => "Confirmada", "cancelled" => "Cancelada", "completed" => "Completada", _ => s };
 }
