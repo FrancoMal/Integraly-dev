@@ -4155,3 +4155,7 @@ textarea.form-input {
 .admin-cal-cell.today-col {
   background: rgba(16, 185, 129, 0.03);
 }
+
+.instructor-modal-row:hover {
+  background: var(--bg-secondary, #f5f5f5) !important;
+}
