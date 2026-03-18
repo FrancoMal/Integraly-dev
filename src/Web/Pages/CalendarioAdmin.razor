@@ -116,8 +116,13 @@ else
                                         title="@($"{dayNames[(int)date.DayOfWeek == 0 ? 6 : (int)date.DayOfWeek - 1]} {date:dd/M} {hour}:00 - {totalEntries} items")">
                                         @if (showDisponibilidad && availableInstructors.Count > 0)
                                         {
-                                            <div class="cal-entry cal-disponibilidad" title="@string.Join(", ", availableInstructors.Select(i => $"{i.FirstName} {i.LastName}".Trim()))">
-                                                @availableInstructors.Count disp.
+                                            <div class="cal-instructor-dots">
+                                                @foreach (var inst in availableInstructors)
+                                                {
+                                                    <span class="instructor-circle" style="background:@GetInstructorColor(inst.Id);" title="@($"{inst.FirstName} {inst.LastName}".Trim())">
+                                                        @GetInitials(inst)
+                                                    </span>
+                                                }
                                             </div>
                                         }
                                         @if (showReservas)
@@ -472,5 +477,12 @@ else
         if (parts.Length > 1)
             return $"{parts[0]} {parts[1][0]}.";
         return parts[0].Length > 8 ? parts[0][..8] + "." : parts[0];
+    }
+
+    private string GetInitials(UserManageDto inst)
+    {
+        var first = !string.IsNullOrEmpty(inst.FirstName) ? inst.FirstName[0].ToString().ToUpper() : "";
+        var last = !string.IsNullOrEmpty(inst.LastName) ? inst.LastName[0].ToString().ToUpper() : "";
+        return first + last;
     }
 }

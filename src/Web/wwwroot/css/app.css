@@ -4126,6 +4126,27 @@ textarea.form-input {
   font-style: italic;
 }
 
+.cal-instructor-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+}
+
+.instructor-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
 .cal-entry-more {
   font-size: 0.6rem;
   color: #64748b;
