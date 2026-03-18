@@ -4048,3 +4048,26 @@ textarea.form-input {
     font-size: 0.6rem;
   }
 }
+
+/* === Fichajes (Time Entries) === */
+.fichaje-entry {
+  background: rgba(59, 130, 246, 0.08);
+  border-left: 2px solid var(--info, #3b82f6);
+}
+
+.fichaje-start {
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.fichaje-continue {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.fichaje-clickable {
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fichaje-clickable:hover {
+  background: rgba(59, 130, 246, 0.15) !important;
+}

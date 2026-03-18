@@ -22,10 +22,10 @@
                      IsActive="@IsActive("")" OnClick="@(() => NavigateTo(""))" />
         }
 
-        @if (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas"))
+        @if (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas") || HasPerm("fichajes"))
         {
             <NavGroup Label="Tutorias" Icon="@SvgIcons.Calendar"
-                      HasActiveChild="@(IsActive("calendario") || IsActive("reservar") || IsActive("mis-reservas"))">
+                      HasActiveChild="@(IsActive("calendario") || IsActive("reservar") || IsActive("mis-reservas") || IsActive("fichajes"))">
                 @if (HasPerm("calendario"))
                 {
                     <NavItem Href="calendario" Label="Calendario" Icon="@SvgIcons.Calendar"
@@ -40,6 +40,11 @@
                 {
                     <NavItem Href="mis-reservas" Label="Mis Reservas" Icon="@SvgIcons.CheckCircle"
                              IsActive="@IsActive("mis-reservas")" OnClick="@(() => NavigateTo("mis-reservas"))" />
+                }
+                @if (HasPerm("fichajes"))
+                {
+                    <NavItem Href="fichajes" Label="Fichajes" Icon="@SvgIcons.ClockIn"
+                             IsActive="@IsActive("fichajes")" OnClick="@(() => NavigateTo("fichajes"))" />
                 }
             </NavGroup>
         }

@@ -1,0 +1,369 @@
+@page "/fichajes"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+@inject TimezoneService TzService
+
+<div class="view-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <div>
+            <h2>Fichajes</h2>
+            <p class="view-subtitle">@(isAdmin ? "Control de horas de los instructores" : "Registra tus horas de trabajo")</p>
+        </div>
+        <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
+    </div>
+</div>
+
+@if (isAdmin)
+{
+    <div class="card" style="margin-bottom: 1rem;">
+        <div class="card-body" style="padding: 0.75rem 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <label class="form-label" style="margin:0;">Instructor:</label>
+            <select class="form-input" style="width:auto;min-width:200px;" value="@selectedInstructorId" @onchange="OnInstructorChanged">
+                <option value="0">-- Seleccionar --</option>
+                @if (instructors is not null)
+                {
+                    @foreach (var inst in instructors)
+                    {
+                        <option value="@inst.Id">@inst.Name</option>
+                    }
+                }
+            </select>
+        </div>
+    </div>
+}
+
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem; display: flex; justify-content: flex-end; align-items: center;">
+        <div class="week-navigator">
+            <button class="btn btn-secondary btn-sm" @onclick="PrevWeek">&lt;</button>
+            <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
+            <button class="btn btn-secondary btn-sm" @onclick="NextWeek">&gt;</button>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando...</p></div></div>
+}
+else if (isAdmin && selectedInstructorId == 0)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Selecciona un instructor para ver sus fichajes</p></div></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
+            <div class="table-responsive">
+                <table class="data-table calendar-compact">
+                    <thead>
+                        <tr>
+                            <th style="width:50px;">Hora</th>
+                            @for (int i = 0; i < 7; i++)
+                            {
+                                var d = weekStart.AddDays(i);
+                                var isToday = d.Date == DateTime.Today;
+                                <th style="text-align:center;@(isToday ? "background:var(--primary-bg);" : "")">
+                                    <div style="font-size:0.75rem;">@dayNames[i]</div>
+                                    <div style="font-size:0.7rem;font-weight:400;color:var(--text-muted);">@d.ToString("dd/M")</div>
+                                </th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int hour = 7; hour <= 22; hour++)
+                        {
+                            var h = hour;
+                            <tr>
+                                <td style="font-size:0.75rem;font-weight:600;padding:4px;">@($"{h:00}:00")</td>
+                                @for (int i = 0; i < 7; i++)
+                                {
+                                    var d = weekStart.AddDays(i);
+                                    var entry = GetEntryAt(d, h);
+                                    var isToday = d.Date == DateTime.Today;
+                                    var isPast = d.Date < DateTime.Today || (d.Date == DateTime.Today && h < DateTime.Now.Hour);
+                                    var isStart = entry is not null && entry.StartHour == h;
+                                    var isContinuation = entry is not null && entry.StartHour < h;
+
+                                    @if (entry is not null)
+                                    {
+                                        <td style="text-align:center;padding:4px;font-size:0.75rem;@(isToday ? "background:rgba(16,185,129,0.03);" : "") @(isPast ? "opacity:0.6;" : "")"
+                                            class="fichaje-entry @(isStart ? "fichaje-start" : "fichaje-continue") @(!isAdmin ? "fichaje-clickable" : "")"
+                                            @onclick="() => { if (!isAdmin) OpenEdit(entry); }">
+                                            @if (isStart)
+                                            {
+                                                <div style="line-height:1.2;">
+                                                    <div style="font-weight:600;font-size:0.7rem;color:var(--info);">@($"{entry.StartHour:00}:00-{entry.EndHour:00}:00")</div>
+                                                    @if (!string.IsNullOrEmpty(entry.Description))
+                                                    {
+                                                        <div style="font-size:0.65rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90px;color:var(--text-secondary);"
+                                                             title="@entry.Description">@entry.Description</div>
+                                                    }
+                                                </div>
+                                            }
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td style="text-align:center;padding:4px;font-size:0.75rem;@(isToday ? "background:rgba(16,185,129,0.03);" : "") @(isPast ? "opacity:0.5;" : "")"
+                                            class="@(!isAdmin ? "fichaje-clickable" : "")"
+                                            @onclick="() => { if (!isAdmin) OpenCreate(d, h); }">
+                                        </td>
+                                    }
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal crear/editar fichaje *@
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:420px;">
+            <div class="modal-header">
+                <h3>@(editingEntry is not null ? "Editar Fichaje" : "Nuevo Fichaje")</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Fecha</label>
+                    <input class="form-input" type="text" value="@formDate.ToString("dd/MM/yyyy")" readonly />
+                </div>
+                <div class="form-row" style="display:flex;gap:1rem;">
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Hora inicio</label>
+                        <select class="form-input" @bind="formStartHour">
+                            @for (int h = 0; h <= 23; h++)
+                            {
+                                <option value="@h">@($"{h:00}:00")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label class="form-label">Hora fin</label>
+                        <select class="form-input" @bind="formEndHour">
+                            @for (int h = 1; h <= 24; h++)
+                            {
+                                <option value="@h">@($"{h:00}:00")</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Que hiciste?</label>
+                    <textarea class="form-input" rows="3" @bind="formDescription" placeholder="Descripcion de las tareas realizadas..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer" style="display:flex;justify-content:space-between;">
+                <div>
+                    @if (editingEntry is not null)
+                    {
+                        <button class="btn btn-danger btn-sm" @onclick="DeleteEntry" disabled="@isSaving">Eliminar</button>
+                    }
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="btn btn-secondary" @onclick="CloseModal" disabled="@isSaving">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SaveEntry" disabled="@isSaving">
+                        @(isSaving ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isAdmin;
+    private bool isLoading = true;
+    private bool isSaving;
+    private int selectedInstructorId;
+    private List<InstructorListItemDto>? instructors;
+    private List<TimeEntryDto>? entries;
+
+    // Week navigation
+    private DateTime weekStart;
+    private DateTime weekEnd;
+    private string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
+
+    // Modal state
+    private bool showModal;
+    private TimeEntryDto? editingEntry;
+    private DateTime formDate;
+    private int formStartHour;
+    private int formEndHour;
+    private string? formDescription;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateTime.Today;
+        var dow = (int)today.DayOfWeek;
+        var daysToMon = dow == 0 ? 6 : dow - 1;
+        weekStart = today.AddDays(-daysToMon);
+        weekEnd = weekStart.AddDays(6);
+
+        var profile = await Api.GetProfileAsync();
+        isAdmin = profile?.Role?.ToLower() == "admin";
+
+        if (isAdmin)
+        {
+            instructors = await Api.GetFichajeInstructorsAsync();
+            isLoading = false;
+        }
+        else
+        {
+            await LoadEntries();
+        }
+    }
+
+    private async Task LoadEntries()
+    {
+        isLoading = true;
+        try
+        {
+            if (isAdmin && selectedInstructorId > 0)
+            {
+                entries = await Api.GetTimeEntriesAsync(selectedInstructorId, weekStart, weekEnd);
+            }
+            else if (!isAdmin)
+            {
+                entries = await Api.GetMyTimeEntriesAsync(weekStart, weekEnd);
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar los fichajes");
+        }
+        isLoading = false;
+    }
+
+    private async Task OnInstructorChanged(ChangeEventArgs e)
+    {
+        selectedInstructorId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        if (selectedInstructorId > 0)
+            await LoadEntries();
+        else
+            entries = null;
+    }
+
+    private async Task PrevWeek() { weekStart = weekStart.AddDays(-7); weekEnd = weekEnd.AddDays(-7); await LoadEntries(); }
+    private async Task NextWeek() { weekStart = weekStart.AddDays(7); weekEnd = weekEnd.AddDays(7); await LoadEntries(); }
+
+    private TimeEntryDto? GetEntryAt(DateTime date, int hour)
+    {
+        return entries?.FirstOrDefault(e => e.Date.Date == date.Date && e.StartHour <= hour && e.EndHour > hour);
+    }
+
+    private void OpenCreate(DateTime date, int hour)
+    {
+        editingEntry = null;
+        formDate = date;
+        formStartHour = hour;
+        formEndHour = hour + 1;
+        formDescription = null;
+        showModal = true;
+    }
+
+    private void OpenEdit(TimeEntryDto entry)
+    {
+        editingEntry = entry;
+        formDate = entry.Date;
+        formStartHour = entry.StartHour;
+        formEndHour = entry.EndHour;
+        formDescription = entry.Description;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingEntry = null;
+    }
+
+    private async Task SaveEntry()
+    {
+        if (formStartHour >= formEndHour)
+        {
+            ToastService.Error("La hora de inicio debe ser menor a la hora de fin");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            if (editingEntry is not null)
+            {
+                var result = await Api.UpdateTimeEntryAsync(editingEntry.Id, new UpdateTimeEntryRequest
+                {
+                    StartHour = formStartHour,
+                    EndHour = formEndHour,
+                    Description = formDescription
+                });
+                if (result is not null)
+                {
+                    ToastService.Success("Fichaje actualizado");
+                    CloseModal();
+                    await LoadEntries();
+                }
+                else
+                {
+                    ToastService.Error("No se pudo actualizar el fichaje");
+                }
+            }
+            else
+            {
+                var result = await Api.CreateTimeEntryAsync(new CreateTimeEntryRequest
+                {
+                    Date = formDate,
+                    StartHour = formStartHour,
+                    EndHour = formEndHour,
+                    Description = formDescription
+                });
+                if (result is not null)
+                {
+                    ToastService.Success("Fichaje registrado");
+                    CloseModal();
+                    await LoadEntries();
+                }
+                else
+                {
+                    ToastService.Error("No se pudo crear el fichaje");
+                }
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar el fichaje");
+        }
+        isSaving = false;
+    }
+
+    private async Task DeleteEntry()
+    {
+        if (editingEntry is null) return;
+        isSaving = true;
+        try
+        {
+            var result = await Api.DeleteTimeEntryAsync(editingEntry.Id);
+            if (result)
+            {
+                ToastService.Success("Fichaje eliminado");
+                CloseModal();
+                await LoadEntries();
+            }
+            else
+            {
+                ToastService.Error("No se pudo eliminar el fichaje");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al eliminar el fichaje");
+        }
+        isSaving = false;
+    }
+}

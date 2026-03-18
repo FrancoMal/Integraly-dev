@@ -233,12 +233,12 @@ GO
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
 (1, 'dashboard'), (1, 'calendario'), (1, 'reservar'), (1, 'mis-reservas'),
 (1, 'usuarios'), (1, 'invitaciones'), (1, 'packs'), (1, 'todas-reservas'),
-(1, 'auditoria'), (1, 'config'), (1, 'perfil');
+(1, 'auditoria'), (1, 'config'), (1, 'perfil'), (1, 'fichajes');
 GO
 
 -- Seed instructor permissions
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
-(2, 'dashboard'), (2, 'calendario'), (2, 'mis-reservas'), (2, 'perfil');
+(2, 'dashboard'), (2, 'calendario'), (2, 'mis-reservas'), (2, 'perfil'), (2, 'fichajes');
 GO
 
 -- Seed usuario permissions
@@ -352,6 +352,29 @@ BEGIN
     );
     CREATE INDEX IX_WeekAvailabilities_InstructorId ON WeekAvailabilities (InstructorId);
     CREATE UNIQUE INDEX IX_WeekAvailabilities_Unique ON WeekAvailabilities (InstructorId, Date, StartHour);
+END
+GO
+
+-- TimeEntries table (instructor time tracking / fichajes)
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='TimeEntries' AND xtype='U')
+BEGIN
+    CREATE TABLE TimeEntries (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        InstructorId INT NOT NULL,
+        Date DATE NOT NULL,
+        StartHour INT NOT NULL,
+        EndHour INT NOT NULL,
+        Description NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NULL,
+        CONSTRAINT FK_TimeEntries_Instructor FOREIGN KEY (InstructorId) REFERENCES Users(Id),
+        CONSTRAINT CK_TimeEntries_StartHour CHECK (StartHour >= 0 AND StartHour <= 23),
+        CONSTRAINT CK_TimeEntries_EndHour CHECK (EndHour >= 1 AND EndHour <= 24),
+        CONSTRAINT CK_TimeEntries_HourRange CHECK (StartHour < EndHour)
+    );
+    CREATE INDEX IX_TimeEntries_InstructorId ON TimeEntries (InstructorId);
+    CREATE INDEX IX_TimeEntries_Date ON TimeEntries (Date);
+    CREATE INDEX IX_TimeEntries_InstructorDate ON TimeEntries (InstructorId, Date);
 END
 GO
 

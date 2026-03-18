@@ -12,7 +12,8 @@ public static class MenuDefinition
         {
             new MenuItem("calendario", "Calendario", "/calendario"),
             new MenuItem("reservar", "Reservar", "/reservar"),
-            new MenuItem("mis-reservas", "Mis Reservas", "/mis-reservas")
+            new MenuItem("mis-reservas", "Mis Reservas", "/mis-reservas"),
+            new MenuItem("fichajes", "Fichajes", "/fichajes")
         }),
         new MenuGroup("administracion", "Administracion", new[]
         {
