@@ -69,11 +69,6 @@
             </div>
 
             <div class="form-group">
-                <label class="form-label">Nombre de usuario</label>
-                <input class="form-input" @bind="username" placeholder="Tu nombre de usuario" autocomplete="username" />
-            </div>
-
-            <div class="form-group">
                 <label class="form-label">Contrasena</label>
                 <input class="form-input" type="password" @bind="password" placeholder="Minimo 6 caracteres" autocomplete="new-password" />
             </div>
@@ -101,7 +96,6 @@
     private string firstName = "";
     private string lastName = "";
     private string phone = "";
-    private string username = "";
     private string password = "";
     private string confirmPassword = "";
 
@@ -160,12 +154,6 @@
     {
         errorMessage = null;
 
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            errorMessage = "El nombre de usuario es obligatorio";
-            return;
-        }
-
         if (string.IsNullOrWhiteSpace(password) || password.Length < 6)
         {
             errorMessage = "La contrasena debe tener al menos 6 caracteres";
@@ -185,7 +173,6 @@
             var request = new
             {
                 Token = token,
-                Username = username,
                 Password = password,
                 FirstName = firstName,
                 LastName = lastName,
@@ -200,7 +187,7 @@
             }
             else
             {
-                errorMessage = "Error al crear la cuenta. El nombre de usuario puede estar en uso.";
+                errorMessage = "Error al crear la cuenta. El email puede ya estar registrado.";
             }
         }
         catch

@@ -20,9 +20,10 @@ public class AuthService
         _config = config;
     }
 
-    public async Task<AuthResponse?> Login(string username, string password)
+    public async Task<AuthResponse?> Login(string usernameOrEmail, string password)
     {
-        var user = await _db.Users.Include(u => u.RoleNav).FirstOrDefaultAsync(u => u.Username == username);
+        var user = await _db.Users.Include(u => u.RoleNav)
+            .FirstOrDefaultAsync(u => u.Username == usernameOrEmail || u.Email == usernameOrEmail);
         if (user is null || !user.IsActive)
             return null;
 
@@ -45,15 +46,8 @@ public class AuthService
         if (await _db.Users.AnyAsync(u => u.Email == invitation.Email))
             return null;
 
-        // Generate username from email (part before @)
-        var baseUsername = invitation.Email.Split('@')[0].ToLower();
-        var username = baseUsername;
-        var counter = 1;
-        while (await _db.Users.AnyAsync(u => u.Username == username))
-        {
-            username = $"{baseUsername}{counter}";
-            counter++;
-        }
+        // Username defaults to email
+        var username = invitation.Email.ToLower();
 
         var user = new User
         {

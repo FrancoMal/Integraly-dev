@@ -25,9 +25,9 @@
 
         <EditForm Model="@loginModel" OnValidSubmit="HandleLogin" FormName="loginForm">
             <div class="form-group">
-                <label class="form-label" for="username">Usuario</label>
+                <label class="form-label" for="username">Email</label>
                 <InputText class="form-input" id="username" @bind-Value="loginModel.Username"
-                           placeholder="Ingresa tu usuario" autocomplete="username" />
+                           placeholder="Ingresa tu email" autocomplete="email" />
             </div>
 
             <div class="form-group">
