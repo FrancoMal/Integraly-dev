@@ -41,12 +41,12 @@
                 </div>
             </div>
             @* Toggle vista *@
-            <div style="display:flex;gap:0.4rem;background:var(--bg-secondary,#f1f5f9);border-radius:8px;padding:3px;">
-                <button class="btn btn-sm @(viewMode == "list" ? "btn-primary" : "btn-ghost")" style="font-size:0.78rem;" @onclick='() => viewMode = "list"'>
-                    <i class="fa-solid fa-list" style="margin-right:0.3rem;"></i>Lista
+            <div style="display:flex;gap:4px;background:var(--bg-secondary,#f1f5f9);border-radius:8px;padding:4px;">
+                <button class="btn btn-sm @(viewMode == "list" ? "btn-primary" : "btn-ghost")" @onclick='() => viewMode = "list"'>
+                    <i class="fa-solid fa-list" style="margin-right:0.35rem;"></i>Lista
                 </button>
-                <button class="btn btn-sm @(viewMode == "calendar" ? "btn-primary" : "btn-ghost")" style="font-size:0.78rem;" @onclick="SwitchToCalendar">
-                    <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Calendario
+                <button class="btn btn-sm @(viewMode == "calendar" ? "btn-primary" : "btn-ghost")" @onclick="SwitchToCalendar">
+                    <i class="fa-solid fa-calendar-week" style="margin-right:0.35rem;"></i>Calendario
                 </button>
             </div>
         </div>

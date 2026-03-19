@@ -2287,6 +2287,16 @@ button {
   align-items: center;
 }
 
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+}
+.btn-ghost:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+}
+
 .integration-card-body {
   padding: 1.5rem;
 }
