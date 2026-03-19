@@ -233,7 +233,7 @@
                             @foreach (var b in allMyBookings.OrderByDescending(b => b.ScheduledDate).ThenByDescending(b => b.StartHour))
                             {
                                 <tr style="@GetListRowStyle(b.Status)">
-                                    <td>@b.ScheduledDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@b.ScheduledDate.ToString("ddd dd/MM/yyyy")</td>
                                     <td style="white-space:nowrap;">@($"{b.StartHour}:00 - {b.StartHour + 1}:00")</td>
                                     <td>@b.InstructorName</td>
                                     <td><span class="status-badge" style="@GetListStatusStyle(b.Status)">@GetListStatusLabel(b.Status)</span></td>
