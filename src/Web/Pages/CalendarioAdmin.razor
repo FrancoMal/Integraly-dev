@@ -3,7 +3,6 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 @inject TimezoneService TzService
-@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="view-header">
@@ -126,9 +125,8 @@ else
                                     <td class="admin-cal-cell @(isToday ? "today-col" : "") @(isCellSelected ? "cell-selected" : "")"
                                         data-cell="@cellKey"
                                         @onclick="e => OnCellClick(e, date, hour)"
-                                        @onmousedown="e => OnMouseDown(e, dateStr, hour)"
-                                        @onmouseenter="e => OnMouseEnter(e, dateStr, hour)"
-                                        @onmousedown:preventDefault="@false">
+                                        @onmousedown="e => OnMouseDown(e, date, hour)"
+                                        @onmouseenter="e => OnMouseEnter(e, date, hour)">
                                         @if (showDisponibilidad && availableInstructors.Count > 0)
                                         {
                                             <div class="cal-instructor-dots">
@@ -407,7 +405,7 @@ else
     private HashSet<string> selectedCells = new();
     private int bulkInstructorId = 0;
     private bool bulkSaving = false;
-    private DotNetObjectReference<CalendarioAdmin>? _dotnetRef;
+    private bool isDragging = false;
 
     private static readonly string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
 
@@ -451,69 +449,24 @@ else
         loading = false;
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _dotnetRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("calendarSelect.init", _dotnetRef);
-        }
-    }
+    public void Dispose() { }
 
-    public void Dispose()
-    {
-        try { JS.InvokeVoidAsync("calendarSelect.dispose"); } catch { }
-        _dotnetRef?.Dispose();
-    }
-
-    // Called from JS when Ctrl+click
-    [JSInvokable]
-    public void JsToggleCell(string date, int hour)
-    {
-        var key = $"{date}_{hour}";
-        if (!selectedCells.Add(key))
-            selectedCells.Remove(key);
-        StateHasChanged();
-    }
-
-    // Called from JS when Shift+drag ends
-    [JSInvokable]
-    public void JsAddCells(string json)
-    {
-        try
-        {
-            var cells = System.Text.Json.JsonSerializer.Deserialize<List<DragCell>>(json);
-            if (cells is not null)
-            {
-                foreach (var c in cells)
-                {
-                    selectedCells.Add($"{c.date}_{c.hour}");
-                }
-            }
-        }
-        catch { }
-        StateHasChanged();
-    }
-
-    private class DragCell
-    {
-        public string date { get; set; } = "";
-        public int hour { get; set; }
-    }
-
-    private async Task OnMouseDown(MouseEventArgs e, string dateStr, int hour)
-    {
-        if (e.ShiftKey || e.CtrlKey || e.MetaKey)
-        {
-            await JS.InvokeVoidAsync("calendarSelect.handleMouseDown", e, dateStr, hour);
-        }
-    }
-
-    private async Task OnMouseEnter(MouseEventArgs e, string dateStr, int hour)
+    private void OnMouseDown(MouseEventArgs e, DateTime date, int hour)
     {
         if (e.ShiftKey)
         {
-            await JS.InvokeVoidAsync("calendarSelect.handleMouseEnter", e, dateStr, hour);
+            isDragging = true;
+            var key = $"{date:yyyy-MM-dd}_{hour}";
+            selectedCells.Add(key);
+        }
+    }
+
+    private void OnMouseEnter(MouseEventArgs e, DateTime date, int hour)
+    {
+        if (isDragging)
+        {
+            var key = $"{date:yyyy-MM-dd}_{hour}";
+            selectedCells.Add(key);
         }
     }
 
@@ -663,10 +616,25 @@ else
         loading = false;
     }
 
-    // Normal click (no modifier) opens the detail modal; Ctrl/Shift handled by JS
     private void OnCellClick(MouseEventArgs e, DateTime date, int hour)
     {
-        if (e.CtrlKey || e.MetaKey || e.ShiftKey) return;
+        // Shift+drag: end drag on mouseup (click fires after mouseup)
+        if (isDragging)
+        {
+            isDragging = false;
+            return;
+        }
+
+        // Ctrl+click: toggle individual cell selection
+        if (e.CtrlKey || e.MetaKey)
+        {
+            var key = $"{date:yyyy-MM-dd}_{hour}";
+            if (!selectedCells.Add(key))
+                selectedCells.Remove(key);
+            return;
+        }
+
+        // Normal click: open detail modal
         OpenModal(date, hour);
     }
 
