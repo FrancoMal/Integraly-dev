@@ -3844,7 +3844,13 @@ td.calendar-slot-cancelled {
 }
 
 td.calendar-slot-unavailable {
-  background: #f1f3f5 !important;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(0, 0, 0, 0.04) 4px,
+    rgba(0, 0, 0, 0.04) 6px
+  ) !important;
 }
 
 /* Impersonate bar */
