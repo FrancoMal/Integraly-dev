@@ -699,9 +699,9 @@ button {
 }
 
 .topbar-title {
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
-  font-family: 'Syne', sans-serif;
+  font-family: 'Inter', sans-serif;
   color: var(--text-primary);
 }
 

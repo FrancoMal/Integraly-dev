@@ -4,16 +4,6 @@
 @inject ToastService ToastService
 @inject TimezoneService TzService
 
-<div class="view-header">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div>
-            <h2>Reservar Clase</h2>
-            <p class="view-subtitle">Explora los horarios disponibles y reserva tu clase</p>
-        </div>
-        <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
-    </div>
-</div>
-
 @if (remainingTokens.HasValue)
 {
     <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
