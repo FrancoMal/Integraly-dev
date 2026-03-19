@@ -165,7 +165,7 @@
                                     else
                                     {
                                         <td style="text-align: center; padding: 4px; cursor: @(available.Count > 0 && !isPast ? "pointer" : "default");"
-                                            class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "")"
+                                            class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "calendar-slot-unavailable")"
                                             @onclick="() => OnSlotClick(date, h)">
                                             @if (!isPast && available.Count > 0)
                                             {

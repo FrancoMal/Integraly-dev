@@ -3843,6 +3843,10 @@ td.calendar-slot-cancelled {
   border-left: 3px solid #ef4444 !important;
 }
 
+td.calendar-slot-unavailable {
+  background: #f1f3f5 !important;
+}
+
 /* Impersonate bar */
 .impersonate-bar {
   position: fixed;
