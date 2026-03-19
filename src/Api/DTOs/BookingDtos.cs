@@ -25,3 +25,10 @@ public record AvailableSlotDto(
     int StartHour,
     bool IsAvailable
 );
+
+public record AdminCreateBookingRequest(
+    [Required] int UserId,
+    [Required] int InstructorId,
+    [Required] DateTime ScheduledDate,
+    [Required][Range(0, 23)] int StartHour
+);

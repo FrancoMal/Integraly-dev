@@ -79,6 +79,22 @@ public class AvailabilityController : ControllerBase
         return Ok(results);
     }
 
+    // Admin: toggle availability for a specific instructor at a specific date+hour
+    [HttpPut("admin-toggle")]
+    public async Task<IActionResult> AdminToggleAvailability([FromBody] AdminToggleAvailabilityRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var result = await _availabilityService.ToggleSingleSlotAsync(
+            request.InstructorId, request.Date, request.StartHour, request.IsActive);
+        return Ok(result);
+    }
+
+    private bool IsAdmin()
+    {
+        return User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "admin";
+    }
+
     private bool IsInstructor()
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;

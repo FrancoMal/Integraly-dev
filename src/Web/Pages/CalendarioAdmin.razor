@@ -190,20 +190,21 @@ else
     </div>
 }
 
-@* Modal de detalle *@
+@* Modal de detalle y gestion *@
 @if (showModal)
 {
     <div class="modal-overlay" @onclick="CloseModal">
-        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:500px;">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:550px;">
             <div class="modal-header">
                 <h3 style="margin:0;font-size:1rem;">@modalDate.ToString("dddd dd/MM/yyyy") — @($"{modalHour}:00")</h3>
             </div>
-            <div class="modal-body" style="max-height:400px;overflow-y:auto;">
+            <div class="modal-body" style="max-height:500px;overflow-y:auto;">
                 @{
                     var mBookings = GetBookingsAt(modalDate, modalHour);
                     var mAvail = GetAvailableAt(modalDate, modalHour);
                 }
 
+                @* === RESERVAS EXISTENTES === *@
                 @if (mBookings.Count > 0)
                 {
                     <div style="margin-bottom:1rem;">
@@ -211,7 +212,22 @@ else
                         @foreach (var b in mBookings)
                         {
                             <div style="padding:0.4rem 0.6rem;margin-bottom:0.4rem;border-radius:6px;background:rgba(59,130,246,0.08);border-left:3px solid #3b82f6;font-size:0.8rem;">
-                                <div style="font-weight:600;">@b.UserName <span style="font-weight:400;color:var(--text-secondary);">con</span> @b.InstructorName</div>
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <span style="font-weight:600;">@b.UserName</span>
+                                        <span style="color:var(--text-secondary);"> con </span>
+                                        <span style="font-weight:600;">@b.InstructorName</span>
+                                    </div>
+                                    @if (b.Status == "confirmed")
+                                    {
+                                        var bookingId = b.Id;
+                                        <button class="btn btn-sm" style="background:#ef4444;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
+                                                disabled="@modalSaving"
+                                                @onclick="() => AdminCancelBooking(bookingId)">
+                                            Cancelar
+                                        </button>
+                                    }
+                                </div>
                                 <div style="display:flex;gap:0.5rem;align-items:center;margin-top:2px;">
                                     <span class="status-badge @(b.Status == "confirmed" ? "status-active" : "status-inactive")">@b.Status</span>
                                     @if (!string.IsNullOrEmpty(b.MeetLink))
@@ -224,23 +240,83 @@ else
                     </div>
                 }
 
-                @if (mAvail.Count > 0)
-                {
-                    <div>
-                        <h4 style="font-size:0.85rem;color:#10b981;margin-bottom:0.5rem;">Disponibilidad (@mAvail.Count instructores)</h4>
-                        @foreach (var inst in mAvail)
+                @* === DISPONIBILIDAD === *@
+                <div style="margin-bottom:1rem;">
+                    <h4 style="font-size:0.85rem;color:#10b981;margin-bottom:0.5rem;">Disponibilidad</h4>
+                    @if (instructors is not null)
+                    {
+                        @foreach (var inst in instructors)
                         {
-                            <div style="padding:0.3rem 0.6rem;margin-bottom:0.3rem;border-radius:6px;background:rgba(16,185,129,0.06);font-size:0.8rem;color:#059669;">
-                                @($"{inst.FirstName} {inst.LastName}".Trim())
+                            var instId = inst.Id;
+                            var isAvail = mAvail.Any(a => a.Id == inst.Id);
+                            var color = GetInstructorColor(inst.Id);
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:0.3rem 0.6rem;margin-bottom:0.3rem;border-radius:6px;font-size:0.8rem;background:@(isAvail ? "rgba(16,185,129,0.06)" : "transparent");border:1px solid @(isAvail ? "rgba(16,185,129,0.2)" : "var(--border-color)");">
+                                <div style="display:flex;align-items:center;gap:0.4rem;">
+                                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@color;"></span>
+                                    <span style="@(isAvail ? "color:#059669;font-weight:600;" : "color:var(--text-secondary);")">@($"{inst.FirstName} {inst.LastName}".Trim())</span>
+                                </div>
+                                <button class="btn btn-sm" style="padding:0.1rem 0.5rem;font-size:0.7rem;@(isAvail ? "background:#ef4444;color:white;" : "background:#10b981;color:white;")"
+                                        disabled="@modalSaving"
+                                        @onclick="() => ToggleAvailability(instId, !isAvail)">
+                                    @(isAvail ? "Quitar" : "Agregar")
+                                </button>
                             </div>
                         }
-                    </div>
-                }
+                    }
+                </div>
 
-                @if (mBookings.Count == 0 && mAvail.Count == 0)
-                {
-                    <p class="text-muted" style="font-size:0.85rem;">No hay datos para este horario.</p>
-                }
+                @* === CREAR NUEVA RESERVA === *@
+                <div style="border-top:1px solid var(--border-color);padding-top:0.75rem;">
+                    <h4 style="font-size:0.85rem;color:#8b5cf6;margin-bottom:0.5rem;">Nueva Reserva</h4>
+                    @if (mAvail.Count == 0)
+                    {
+                        <p class="text-muted" style="font-size:0.8rem;">No hay instructores disponibles en este horario. Agrega disponibilidad primero.</p>
+                    }
+                    else
+                    {
+                        <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                            <div style="display:flex;gap:0.5rem;align-items:center;">
+                                <label style="font-size:0.8rem;font-weight:600;min-width:70px;">Alumno:</label>
+                                <select class="form-input" style="flex:1;padding:0.3rem 0.5rem;font-size:0.8rem;" @bind="newBookingUserId">
+                                    <option value="0">— Seleccionar alumno —</option>
+                                    @if (allUsers is not null)
+                                    {
+                                        @foreach (var u in allUsers.Where(u => u.Role == "usuario" && u.IsActive))
+                                        {
+                                            <option value="@u.Id">@($"{u.FirstName} {u.LastName}".Trim()) (@u.Username)</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div style="display:flex;gap:0.5rem;align-items:center;">
+                                <label style="font-size:0.8rem;font-weight:600;min-width:70px;">Instructor:</label>
+                                <select class="form-input" style="flex:1;padding:0.3rem 0.5rem;font-size:0.8rem;" @bind="newBookingInstructorId">
+                                    <option value="0">— Seleccionar instructor —</option>
+                                    @foreach (var inst in mAvail)
+                                    {
+                                        var hasExisting = mBookings.Any(b => b.InstructorId == inst.Id);
+                                        @if (!hasExisting)
+                                        {
+                                            <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <button class="btn btn-sm" style="background:#8b5cf6;color:white;align-self:flex-end;"
+                                    disabled="@(modalSaving || newBookingUserId == 0 || newBookingInstructorId == 0)"
+                                    @onclick="AdminCreateBooking">
+                                @if (modalSaving)
+                                {
+                                    <span>Creando...</span>
+                                }
+                                else
+                                {
+                                    <span>Crear Reserva</span>
+                                }
+                            </button>
+                        </div>
+                    }
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-sm" @onclick="CloseModal">Cerrar</button>
@@ -273,6 +349,12 @@ else
     private bool showInstructorModal = false;
     private DateTime modalDate;
     private int modalHour;
+    private bool modalSaving = false;
+
+    // Modal: nueva reserva
+    private int newBookingUserId = 0;
+    private int newBookingInstructorId = 0;
+    private List<UserManageDto>? allUsers;
 
     private static readonly string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
 
@@ -291,6 +373,7 @@ else
 
         try
         {
+            allUsers = await Api.GetUsersAsync();
             instructors = await Api.GetInstructorsAsync();
             if (instructors is not null)
             {
@@ -466,10 +549,104 @@ else
     {
         modalDate = date;
         modalHour = hour;
+        newBookingUserId = 0;
+        newBookingInstructorId = 0;
         showModal = true;
     }
 
     private void CloseModal() => showModal = false;
+
+    private async Task ToggleAvailability(int instructorId, bool isActive)
+    {
+        modalSaving = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.AdminToggleAvailabilityAsync(instructorId, modalDate, modalHour, isActive);
+            if (success)
+            {
+                await LoadWeekData();
+                // Also reload general availability in case it affects the view
+                if (instructorWeekOverrides.ContainsKey(instructorId))
+                {
+                    var overrides = await Api.GetWeekAvailabilityAsync(instructorId, weekStart, weekEnd);
+                    instructorWeekOverrides[instructorId] = overrides ?? new List<WeekAvailabilityDto>();
+                }
+                ToastService.Success(isActive ? "Disponibilidad agregada" : "Disponibilidad quitada");
+            }
+            else
+            {
+                ToastService.Error("Error al cambiar disponibilidad");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cambiar disponibilidad");
+        }
+        modalSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task AdminCreateBooking()
+    {
+        if (newBookingUserId == 0 || newBookingInstructorId == 0) return;
+
+        modalSaving = true;
+        StateHasChanged();
+        try
+        {
+            var request = new AdminCreateBookingRequest
+            {
+                UserId = newBookingUserId,
+                InstructorId = newBookingInstructorId,
+                ScheduledDate = modalDate,
+                StartHour = modalHour
+            };
+            var booking = await Api.AdminCreateBookingAsync(request);
+            if (booking is not null)
+            {
+                await LoadWeekData();
+                newBookingUserId = 0;
+                newBookingInstructorId = 0;
+                ToastService.Success("Reserva creada correctamente");
+            }
+            else
+            {
+                ToastService.Error("Error al crear la reserva");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al crear la reserva. Verifica que el alumno tenga tokens disponibles.");
+        }
+        modalSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task AdminCancelBooking(int bookingId)
+    {
+        modalSaving = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.AdminCancelBookingAsync(bookingId);
+            if (success)
+            {
+                await LoadWeekData();
+                ToastService.Success("Reserva cancelada");
+            }
+            else
+            {
+                ToastService.Error("Error al cancelar la reserva");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cancelar la reserva");
+        }
+        modalSaving = false;
+        StateHasChanged();
+    }
 
     private string TruncateName(string name)
     {

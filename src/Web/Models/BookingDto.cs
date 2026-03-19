@@ -26,3 +26,11 @@ public class AvailableSlotDto
     public int StartHour { get; set; }
     public bool IsAvailable { get; set; }
 }
+
+public class AdminCreateBookingRequest
+{
+    public int UserId { get; set; }
+    public int InstructorId { get; set; }
+    public DateTime ScheduledDate { get; set; }
+    public int StartHour { get; set; }
+}

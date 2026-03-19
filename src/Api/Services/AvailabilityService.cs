@@ -153,4 +153,32 @@ public class AvailabilityService
 
         return general?.IsActive ?? false;
     }
+
+    // Toggle a single week availability slot for admin
+    public async Task<WeekAvailabilityDto> ToggleSingleSlotAsync(int instructorId, DateTime date, int startHour, bool isActive)
+    {
+        var existing = await _db.WeekAvailabilities
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.Date == date.Date && w.StartHour == startHour);
+
+        if (existing is not null)
+        {
+            existing.IsActive = isActive;
+            await _db.SaveChangesAsync();
+            return new WeekAvailabilityDto(existing.Id, existing.InstructorId, existing.Date, existing.StartHour, existing.IsActive);
+        }
+
+        var slot = new WeekAvailability
+        {
+            InstructorId = instructorId,
+            Date = date.Date,
+            StartHour = startHour,
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.WeekAvailabilities.Add(slot);
+        await _db.SaveChangesAsync();
+
+        return new WeekAvailabilityDto(slot.Id, slot.InstructorId, slot.Date, slot.StartHour, slot.IsActive);
+    }
 }

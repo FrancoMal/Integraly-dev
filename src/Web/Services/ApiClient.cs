@@ -192,6 +192,12 @@ public class ApiClient
         return await PutAsync<List<WeekAvailabilityDto>>("/api/availability/week", new { weekStart, slots });
     }
 
+    public async Task<bool> AdminToggleAvailabilityAsync(int instructorId, DateTime date, int startHour, bool isActive)
+    {
+        var result = await PutAsync<object>("/api/availability/admin-toggle", new { instructorId, date = date.ToString("yyyy-MM-dd"), startHour, isActive });
+        return result != null;
+    }
+
     // --- Bookings ---
     public async Task<List<BookingDto>?> GetAllBookingsAsync()
     {
@@ -221,6 +227,16 @@ public class ApiClient
     public async Task<List<AvailableSlotDto>?> GetAvailableSlotsAsync(int instructorId, DateTime date)
     {
         return await GetAsync<List<AvailableSlotDto>>($"/api/bookings/available-slots?instructorId={instructorId}&date={date:yyyy-MM-dd}");
+    }
+
+    public async Task<BookingDto?> AdminCreateBookingAsync(AdminCreateBookingRequest request)
+    {
+        return await PostAsync<BookingDto>("/api/bookings/admin", request);
+    }
+
+    public async Task<bool> AdminCancelBookingAsync(int id)
+    {
+        return await DeleteAsync($"/api/bookings/{id}/admin-cancel");
     }
 
     public async Task<TokenPackDto?> UpdateTokenPackAsync(int id, object request)

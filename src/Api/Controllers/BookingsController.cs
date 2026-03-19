@@ -104,6 +104,46 @@ public class BookingsController : ControllerBase
         return Ok(slots);
     }
 
+    // Admin: create booking on behalf of a user
+    [HttpPost("admin")]
+    public async Task<IActionResult> AdminCreate([FromBody] AdminCreateBookingRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var (booking, error) = await _bookingService.CreateAsync(
+            request.UserId,
+            request.InstructorId,
+            request.ScheduledDate,
+            request.StartHour
+        );
+
+        if (booking is null)
+            return BadRequest(new { message = error });
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("Booking", booking.Id.ToString(), "admin-create",
+            $"admin created booking for user {request.UserId} with instructor {request.InstructorId}", username);
+
+        return Created($"/api/bookings/{booking.Id}", booking);
+    }
+
+    // Admin: cancel any booking without restrictions
+    [HttpDelete("{id}/admin-cancel")]
+    public async Task<IActionResult> AdminCancel(int id)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var (success, error) = await _bookingService.AdminCancelAsync(id);
+
+        if (!success)
+            return BadRequest(new { message = error });
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("Booking", id.ToString(), "admin-cancel", null, username);
+
+        return NoContent();
+    }
+
     private bool IsAdmin()
     {
         return User.FindFirst(ClaimTypes.Role)?.Value == "admin";

@@ -231,4 +231,23 @@ public class BookingService
             .Select(h => new AvailableSlotDto(h, !bookedHours.Contains(h)))
             .ToList();
     }
+
+    public async Task<(bool Success, string? Error)> AdminCancelAsync(int bookingId)
+    {
+        var booking = await _db.Bookings.FindAsync(bookingId);
+        if (booking is null)
+            return (false, "Reserva no encontrada");
+
+        if (booking.Status != "confirmed")
+            return (false, "La reserva ya fue cancelada o completada");
+
+        // Refund token
+        await _tokenPackService.RefundTokenAsync(booking.TokenPackId);
+
+        booking.Status = "cancelled";
+        booking.CancelledAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return (true, null);
+    }
 }

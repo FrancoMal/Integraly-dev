@@ -30,3 +30,10 @@ public class SetWeekAvailabilityRequest
     public DateTime WeekStart { get; set; }
     public List<WeekSlotRequest> Slots { get; set; } = new();
 }
+
+public record AdminToggleAvailabilityRequest(
+    [Required] int InstructorId,
+    [Required] DateTime Date,
+    [Required][Range(0, 23)] int StartHour,
+    [Required] bool IsActive
+);
