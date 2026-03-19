@@ -5,16 +5,6 @@
 @inject TimezoneService TzService
 @implements IDisposable
 
-<div class="view-header">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div>
-            <h2>Calendario General</h2>
-            <p class="view-subtitle">Vista completa de reservas y disponibilidad</p>
-        </div>
-        <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
-    </div>
-</div>
-
 @* Filtros *@
 <div class="card" style="margin-bottom: 1rem;">
     <div class="card-body" style="padding: 0.75rem 1rem;">
@@ -28,10 +18,13 @@
                     <i class="fa-solid fa-clock" style="margin-right:0.3rem;"></i>Disponibilidad
                 </button>
             </div>
-            <div class="week-navigator">
-                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left"></i></button>
-                <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+                <div class="week-navigator">
+                    <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left"></i></button>
+                    <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
+                    <button class="btn btn-secondary btn-sm" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+                <span style="font-size:0.75rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:3px 10px;border-radius:20px;white-space:nowrap;">🕐 @TzService.GetTimezoneLabel()</span>
             </div>
         </div>
 
