@@ -4213,18 +4213,15 @@ textarea.form-input {
 }
 
 .bulk-action-bar {
-  position: sticky;
-  bottom: 0;
   background: white;
-  border-top: 2px solid #8b5cf6;
+  border: 2px solid #8b5cf6;
+  border-radius: 8px;
   padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
-  border-radius: 0 0 8px 8px;
-  z-index: 10;
+  box-shadow: 0 2px 8px rgba(139,92,246,0.15);
 }
 
 .instructor-modal-row:hover {
