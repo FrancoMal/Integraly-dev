@@ -209,6 +209,12 @@ public class ApiClient
         return result != null;
     }
 
+    public async Task<bool> CopyPreviousWeekAvailabilityAsync(DateTime targetWeekStart)
+    {
+        var result = await PostAsync<object>("api/availability/copy-previous-week", new { targetWeekStart = targetWeekStart.ToString("yyyy-MM-dd") });
+        return result != null;
+    }
+
     // --- Bookings ---
     public async Task<List<BookingDto>?> GetAllBookingsAsync()
     {

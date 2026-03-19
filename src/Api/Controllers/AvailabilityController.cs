@@ -101,6 +101,16 @@ public class AvailabilityController : ControllerBase
         return Ok(new { updated = count });
     }
 
+    // Admin: copy availability from previous week to target week
+    [HttpPost("copy-previous-week")]
+    public async Task<IActionResult> CopyPreviousWeek([FromBody] CopyWeekRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var count = await _availabilityService.CopyWeekAvailabilityAsync(request.TargetWeekStart);
+        return Ok(new { copied = count });
+    }
+
     private bool IsAdmin()
     {
         return User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "admin";

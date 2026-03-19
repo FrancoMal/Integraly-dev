@@ -50,3 +50,5 @@ public class AdminBulkToggleRequest
     public bool IsActive { get; set; }
     public List<AdminBulkToggleSlot> Slots { get; set; } = new();
 }
+
+public record CopyWeekRequest(DateTime TargetWeekStart);

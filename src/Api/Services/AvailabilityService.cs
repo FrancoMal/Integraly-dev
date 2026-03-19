@@ -211,4 +211,48 @@ public class AvailabilityService
 
         return new WeekAvailabilityDto(slot.Id, slot.InstructorId, slot.Date, slot.StartHour, slot.IsActive);
     }
+
+    // Copy all active week availability overrides from previous week to target week
+    public async Task<int> CopyWeekAvailabilityAsync(DateTime targetWeekStart)
+    {
+        var previousWeekStart = targetWeekStart.AddDays(-7);
+        var previousWeekEnd = previousWeekStart.AddDays(7);
+
+        // Get all active overrides from previous week
+        var previousSlots = await _db.WeekAvailabilities
+            .Where(w => w.Date >= previousWeekStart.Date && w.Date < previousWeekEnd.Date && w.IsActive)
+            .ToListAsync();
+
+        if (previousSlots.Count == 0) return 0;
+
+        var count = 0;
+        foreach (var slot in previousSlots)
+        {
+            var dayOffset = (slot.Date.Date - previousWeekStart.Date).Days;
+            var newDate = targetWeekStart.AddDays(dayOffset).Date;
+
+            var existing = await _db.WeekAvailabilities
+                .FirstOrDefaultAsync(w => w.InstructorId == slot.InstructorId && w.Date == newDate && w.StartHour == slot.StartHour);
+
+            if (existing is not null)
+            {
+                existing.IsActive = true;
+            }
+            else
+            {
+                _db.WeekAvailabilities.Add(new WeekAvailability
+                {
+                    InstructorId = slot.InstructorId,
+                    Date = newDate,
+                    StartHour = slot.StartHour,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            count++;
+        }
+
+        await _db.SaveChangesAsync();
+        return count;
+    }
 }

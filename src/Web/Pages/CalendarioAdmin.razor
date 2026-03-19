@@ -28,7 +28,7 @@
             </div>
         </div>
 
-        @* Fila 2: Filtro de instructores (boton) + filtro de alumno *@
+        @* Fila 2: Filtro de instructores (boton) + filtro de alumno + copiar semana *@
         <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
             @if (instructors is not null && instructors.Count > 0)
             {
@@ -47,6 +47,12 @@
                     }
                 </select>
             </div>
+            <button class="btn btn-sm" style="background:#8b5cf6;color:white;display:flex;align-items:center;gap:0.4rem;margin-left:auto;"
+                    disabled="@copyingWeek"
+                    @onclick="CopyPreviousWeek">
+                <i class="fa-solid fa-copy"></i>
+                <span>@(copyingWeek ? "Copiando..." : "Copiar semana anterior")</span>
+            </button>
         </div>
     </div>
 </div>
@@ -378,6 +384,9 @@ else
     private int newBookingInstructorId = 0;
     private List<UserManageDto>? allUsers;
 
+    // Copy week
+    private bool copyingWeek = false;
+
     // Multi-select
     private HashSet<string> selectedCells = new();
     private int bulkInstructorId = 0;
@@ -595,6 +604,40 @@ else
         StateHasChanged();
         await LoadWeekData();
         loading = false;
+    }
+
+    private async Task CopyPreviousWeek()
+    {
+        copyingWeek = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.CopyPreviousWeekAvailabilityAsync(weekStart);
+            if (success)
+            {
+                await LoadWeekData();
+                // Reload week overrides for all instructors
+                if (instructors is not null)
+                {
+                    foreach (var inst in instructors)
+                    {
+                        var overrides = await Api.GetWeekAvailabilityAsync(inst.Id, weekStart, weekEnd);
+                        instructorWeekOverrides[inst.Id] = overrides ?? new List<WeekAvailabilityDto>();
+                    }
+                }
+                ToastService.Success("Disponibilidad copiada desde la semana anterior");
+            }
+            else
+            {
+                ToastService.Error("No se encontro disponibilidad en la semana anterior");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al copiar disponibilidad");
+        }
+        copyingWeek = false;
+        StateHasChanged();
     }
 
     private void OnCellClick(MouseEventArgs e, DateTime date, int hour)
