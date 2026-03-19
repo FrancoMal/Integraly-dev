@@ -3,11 +3,6 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 
-<div class="view-header">
-    <h2>Tareas de Instructores</h2>
-    <p class="view-subtitle">Registro de tareas y horas trabajadas</p>
-</div>
-
 @* Filtros *@
 <div class="card" style="margin-bottom: 1rem;">
     <div class="card-body" style="padding: 0.75rem 1rem;">
@@ -53,31 +48,6 @@
                     <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Calendario
                 </button>
             </div>
-        </div>
-    </div>
-</div>
-
-@* Resumen *@
-<div class="dashboard-cards-row" style="margin-bottom:1rem;">
-    <div class="stat-card">
-        <div class="stat-card-icon primary">@SvgIcons.Clock</div>
-        <div class="stat-card-info">
-            <span class="stat-card-value">@totalHours.ToString("0.#")</span>
-            <span class="stat-card-label">Horas del periodo</span>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-icon warning">@SvgIcons.ClipboardList</div>
-        <div class="stat-card-info">
-            <span class="stat-card-value">@pendingCount</span>
-            <span class="stat-card-label">Tareas pendientes</span>
-        </div>
-    </div>
-    <div class="stat-card">
-        <div class="stat-card-icon success">@SvgIcons.CheckCircle</div>
-        <div class="stat-card-info">
-            <span class="stat-card-value">@completedCount</span>
-            <span class="stat-card-label">Tareas completadas</span>
         </div>
     </div>
 </div>
