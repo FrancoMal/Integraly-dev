@@ -3819,26 +3819,26 @@ textarea.form-input {
   vertical-align: middle;
   position: relative;
 }
-.calendar-slot-available {
+td.calendar-slot-available {
   border-left: 3px solid #10b981 !important;
   background: transparent !important;
 }
-.calendar-slot-available:hover {
+td.calendar-slot-available:hover {
   background: rgba(16, 185, 129, 0.08) !important;
   cursor: pointer;
 }
 
-.calendar-slot-booked {
+td.calendar-slot-booked {
   background: rgba(245, 158, 11, 0.08) !important;
   border-left: 3px solid #f59e0b !important;
 }
 
-.calendar-slot-completed {
+td.calendar-slot-completed {
   background: rgba(59, 130, 246, 0.08) !important;
   border-left: 3px solid #3b82f6 !important;
 }
 
-.calendar-slot-cancelled {
+td.calendar-slot-cancelled {
   background: rgba(239, 68, 68, 0.08) !important;
   border-left: 3px solid #ef4444 !important;
 }
