@@ -70,7 +70,7 @@
 
                 <div class="form-actions">
                     <button class="btn btn-primary" @onclick="SaveProfile" disabled="@isSavingProfile">
-                        @(isSavingProfile ? "Guardando..." : "Guardar Cambios")
+                        <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSavingProfile ? "Guardando..." : "Guardar Cambios")
                     </button>
                 </div>
             }
@@ -104,7 +104,7 @@
 
             <div class="form-actions">
                 <button class="btn btn-primary" @onclick="ChangePassword" disabled="@isSavingPassword">
-                    @(isSavingPassword ? "Cambiando..." : "Cambiar Contrasena")
+                    <i class="fa-solid fa-key" style="margin-right:0.3rem;"></i>@(isSavingPassword ? "Cambiando..." : "Cambiar Contrasena")
                 </button>
             </div>
         </div>

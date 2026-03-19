@@ -63,7 +63,7 @@
 
             <div class="form-actions">
                 <button class="btn btn-primary" @onclick="SaveSettings" disabled="@isSaving">
-                    @(isSaving ? "Guardando..." : "Guardar Configuracion")
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSaving ? "Guardando..." : "Guardar Configuracion")
                 </button>
             </div>
         }
@@ -123,7 +123,7 @@
 
             <div class="form-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
                 <button class="btn btn-primary" @onclick="SaveSmtpSettings" disabled="@isSmtpSaving">
-                    @(isSmtpSaving ? "Guardando..." : "Guardar SMTP")
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSmtpSaving ? "Guardando..." : "Guardar SMTP")
                 </button>
             </div>
 
@@ -136,7 +136,7 @@
                     <input class="form-input" type="email" @bind="testEmailTo" placeholder="test@ejemplo.com" />
                 </div>
                 <button class="btn btn-secondary" @onclick="SendTestEmail" disabled="@isSendingTest" style="height: fit-content;">
-                    @(isSendingTest ? "Enviando..." : "Enviar prueba")
+                    <i class="fa-solid fa-paper-plane" style="margin-right:0.3rem;"></i>@(isSendingTest ? "Enviando..." : "Enviar prueba")
                 </button>
             </div>
         }

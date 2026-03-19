@@ -18,10 +18,10 @@
     <div class="card-body" style="padding: 0.75rem 1rem;">
         <div style="display: flex; gap: 0.5rem;">
             <button class="btn @(mode == "general" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => SwitchMode("general")'>
-                General
+                <i class="fa-solid fa-table-cells" style="margin-right:0.3rem;"></i>General
             </button>
             <button class="btn @(mode == "week" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => SwitchMode("week")'>
-                Por Semana
+                <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Por Semana
             </button>
         </div>
     </div>
@@ -33,7 +33,7 @@
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3>Disponibilidad semanal</h3>
             <button class="btn btn-primary" @onclick="SaveGeneralAvailability" disabled="@isSaving">
-                @(isSaving ? "Guardando..." : "Guardar Cambios")
+                <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSaving ? "Guardando..." : "Guardar Cambios")
             </button>
         </div>
         <div class="card-body">
@@ -99,9 +99,9 @@ else
     <div class="card" style="margin-bottom: 1rem;">
         <div class="card-body">
             <div class="week-navigator">
-                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek">&lt; Anterior</button>
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left" style="margin-right:0.3rem;"></i>Anterior</button>
                 <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente &gt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente<i class="fa-solid fa-chevron-right" style="margin-left:0.3rem;"></i></button>
             </div>
         </div>
     </div>
@@ -110,9 +110,9 @@ else
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3>Disponibilidad - Semana del @weekStart.ToString("dd/MM")</h3>
             <div style="display: flex; gap: 0.5rem;">
-                <button class="btn btn-secondary btn-sm" @onclick="ResetWeek">Restablecer semana</button>
+                <button class="btn btn-secondary btn-sm" @onclick="ResetWeek"><i class="fa-solid fa-rotate-left" style="margin-right:0.3rem;"></i>Restablecer semana</button>
                 <button class="btn btn-primary btn-sm" @onclick="SaveWeekAvailability" disabled="@isSaving">
-                    @(isSaving ? "Guardando..." : "Guardar esta semana")
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSaving ? "Guardando..." : "Guardar esta semana")
                 </button>
             </div>
         </div>

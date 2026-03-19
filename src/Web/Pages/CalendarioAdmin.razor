@@ -22,16 +22,16 @@
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.5rem;">
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
                 <button class="btn btn-sm @(showReservas ? "btn-filter-reservas" : "btn-secondary")" @onclick="() => { showReservas = !showReservas; }">
-                    Reservas
+                    <i class="fa-solid fa-calendar-check" style="margin-right:0.3rem;"></i>Reservas
                 </button>
                 <button class="btn btn-sm @(showDisponibilidad ? "btn-filter-disponibilidad" : "btn-secondary")" @onclick="() => { showDisponibilidad = !showDisponibilidad; }">
-                    Disponibilidad
+                    <i class="fa-solid fa-clock" style="margin-right:0.3rem;"></i>Disponibilidad
                 </button>
             </div>
             <div class="week-navigator">
-                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek">&lt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left"></i></button>
                 <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">&gt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
         </div>
 
@@ -40,7 +40,7 @@
             @if (instructors is not null && instructors.Count > 0)
             {
                 <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
-                    @SvgIcons.Users
+                    <i class="fa-solid fa-users"></i>
                     <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
                 </button>
             }
@@ -82,15 +82,15 @@ else
             <button class="btn btn-sm" style="background:#10b981;color:white;"
                     disabled="@(bulkSaving || bulkInstructorId == 0)"
                     @onclick="() => BulkToggleAvailability(true)">
-                Agregar disponibilidad
+                <i class="fa-solid fa-plus-circle" style="margin-right:0.3rem;"></i>Agregar disponibilidad
             </button>
             <button class="btn btn-sm" style="background:#ef4444;color:white;"
                     disabled="@(bulkSaving || bulkInstructorId == 0)"
                     @onclick="() => BulkToggleAvailability(false)">
-                Quitar disponibilidad
+                <i class="fa-solid fa-minus-circle" style="margin-right:0.3rem;"></i>Quitar disponibilidad
             </button>
             <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">
-                Limpiar
+                <i class="fa-solid fa-broom" style="margin-right:0.3rem;"></i>Limpiar
             </button>
         </div>
     }
@@ -181,8 +181,8 @@ else
             <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
                 <h3 style="margin:0;font-size:1rem;">Seleccionar instructores</h3>
                 <div style="display:flex;gap:0.5rem;">
-                    <button class="btn btn-sm btn-secondary" @onclick="SelectAllInstructors">Todos</button>
-                    <button class="btn btn-sm btn-secondary" @onclick="SelectNoneInstructors">Ninguno</button>
+                    <button class="btn btn-sm btn-secondary" @onclick="SelectAllInstructors"><i class="fa-solid fa-check-double" style="margin-right:0.3rem;"></i>Todos</button>
+                    <button class="btn btn-sm btn-secondary" @onclick="SelectNoneInstructors"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Ninguno</button>
                 </div>
             </div>
             <div class="modal-body" style="max-height:350px;overflow-y:auto;padding:0.75rem 1rem;">
@@ -206,7 +206,7 @@ else
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary btn-sm" @onclick="() => showInstructorModal = false">Listo</button>
+                <button class="btn btn-primary btn-sm" @onclick="() => showInstructorModal = false"><i class="fa-solid fa-check" style="margin-right:0.3rem;"></i>Listo</button>
             </div>
         </div>
     </div>
@@ -247,12 +247,12 @@ else
                                             <button class="btn btn-sm" style="background:#10b981;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
                                                     disabled="@modalSaving"
                                                     @onclick="() => AdminCompleteBooking(bookingId)">
-                                                Completar
+                                                <i class="fa-solid fa-check" style="margin-right:0.3rem;"></i>Completar
                                             </button>
                                             <button class="btn btn-sm" style="background:#ef4444;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
                                                     disabled="@modalSaving"
                                                     @onclick="() => AdminCancelBooking(bookingId)">
-                                                Cancelar
+                                                <i class="fa-solid fa-ban" style="margin-right:0.3rem;"></i>Cancelar
                                             </button>
                                         </div>
                                     }
@@ -287,7 +287,7 @@ else
                                 <button class="btn btn-sm" style="padding:0.1rem 0.5rem;font-size:0.7rem;@(isAvail ? "background:#ef4444;color:white;" : "background:#10b981;color:white;")"
                                         disabled="@modalSaving"
                                         @onclick="() => ToggleAvailability(instId, !isAvail)">
-                                    @(isAvail ? "Quitar" : "Agregar")
+                                    @if (isAvail) { <i class="fa-solid fa-minus" style="margin-right:0.2rem;"></i>@("Quitar") } else { <i class="fa-solid fa-plus" style="margin-right:0.2rem;"></i>@("Agregar") }
                                 </button>
                             </div>
                         }
@@ -340,7 +340,7 @@ else
                                 }
                                 else
                                 {
-                                    <span>Crear Reserva</span>
+                                    <span><i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>Crear Reserva</span>
                                 }
                             </button>
                         </div>
@@ -348,7 +348,7 @@ else
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" @onclick="CloseModal">Cerrar</button>
+                <button class="btn btn-secondary btn-sm" @onclick="CloseModal"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cerrar</button>
             </div>
         </div>
     </div>

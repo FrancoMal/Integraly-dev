@@ -6,7 +6,7 @@
 <div class="card">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h3>Roles (@(roles?.Count ?? 0))</h3>
-        <button class="btn btn-primary" @onclick="ShowCreateForm">+ Nuevo Rol</button>
+        <button class="btn btn-primary" @onclick="ShowCreateForm"><i class="fa-solid fa-shield-halved" style="margin-right:0.3rem;"></i>Nuevo Rol</button>
     </div>
     <div class="card-body" style="padding: 0;">
         @if (isLoading)
@@ -51,12 +51,12 @@
                                 <td>@role.CreatedAt.ToString("dd/MM/yyyy")</td>
                                 <td class="actions-cell">
                                     <button class="btn-icon btn-edit" @onclick="() => ShowEditForm(role)" title="Editar">
-                                        @SvgIcons.Settings
+                                        <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
                                     @if (role.UserCount == 0 && role.Name != "admin")
                                     {
                                         <button class="btn-icon btn-delete" @onclick="() => ConfirmDelete(role)" title="Eliminar">
-                                            @SvgIcons.AlertCircle
+                                            <i class="fa-solid fa-trash"></i>
                                         </button>
                                     }
                                 </td>
@@ -136,9 +136,9 @@
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                <button class="btn btn-secondary" @onclick="CloseForm"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
                 <button class="btn btn-primary" @onclick="SaveRole" disabled="@isSaving">
-                    @(isSaving ? "Guardando..." : "Guardar")
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSaving ? "Guardando..." : "Guardar")
                 </button>
             </div>
         </div>
@@ -156,8 +156,8 @@
                 <p>Estas seguro que queres eliminar el rol <strong>@roleToDelete?.Name</strong>?</p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showDeleteConfirm = false">Cancelar</button>
-                <button class="btn btn-danger" @onclick="DeleteRole">Eliminar</button>
+                <button class="btn btn-secondary" @onclick="() => showDeleteConfirm = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
+                <button class="btn btn-danger" @onclick="DeleteRole"><i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar</button>
             </div>
         </div>
     </div>

@@ -47,10 +47,10 @@
             @* Toggle vista *@
             <div style="display:flex;gap:0.25rem;background:var(--bg-secondary,#f1f5f9);border-radius:6px;padding:2px;">
                 <button class="btn btn-sm @(viewMode == "list" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick='() => viewMode = "list"'>
-                    Lista
+                    <i class="fa-solid fa-list" style="margin-right:0.3rem;"></i>Lista
                 </button>
                 <button class="btn btn-sm @(viewMode == "calendar" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick="SwitchToCalendar">
-                    Calendario
+                    <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Calendario
                 </button>
             </div>
         </div>
@@ -86,7 +86,7 @@
     <button class="btn btn-sm" style="background:#7c3aed;color:white;" disabled>
         <i class="fa-solid fa-wand-magic-sparkles" style="margin-right:0.35rem;"></i>Obtener tareas de Git
     </button>
-    <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal">+ Nueva Tarea</button>
+    <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal"><i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>Nueva Tarea</button>
 </div>
 
 @if (loading)
@@ -153,20 +153,20 @@ else if (viewMode == "list")
                                                         title="Completar"
                                                         disabled="@saving"
                                                         @onclick="() => CompleteTask(task.Id)">
-                                                    @SvgIcons.Check <span>Completar</span>
+                                                    <i class="fa-solid fa-check"></i> <span>Completar</span>
                                                 </button>
                                             }
                                             <button class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
                                                     title="Editar"
                                                     disabled="@saving"
                                                     @onclick="() => OpenEditModal(task)">
-                                                Editar
+                                                <i class="fa-solid fa-pen" style="margin-right:0.3rem;"></i>Editar
                                             </button>
                                             <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
                                                     title="Eliminar"
                                                     disabled="@saving"
                                                     @onclick="() => DeleteTask(task.Id)">
-                                                Eliminar
+                                                <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar
                                             </button>
                                         </div>
                                     </td>
@@ -185,9 +185,9 @@ else
     <div class="card" style="margin-bottom:0.5rem;">
         <div class="card-body" style="padding:0.5rem 1rem;">
             <div class="week-navigator" style="display:flex;justify-content:center;align-items:center;gap:1rem;">
-                <button class="btn btn-secondary btn-sm" @onclick="CalPreviousWeek">&lt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="CalPreviousWeek"><i class="fa-solid fa-chevron-left"></i></button>
                 <span style="font-weight:600;font-size:0.9rem;">@calWeekStart.ToString("dd/M") — @calWeekEnd.ToString("dd/M/yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="CalNextWeek">&gt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="CalNextWeek"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
         </div>
     </div>
@@ -319,9 +319,9 @@ else
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary btn-sm" @onclick="CloseModal" disabled="@saving">Cancelar</button>
+                <button class="btn btn-secondary btn-sm" @onclick="CloseModal" disabled="@saving"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
                 <button class="btn btn-primary btn-sm" @onclick="SaveTask" disabled="@saving">
-                    @(saving ? "Guardando..." : "Guardar")
+                    @if (saving) { @("Guardando...") } else { <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@("Guardar") }
                 </button>
             </div>
         </div>

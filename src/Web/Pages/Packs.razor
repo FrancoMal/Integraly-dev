@@ -11,7 +11,7 @@
 <div class="card">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h3>Packs (@(packs?.Count ?? 0))</h3>
-        <button class="btn btn-primary" @onclick="ShowCreateForm">+ Nuevo Pack</button>
+        <button class="btn btn-primary" @onclick="ShowCreateForm"><i class="fa-solid fa-box" style="margin-right:0.3rem;"></i>Nuevo Pack</button>
     </div>
     <div class="card-body" style="padding: 0;">
         @if (isLoading)
@@ -53,7 +53,7 @@
                                 <td>@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
                                 <td class="actions-cell">
                                     <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditForm(pack)" title="Editar">
-                                        Editar
+                                        <i class="fa-solid fa-pen" style="margin-right:0.3rem;"></i>Editar
                                     </button>
                                 </td>
                             </tr>
@@ -104,9 +104,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                <button class="btn btn-secondary" @onclick="CloseForm"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
                 <button class="btn btn-primary" @onclick="CreatePack" disabled="@isSaving">
-                    @(isSaving ? "Creando..." : "Crear Pack")
+                    <i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Pack")
                 </button>
             </div>
         </div>
@@ -143,9 +143,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseEditForm">Cancelar</button>
+                <button class="btn btn-secondary" @onclick="CloseEditForm"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
                 <button class="btn btn-primary" @onclick="SaveEdit" disabled="@isEditSaving">
-                    @(isEditSaving ? "Guardando..." : "Guardar")
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isEditSaving ? "Guardando..." : "Guardar")
                 </button>
             </div>
         </div>
