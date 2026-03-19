@@ -2287,13 +2287,21 @@ button {
   align-items: center;
 }
 
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: #dce1e8;
+  border-radius: 8px;
+  padding: 4px;
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--text-secondary);
   border: none;
 }
 .btn-ghost:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.5);
   color: var(--text-primary);
 }
 

@@ -41,7 +41,7 @@
                 </div>
             </div>
             @* Toggle vista *@
-            <div style="display:flex;gap:4px;background:var(--bg-secondary,#f1f5f9);border-radius:8px;padding:4px;">
+            <div class="view-toggle">
                 <button class="btn btn-sm @(viewMode == "list" ? "btn-primary" : "btn-ghost")" @onclick='() => viewMode = "list"'>
                     <i class="fa-solid fa-list" style="margin-right:0.35rem;"></i>Lista
                 </button>
