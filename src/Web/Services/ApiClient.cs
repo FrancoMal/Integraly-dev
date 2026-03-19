@@ -211,8 +211,17 @@ public class ApiClient
 
     public async Task<bool> CopyPreviousWeekAvailabilityAsync(DateTime targetWeekStart)
     {
-        var result = await PostAsync<object>("api/availability/copy-previous-week", new { targetWeekStart = targetWeekStart.ToString("yyyy-MM-dd") });
-        return result != null;
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _http.PostAsJsonAsync("/api/availability/copy-previous-week",
+                new { targetWeekStart = targetWeekStart.ToString("yyyy-MM-dd") });
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     // --- Bookings ---
