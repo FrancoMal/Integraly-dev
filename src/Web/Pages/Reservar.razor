@@ -86,11 +86,11 @@
             </div>
         }
         @* Derecha: Toggle vista *@
-        <div style="display:flex;gap:0.25rem;background:var(--bg-secondary,#f1f5f9);border-radius:6px;padding:2px;">
-            <button class="btn btn-sm @(currentView == "calendario" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick='() => currentView = "calendario"'>
+        <div style="display:flex;gap:0.4rem;background:var(--bg-secondary,#f1f5f9);border-radius:8px;padding:3px;">
+            <button class="btn btn-sm @(currentView == "calendario" ? "btn-primary" : "btn-ghost")" style="font-size:0.78rem;" @onclick='() => currentView = "calendario"'>
                 <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Calendario
             </button>
-            <button class="btn btn-sm @(currentView == "lista" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick='() => currentView = "lista"'>
+            <button class="btn btn-sm @(currentView == "lista" ? "btn-primary" : "btn-ghost")" style="font-size:0.78rem;" @onclick='() => currentView = "lista"'>
                 <i class="fa-solid fa-list" style="margin-right:0.3rem;"></i>Lista
             </button>
         </div>
