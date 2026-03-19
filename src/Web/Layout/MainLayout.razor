@@ -130,7 +130,7 @@
             <button class="topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Abrir menu">
                 @SvgIcons.Menu
             </button>
-            <h1 class="topbar-title">integraly<span class="brand-dot">.dev</span></h1>
+            <h1 class="topbar-title">@GetPageTitle()</h1>
         </div>
         <div class="topbar-actions">
             <button class="topbar-btn" @onclick="Refresh" title="Actualizar">
@@ -166,6 +166,31 @@
     private string username = "usuario";
     private string role = "user";
     private List<string> permissions = new();
+
+    private static readonly Dictionary<string, string> RouteToPageTitle = new()
+    {
+        { "", "Dashboard" },
+        { "calendario", "Disponibilidad" },
+        { "calendario-admin", "Calendario" },
+        { "tareas-admin", "Tareas" },
+        { "reservar", "Reservar" },
+        { "mis-reservas", "Mis Reservas" },
+        { "usuarios", "Usuarios" },
+        { "roles", "Roles" },
+        { "invitaciones", "Invitaciones" },
+        { "packs", "Packs" },
+        { "todas-reservas", "Reservas" },
+        { "auditoria", "Auditoria" },
+        { "config", "Configuracion" },
+        { "perfil", "Mi Perfil" }
+    };
+
+    private string GetPageTitle()
+    {
+        var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var path = uri.Split('?')[0].TrimEnd('/');
+        return RouteToPageTitle.TryGetValue(path, out var title) ? title : "Dashboard";
+    }
 
     private static readonly Dictionary<string, string> RouteToMenuKey = new()
     {
