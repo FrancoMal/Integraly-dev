@@ -12,13 +12,16 @@ public record BookingDto(
     int StartHour,
     string Status,
     string? MeetLink,
+    string? UserNotes,
+    string? AdminNotes,
     DateTime CreatedAt
 );
 
 public record CreateBookingRequest(
     [Required] int InstructorId,
     [Required] DateTime ScheduledDate,
-    [Required][Range(0, 23)] int StartHour
+    [Required][Range(0, 23)] int StartHour,
+    string? UserNotes
 );
 
 public record AvailableSlotDto(
@@ -30,5 +33,12 @@ public record AdminCreateBookingRequest(
     [Required] int UserId,
     [Required] int InstructorId,
     [Required] DateTime ScheduledDate,
-    [Required][Range(0, 23)] int StartHour
+    [Required][Range(0, 23)] int StartHour,
+    string? UserNotes
 );
+
+public class UpdateBookingNotesRequest
+{
+    public string? UserNotes { get; set; }
+    public string? AdminNotes { get; set; }
+}

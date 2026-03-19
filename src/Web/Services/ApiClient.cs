@@ -271,6 +271,11 @@ public class ApiClient
         return result != null;
     }
 
+    public async Task<BookingDto?> UpdateBookingNotesAsync(int id, object request)
+    {
+        return await PutAsync<BookingDto>($"/api/bookings/{id}/notes", request);
+    }
+
     public async Task<TokenPackDto?> UpdateTokenPackAsync(int id, object request)
     {
         return await PutAsync<TokenPackDto>($"/api/tokenpacks/{id}", request);

@@ -325,6 +325,12 @@
                         </button>
                     }
                 </div>
+                <div class="form-group" style="margin-top:0.5rem;">
+                    <label class="form-label">Notas (opcional)</label>
+                    <textarea class="form-input" style="width:100%;min-height:50px;resize:vertical;font-size:0.85rem;"
+                              placeholder="Temas que queres ver en la clase..."
+                              @bind="bookingUserNotes"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="() => showModal = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
@@ -390,6 +396,20 @@
                         </div>
                     }
                 </div>
+
+                <div style="margin-top:0.75rem;">
+                    <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">
+                        <i class="fa-solid fa-sticky-note" style="margin-right:0.3rem;"></i>Notas para la clase
+                    </label>
+                    <textarea class="form-input" style="width:100%;min-height:70px;resize:vertical;font-size:0.85rem;padding:0.5rem;"
+                              placeholder="Indica los temas que queres ver en esta clase..."
+                              @bind="detailUserNotes"></textarea>
+                    <button class="btn btn-sm btn-primary" style="margin-top:0.5rem;"
+                            disabled="@savingNotes"
+                            @onclick="SaveUserNotes">
+                        <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(savingNotes ? "Guardando..." : "Guardar notas")
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="() => showDetailModal = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cerrar</button>
@@ -440,6 +460,9 @@
     private bool showDetailModal;
     private BookingDto? detailBooking;
     private bool isCancelling;
+    private string detailUserNotes = "";
+    private bool savingNotes = false;
+    private string bookingUserNotes = "";
 
     // Colors for instructors
     private string[] instructorColors = { "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
@@ -636,6 +659,7 @@
         modalInstructors = available;
         modalSelectedInstructorId = available.Count == 1 ? available[0].Id : 0;
         modalSelectedInstructorName = available.Count == 1 ? $"{available[0].FirstName} {available[0].LastName}".Trim() : "";
+        bookingUserNotes = "";
         showModal = true;
     }
 
@@ -655,7 +679,8 @@
             {
                 InstructorId = modalSelectedInstructorId,
                 ScheduledDate = modalDate,
-                StartHour = modalHour
+                StartHour = modalHour,
+                UserNotes = string.IsNullOrWhiteSpace(bookingUserNotes) ? null : bookingUserNotes
             };
 
             var result = await Api.CreateBookingAsync(request);
@@ -688,6 +713,7 @@
     private void ShowBookingDetail(BookingDto booking)
     {
         detailBooking = booking;
+        detailUserNotes = booking.UserNotes ?? "";
         showDetailModal = true;
     }
 
@@ -717,6 +743,32 @@
             ToastService.Error("Error al cancelar la reserva");
         }
         isCancelling = false;
+    }
+
+    private async Task SaveUserNotes()
+    {
+        if (detailBooking is null) return;
+        savingNotes = true;
+        StateHasChanged();
+        try
+        {
+            var result = await Api.UpdateBookingNotesAsync(detailBooking.Id, new { UserNotes = detailUserNotes });
+            if (result is not null)
+            {
+                detailBooking.UserNotes = detailUserNotes;
+                ToastService.Success("Notas guardadas");
+            }
+            else
+            {
+                ToastService.Error("Error al guardar las notas");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar las notas");
+        }
+        savingNotes = false;
+        StateHasChanged();
     }
 
     private string GetListRowStyle(string s) => s switch

@@ -263,6 +263,31 @@ else
                                         <a href="@b.MeetLink" target="_blank" style="font-size:0.75rem;color:var(--primary);">Meet</a>
                                     }
                                 </div>
+                                @{
+                                    var bId = b.Id;
+                                    if (!editingAdminNotes.ContainsKey(bId))
+                                        editingAdminNotes[bId] = b.AdminNotes ?? "";
+                                }
+                                @if (!string.IsNullOrEmpty(b.UserNotes))
+                                {
+                                    <div style="margin-top:4px;padding:4px 8px;background:rgba(245,158,11,0.06);border-radius:4px;font-size:0.75rem;">
+                                        <span style="font-weight:600;color:#b45309;"><i class="fa-solid fa-user" style="margin-right:0.2rem;"></i>Alumno:</span>
+                                        @b.UserNotes
+                                    </div>
+                                }
+                                <div style="margin-top:4px;font-size:0.75rem;">
+                                    <span style="font-weight:600;color:#7c3aed;"><i class="fa-solid fa-lock" style="margin-right:0.2rem;"></i>Notas admin:</span>
+                                    <div style="display:flex;gap:4px;margin-top:2px;">
+                                        <textarea class="form-input" style="flex:1;min-height:32px;resize:vertical;font-size:0.75rem;padding:3px 6px;"
+                                                  placeholder="Notas internas..."
+                                                  @bind="editingAdminNotes[bId]"></textarea>
+                                        <button class="btn btn-sm" style="background:#7c3aed;color:white;padding:0.2rem 0.5rem;font-size:0.7rem;align-self:flex-end;"
+                                                disabled="@savingAdminNotes"
+                                                @onclick="() => SaveAdminNotes(bId)">
+                                            <i class="fa-solid fa-floppy-disk"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         }
                     </div>
@@ -386,6 +411,10 @@ else
 
     // Copy week
     private bool copyingWeek = false;
+
+    // Admin notes
+    private Dictionary<int, string> editingAdminNotes = new();
+    private bool savingAdminNotes = false;
 
     // Multi-select
     private HashSet<string> selectedCells = new();
@@ -708,6 +737,7 @@ else
         modalHour = hour;
         newBookingUserId = 0;
         newBookingInstructorId = 0;
+        editingAdminNotes.Clear();
         showModal = true;
     }
 
@@ -826,6 +856,27 @@ else
             ToastService.Error("Error al completar la clase");
         }
         modalSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task SaveAdminNotes(int bookingId)
+    {
+        savingAdminNotes = true;
+        StateHasChanged();
+        try
+        {
+            var notes = editingAdminNotes.ContainsKey(bookingId) ? editingAdminNotes[bookingId] : "";
+            var result = await Api.UpdateBookingNotesAsync(bookingId, new { AdminNotes = notes });
+            if (result is not null)
+                ToastService.Success("Notas guardadas");
+            else
+                ToastService.Error("Error al guardar notas");
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar notas");
+        }
+        savingAdminNotes = false;
         StateHasChanged();
     }
 

@@ -161,6 +161,8 @@ BEGIN
         StartHour INT NOT NULL,
         Status NVARCHAR(20) NOT NULL DEFAULT 'confirmed',
         MeetLink NVARCHAR(500) NULL,
+        UserNotes NVARCHAR(1000) NULL,
+        AdminNotes NVARCHAR(1000) NULL,
         CancelledAt DATETIME2 NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
         CONSTRAINT FK_Bookings_User FOREIGN KEY (UserId) REFERENCES Users(Id),
@@ -172,6 +174,14 @@ BEGIN
     CREATE INDEX IX_Bookings_UserId ON Bookings (UserId);
     CREATE INDEX IX_Bookings_InstructorId ON Bookings (InstructorId);
     CREATE INDEX IX_Bookings_ScheduledDate ON Bookings (ScheduledDate);
+END
+GO
+
+-- Add UserNotes and AdminNotes columns to existing Bookings tables
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Bookings') AND name = 'UserNotes')
+BEGIN
+    ALTER TABLE Bookings ADD UserNotes NVARCHAR(1000) NULL;
+    ALTER TABLE Bookings ADD AdminNotes NVARCHAR(1000) NULL;
 END
 GO
 

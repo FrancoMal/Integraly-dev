@@ -36,6 +36,8 @@ public class BookingService
                 b.StartHour,
                 b.Status,
                 b.MeetLink,
+                b.UserNotes,
+                b.AdminNotes,
                 b.CreatedAt
             ))
             .ToListAsync();
@@ -59,6 +61,8 @@ public class BookingService
                 b.StartHour,
                 b.Status,
                 b.MeetLink,
+                b.UserNotes,
+                b.AdminNotes,
                 b.CreatedAt
             ))
             .ToListAsync();
@@ -81,12 +85,14 @@ public class BookingService
                 b.StartHour,
                 b.Status,
                 b.MeetLink,
+                b.UserNotes,
+                b.AdminNotes,
                 b.CreatedAt
             ))
             .ToListAsync();
     }
 
-    public async Task<(BookingDto? Booking, string? Error)> CreateAsync(int userId, int instructorId, DateTime scheduledDate, int startHour)
+    public async Task<(BookingDto? Booking, string? Error)> CreateAsync(int userId, int instructorId, DateTime scheduledDate, int startHour, string? userNotes = null)
     {
         // Validate instructor has availability for that day/hour (considering week overrides)
         var isAvailable = await _availabilityService.IsAvailableAtAsync(instructorId, scheduledDate, startHour);
@@ -121,6 +127,7 @@ public class BookingService
             StartHour = startHour,
             Status = "confirmed",
             MeetLink = meetLink,
+            UserNotes = userNotes,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -140,6 +147,8 @@ public class BookingService
             booking.StartHour,
             booking.Status,
             booking.MeetLink,
+            booking.UserNotes,
+            booking.AdminNotes,
             booking.CreatedAt
         );
 
@@ -188,7 +197,8 @@ public class BookingService
             .Select(b => new BookingDto(
                 b.Id, b.UserId, b.User != null ? b.User.Username : "",
                 b.InstructorId, b.Instructor != null ? b.Instructor.Username : "",
-                b.ScheduledDate, b.StartHour, b.Status, b.MeetLink, b.CreatedAt
+                b.ScheduledDate, b.StartHour, b.Status, b.MeetLink,
+                b.UserNotes, b.AdminNotes, b.CreatedAt
             ))
             .ToListAsync();
     }

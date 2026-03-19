@@ -1,8 +1,10 @@
 using System.Security.Claims;
+using Api.Data;
 using Api.DTOs;
 using Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers;
 
@@ -13,11 +15,13 @@ public class BookingsController : ControllerBase
 {
     private readonly BookingService _bookingService;
     private readonly AuditLogService _auditLogService;
+    private readonly AppDbContext _db;
 
-    public BookingsController(BookingService bookingService, AuditLogService auditLogService)
+    public BookingsController(BookingService bookingService, AuditLogService auditLogService, AppDbContext db)
     {
         _bookingService = bookingService;
         _auditLogService = auditLogService;
+        _db = db;
     }
 
     [HttpGet]
@@ -47,6 +51,12 @@ public class BookingsController : ControllerBase
             bookings = await _bookingService.GetByUserIdAsync(userId.Value);
         }
 
+        // Strip AdminNotes for non-admin users
+        if (!IsAdmin())
+        {
+            bookings = bookings.Select(b => b with { AdminNotes = null }).ToList();
+        }
+
         return Ok(bookings);
     }
 
@@ -60,7 +70,8 @@ public class BookingsController : ControllerBase
             userId.Value,
             request.InstructorId,
             request.ScheduledDate,
-            request.StartHour
+            request.StartHour,
+            request.UserNotes
         );
 
         if (booking is null)
@@ -114,7 +125,8 @@ public class BookingsController : ControllerBase
             request.UserId,
             request.InstructorId,
             request.ScheduledDate,
-            request.StartHour
+            request.StartHour,
+            request.UserNotes
         );
 
         if (booking is null)
@@ -159,6 +171,46 @@ public class BookingsController : ControllerBase
         await _auditLogService.LogAsync("Booking", id.ToString(), "complete", null, username);
 
         return NoContent();
+    }
+
+    // Update notes on a booking
+    [HttpPut("{id}/notes")]
+    public async Task<IActionResult> UpdateNotes(int id, [FromBody] UpdateBookingNotesRequest request)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var booking = await _db.Bookings.Include(b => b.User).Include(b => b.Instructor).FirstOrDefaultAsync(b => b.Id == id);
+        if (booking is null) return NotFound();
+
+        // Users can only update their own UserNotes
+        if (!IsAdmin() && booking.UserId != userId.Value) return Forbid();
+
+        if (request.UserNotes is not null)
+            booking.UserNotes = request.UserNotes;
+
+        // Only admin can update AdminNotes
+        if (IsAdmin() && request.AdminNotes is not null)
+            booking.AdminNotes = request.AdminNotes;
+
+        await _db.SaveChangesAsync();
+
+        var dto = new BookingDto(
+            booking.Id,
+            booking.UserId,
+            booking.User?.Username ?? "",
+            booking.InstructorId,
+            booking.Instructor?.Username ?? "",
+            booking.ScheduledDate,
+            booking.StartHour,
+            booking.Status,
+            booking.MeetLink,
+            booking.UserNotes,
+            IsAdmin() ? booking.AdminNotes : null,
+            booking.CreatedAt
+        );
+
+        return Ok(dto);
     }
 
     private bool IsAdmin()
