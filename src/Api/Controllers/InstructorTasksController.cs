@@ -100,7 +100,7 @@ public class InstructorTasksController : ControllerBase
             StartHour = request.StartHour,
             EndHour = request.EndHour,
             HoursWorked = request.HoursWorked,
-            Status = "pendiente",
+            Status = string.IsNullOrEmpty(request.Status) ? "asignada" : request.Status,
             AssignedByUserId = IsAdmin() ? userId.Value : null,
             CreatedAt = DateTime.UtcNow
         };

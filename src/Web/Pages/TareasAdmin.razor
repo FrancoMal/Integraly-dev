@@ -33,6 +33,7 @@
                     <label style="font-size:0.8rem;font-weight:600;">Estado:</label>
                     <select class="form-input" style="width:auto;min-width:140px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterStatus" @onchange="OnStatusFilterChanged">
                         <option value="">Todas</option>
+                        <option value="asignada">Asignada</option>
                         <option value="pendiente">Pendiente</option>
                         <option value="en_progreso">En progreso</option>
                         <option value="completada">Completada</option>
@@ -95,7 +96,7 @@ else if (viewMode == "list")
                             {
                                 <tr>
                                     <td>@task.TaskDate.ToString("dd/MM/yyyy")</td>
-                                    <td style="white-space:nowrap;">@($"{task.StartHour}:00 - {task.EndHour}:00")</td>
+                                    <td style="white-space:nowrap;">@(task.Status == "asignada" ? "—" : $"{task.StartHour}:00 - {task.EndHour}:00")</td>
                                     <td>@task.InstructorName</td>
                                     <td>
                                         <div style="font-weight:500;">@task.Title</div>
@@ -111,7 +112,7 @@ else if (viewMode == "list")
                                     <td>
                                         <span class="status-badge" style="@GetTaskTypeBadgeStyle(task.TaskType)">@GetTaskTypeLabel(task.TaskType)</span>
                                     </td>
-                                    <td style="font-weight:600;">@task.HoursWorked.ToString("0.#")h</td>
+                                    <td style="font-weight:600;">@(task.Status == "asignada" ? "—" : $"{task.HoursWorked.ToString("0.#")}h")</td>
                                     <td>
                                         <span class="status-badge" style="@GetStatusBadgeStyle(task.Status)">@GetStatusLabel(task.Status)</span>
                                     </td>
@@ -258,34 +259,46 @@ else
                             </select>
                         </div>
                         <div style="flex:1;">
-                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Fecha</label>
-                            <input type="date" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formDate" />
-                        </div>
-                    </div>
-                    <div style="display:flex;gap:0.75rem;">
-                        <div style="flex:1;">
-                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Hora desde</label>
-                            <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formStartHour">
-                                @for (int h = 7; h <= 22; h++)
-                                {
-                                    <option value="@h">@($"{h}:00")</option>
-                                }
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Estado</label>
+                            <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formStatus">
+                                <option value="asignada">Asignada</option>
+                                <option value="pendiente">Pendiente</option>
+                                <option value="en_progreso">En progreso</option>
+                                <option value="completada">Completada</option>
                             </select>
                         </div>
-                        <div style="flex:1;">
-                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Hora hasta</label>
-                            <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formEndHour">
-                                @for (int h = 8; h <= 23; h++)
-                                {
-                                    <option value="@h">@($"{h}:00")</option>
-                                }
-                            </select>
-                        </div>
-                        <div style="flex:1;">
-                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Horas</label>
-                            <input type="number" step="0.5" min="0" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formHours" />
-                        </div>
                     </div>
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Fecha</label>
+                        <input type="date" class="form-input" style="width:180px;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formDate" />
+                    </div>
+                    @if (formStatus != "asignada")
+                    {
+                        <div style="display:flex;gap:0.75rem;">
+                            <div style="flex:1;">
+                                <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Hora desde</label>
+                                <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formStartHour">
+                                    @for (int h = 7; h <= 22; h++)
+                                    {
+                                        <option value="@h">@($"{h}:00")</option>
+                                    }
+                                </select>
+                            </div>
+                            <div style="flex:1;">
+                                <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Hora hasta</label>
+                                <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formEndHour">
+                                    @for (int h = 8; h <= 23; h++)
+                                    {
+                                        <option value="@h">@($"{h}:00")</option>
+                                    }
+                                </select>
+                            </div>
+                            <div style="flex:1;">
+                                <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Horas</label>
+                                <input type="number" step="0.5" min="0" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formHours" />
+                            </div>
+                        </div>
+                    }
                 </div>
             </div>
             <div class="modal-footer">
@@ -327,6 +340,7 @@ else
     private string formTitle = "";
     private string? formDescription;
     private string formTaskType = "otra";
+    private string formStatus = "asignada";
     private DateTime formDate = DateTime.Today;
     private int formStartHour = 8;
     private int formEndHour = 9;
@@ -493,10 +507,11 @@ else
         formTitle = "";
         formDescription = null;
         formTaskType = "otra";
+        formStatus = "asignada";
         formDate = DateTime.Today;
         formStartHour = 8;
         formEndHour = 9;
-        formHours = 1;
+        formHours = 0;
         showModal = true;
     }
 
@@ -507,6 +522,7 @@ else
         formTitle = "";
         formDescription = null;
         formTaskType = "otra";
+        formStatus = "pendiente";
         formDate = date;
         formStartHour = hour;
         formEndHour = hour + 1;
@@ -521,6 +537,7 @@ else
         formTitle = task.Title;
         formDescription = task.Description;
         formTaskType = task.TaskType;
+        formStatus = task.Status;
         formDate = task.TaskDate;
         formStartHour = task.StartHour;
         formEndHour = task.EndHour;
@@ -538,7 +555,7 @@ else
             return;
         }
 
-        if (formEndHour <= formStartHour)
+        if (formStatus != "asignada" && formEndHour <= formStartHour)
         {
             ToastService.Error("La hora 'hasta' debe ser mayor que la hora 'desde'");
             return;
@@ -556,9 +573,10 @@ else
                     Description = formDescription,
                     TaskType = formTaskType,
                     TaskDate = formDate,
-                    StartHour = formStartHour,
-                    EndHour = formEndHour,
-                    HoursWorked = formHours
+                    StartHour = formStatus == "asignada" ? 0 : formStartHour,
+                    EndHour = formStatus == "asignada" ? 0 : formEndHour,
+                    HoursWorked = formStatus == "asignada" ? 0 : formHours,
+                    Status = formStatus
                 };
                 var result = await Api.UpdateInstructorTaskAsync(editingTask.Id, request);
                 if (result is not null)
@@ -580,10 +598,11 @@ else
                     Title = formTitle,
                     Description = formDescription,
                     TaskType = formTaskType,
+                    Status = formStatus,
                     TaskDate = formDate,
-                    StartHour = formStartHour,
-                    EndHour = formEndHour,
-                    HoursWorked = formHours
+                    StartHour = formStatus == "asignada" ? 0 : formStartHour,
+                    EndHour = formStatus == "asignada" ? 0 : formEndHour,
+                    HoursWorked = formStatus == "asignada" ? 0 : formHours
                 };
                 var result = await Api.CreateInstructorTaskAsync(request);
                 if (result is not null)
@@ -679,6 +698,7 @@ else
 
     private string GetStatusBadgeStyle(string status) => status switch
     {
+        "asignada" => "background:rgba(139,92,246,0.1);color:#7c3aed;",
         "pendiente" => "background:rgba(249,115,22,0.1);color:#ea580c;",
         "en_progreso" => "background:var(--info-bg);color:var(--info);",
         "completada" => "background:var(--primary-bg);color:var(--primary-dark);",
@@ -687,6 +707,7 @@ else
 
     private string GetStatusLabel(string status) => status switch
     {
+        "asignada" => "Asignada",
         "pendiente" => "Pendiente",
         "en_progreso" => "En progreso",
         "completada" => "Completada",

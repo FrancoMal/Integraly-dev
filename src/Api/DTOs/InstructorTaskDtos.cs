@@ -25,6 +25,7 @@ public record CreateInstructorTaskRequest(
     [Required] string Title,
     string? Description,
     string TaskType = "otra",
+    string Status = "asignada",
     [Required] DateTime TaskDate = default,
     int StartHour = 8,
     int EndHour = 9,

@@ -25,6 +25,7 @@ public class CreateInstructorTaskRequest
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string TaskType { get; set; } = "otra";
+    public string Status { get; set; } = "asignada";
     public DateTime TaskDate { get; set; }
     public int StartHour { get; set; } = 8;
     public int EndHour { get; set; } = 9;
