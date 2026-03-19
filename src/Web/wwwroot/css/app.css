@@ -4151,10 +4151,14 @@ textarea.form-input {
   cursor: default;
 }
 
+.instructor-circle.available {
+  opacity: 0.45;
+}
+
 .instructor-circle.has-booking::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: -4px;
   left: 3px;
   right: 3px;
   height: 2.5px;

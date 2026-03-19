@@ -123,7 +123,7 @@ else
                                                     var tooltip = hasBooking
                                                         ? $"{inst.FirstName} {inst.LastName} — Clase con {booking!.UserName} ({booking.Status})"
                                                         : $"{inst.FirstName} {inst.LastName} — Disponible";
-                                                    <span class="instructor-circle @(hasBooking ? "has-booking" : "")" style="background:@GetInstructorColor(inst.Id);" title="@tooltip">
+                                                    <span class="instructor-circle @(hasBooking ? "has-booking" : "available")" style="background:@GetInstructorColor(inst.Id);" title="@tooltip">
                                                         @GetInitials(inst)
                                                     </span>
                                                 }
