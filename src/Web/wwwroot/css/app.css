@@ -89,7 +89,7 @@ button {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #0f1923 0%, #132a3e 40%, #1a3a5c 100%);
   padding: 1rem;
 }
 
@@ -98,22 +98,23 @@ button {
   max-width: 400px;
   background: #ffffff;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
   overflow: hidden;
   animation: fadeIn 0.4s ease;
 }
 
 .login-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  background: linear-gradient(135deg, #1a2a3e 0%, #1e3a5a 50%, #234b6e 100%);
   padding: 2rem 2rem 1.5rem;
   text-align: center;
   color: #ffffff;
 }
 
 .login-logo {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   margin: 0 auto 0.75rem;
+  filter: drop-shadow(0 2px 8px rgba(91, 184, 217, 0.4));
 }
 
 .login-logo svg {
@@ -122,15 +123,21 @@ button {
 }
 
 .login-header h1 {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
   font-family: 'Syne', sans-serif;
   margin-bottom: 0.25rem;
+  letter-spacing: 0.5px;
+}
+
+.login-header h1 .brand-dot {
+  color: #5bb8d9;
 }
 
 .login-header p {
   font-size: 0.85rem;
-  opacity: 0.9;
+  opacity: 0.75;
+  color: #a0c4d8;
 }
 
 .login-body {
@@ -168,19 +175,21 @@ button {
 .login-btn {
   width: 100%;
   padding: 0.75rem;
-  background: var(--primary);
+  background: linear-gradient(135deg, #2a8fbf 0%, #3ba3d4 100%);
   color: #ffffff;
   border: none;
   border-radius: var(--radius-sm);
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: background var(--transition);
+  transition: all 0.2s ease;
   margin-top: 0.5rem;
+  box-shadow: 0 2px 8px rgba(42, 143, 191, 0.3);
 }
 
 .login-btn:hover {
-  background: var(--primary-dark);
+  background: linear-gradient(135deg, #2481ab 0%, #2a8fbf 100%);
+  box-shadow: 0 4px 12px rgba(42, 143, 191, 0.4);
 }
 
 .login-btn:disabled {
