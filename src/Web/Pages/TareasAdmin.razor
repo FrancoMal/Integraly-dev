@@ -4,13 +4,8 @@
 @inject ToastService ToastService
 
 <div class="view-header">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div>
-            <h2>Tareas de Instructores</h2>
-            <p class="view-subtitle">Registro de tareas y horas trabajadas</p>
-        </div>
-        <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal">+ Nueva Tarea</button>
-    </div>
+    <h2>Tareas de Instructores</h2>
+    <p class="view-subtitle">Registro de tareas y horas trabajadas</p>
 </div>
 
 @* Filtros *@
@@ -85,6 +80,10 @@
             <span class="stat-card-label">Tareas completadas</span>
         </div>
     </div>
+</div>
+
+<div style="display:flex;justify-content:flex-end;margin-bottom:0.5rem;">
+    <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal">+ Nueva Tarea</button>
 </div>
 
 @if (loading)
