@@ -4,31 +4,64 @@
 @inject ToastService ToastService
 @inject TimezoneService TzService
 
-@if (remainingTokens.HasValue)
+@if (myPacks is not null && myPacks.Count > 0)
 {
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-        <div class="stat-card" style="display: inline-flex;">
-            <div class="stat-card-icon primary">@SvgIcons.Package</div>
-            <div class="stat-card-info">
-                <span class="stat-card-value">@remainingTokens</span>
-                <span class="stat-card-label">Clases disponibles</span>
+    @foreach (var pack in myPacks.Where(p => p.RemainingTokens > 0 || p.TotalTokens > 0))
+    {
+        var totalPack = pack.TotalTokens;
+        var completadas = usedClasses;
+        var reservadas = bookedClasses;
+        var disponibles = pack.RemainingTokens;
+        var pctCompletadas = totalPack > 0 ? (int)((double)completadas / totalPack * 100) : 0;
+        var pctReservadas = totalPack > 0 ? (int)((double)reservadas / totalPack * 100) : 0;
+        var pctDisponibles = totalPack > 0 ? (int)((double)disponibles / totalPack * 100) : 0;
+
+        <div class="card" style="margin-bottom:1rem;">
+            <div class="card-body" style="padding:1rem 1.25rem;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                    <div>
+                        <span style="font-weight:600;font-size:0.95rem;">@(string.IsNullOrEmpty(pack.Description) ? "Pack de Clases" : pack.Description)</span>
+                        <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem;">(@totalPack clases)</span>
+                    </div>
+                </div>
+
+                @* Barra de progreso *@
+                <div style="height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden;display:flex;margin-bottom:0.75rem;">
+                    @if (pctCompletadas > 0)
+                    {
+                        <div style="width:@(pctCompletadas)%;background:#3b82f6;transition:width 0.3s;" title="Completadas: @completadas"></div>
+                    }
+                    @if (pctReservadas > 0)
+                    {
+                        <div style="width:@(pctReservadas)%;background:#f59e0b;transition:width 0.3s;" title="Reservadas: @reservadas"></div>
+                    }
+                    @if (pctDisponibles > 0)
+                    {
+                        <div style="width:@(pctDisponibles)%;background:#10b981;transition:width 0.3s;" title="Disponibles: @disponibles"></div>
+                    }
+                </div>
+
+                @* Detalle debajo de la barra *@
+                <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;"></span>
+                        <span style="color:var(--text-secondary);">Completadas</span>
+                        <span style="font-weight:600;">@completadas</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;"></span>
+                        <span style="color:var(--text-secondary);">Reservadas</span>
+                        <span style="font-weight:600;">@reservadas</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#10b981;"></span>
+                        <span style="color:var(--text-secondary);">Disponibles</span>
+                        <span style="font-weight:600;">@disponibles</span>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="stat-card" style="display: inline-flex;">
-            <div class="stat-card-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">@SvgIcons.Calendar</div>
-            <div class="stat-card-info">
-                <span class="stat-card-value">@bookedClasses</span>
-                <span class="stat-card-label">Clases reservadas</span>
-            </div>
-        </div>
-        <div class="stat-card" style="display: inline-flex;">
-            <div class="stat-card-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">@SvgIcons.CheckCircle</div>
-            <div class="stat-card-info">
-                <span class="stat-card-value">@usedClasses</span>
-                <span class="stat-card-label">Clases realizadas</span>
-            </div>
-        </div>
-    </div>
+    }
 }
 
 <div class="card" style="margin-bottom: 1rem;">
@@ -373,6 +406,7 @@
     private int bookedClasses;
     private int usedClasses;
     private string currentView = "calendario";
+    private List<TokenPackDto>? myPacks;
 
     private List<UserManageDto>? instructors;
     private HashSet<int> selectedInstructorIds = new();
@@ -426,9 +460,11 @@
         {
             var instructorsTask = Api.GetInstructorsAsync();
             var dashTask = Api.GetUserDashboardAsync();
-            await Task.WhenAll(instructorsTask, dashTask);
+            var packsTask = Api.GetMyTokenPacksAsync();
+            await Task.WhenAll(instructorsTask, dashTask, packsTask);
 
             instructors = instructorsTask.Result ?? new();
+            myPacks = packsTask.Result;
 
             var dash = dashTask.Result;
             if (dash is not null)
