@@ -52,6 +52,65 @@ else if (userRole == "admin")
             </div>
         </div>
     </div>
+
+    @* Tabla de alumnos *@
+    <div class="card" style="margin-top:1.5rem;">
+        <div class="card-body">
+            <h3 style="margin:0 0 1rem 0;font-size:1rem;">Resumen de alumnos</h3>
+            @if (studentsSummary is null)
+            {
+                <p class="text-muted">Cargando...</p>
+            }
+            else if (studentsSummary.Count == 0)
+            {
+                <p class="text-muted">No hay alumnos registrados.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Alumno</th>
+                                <th style="text-align:center;">Contratadas</th>
+                                <th style="text-align:center;">Tomadas</th>
+                                <th style="text-align:center;">Reservadas</th>
+                                <th style="text-align:center;">Pendientes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in studentsSummary)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600;">@s.Name</div>
+                                        <div style="font-size:0.75rem;color:var(--text-secondary);">@s.Username</div>
+                                    </td>
+                                    <td style="text-align:center;font-weight:600;">@s.TotalClasses</td>
+                                    <td style="text-align:center;">
+                                        <span class="status-badge status-active">@s.CompletedClasses</span>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <span class="status-badge" style="background:rgba(59,130,246,0.1);color:#3b82f6;">@s.ReservedClasses</span>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        @if (s.PendingClasses > 0)
+                                        {
+                                            <span class="status-badge" style="background:rgba(245,158,11,0.1);color:#f59e0b;">@s.PendingClasses</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-badge status-inactive">0</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
 }
 else if (userRole == "instructor")
 {
@@ -100,6 +159,7 @@ else
     private AdminDashboardDto? adminStats;
     private InstructorDashboardDto? instructorStats;
     private UserDashboardDto? userStats;
+    private List<StudentSummaryDto>? studentsSummary;
 
     protected override async Task OnInitializedAsync()
     {
@@ -115,6 +175,7 @@ else
             if (userRole == "admin")
             {
                 adminStats = await Api.GetAdminDashboardAsync();
+                studentsSummary = await Api.GetStudentsSummaryAsync();
             }
             else if (userRole == "instructor")
             {

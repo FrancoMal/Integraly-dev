@@ -35,6 +35,11 @@ public class ApiClient
         return await GetAsync<UserDashboardDto>("/api/dashboard");
     }
 
+    public async Task<List<StudentSummaryDto>?> GetStudentsSummaryAsync()
+    {
+        return await GetAsync<List<StudentSummaryDto>>("/api/dashboard/students-summary");
+    }
+
     public async Task<UserDto?> GetMeAsync()
     {
         return await GetAsync<UserDto>("/api/auth/me");

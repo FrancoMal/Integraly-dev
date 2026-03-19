@@ -22,3 +22,14 @@ public class UserDashboardDto
     public int BookedClasses { get; set; }
     public int UsedClasses { get; set; }
 }
+
+public class StudentSummaryDto
+{
+    public int UserId { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Username { get; set; } = string.Empty;
+    public int TotalClasses { get; set; }
+    public int CompletedClasses { get; set; }
+    public int ReservedClasses { get; set; }
+    public int PendingClasses { get; set; }
+}

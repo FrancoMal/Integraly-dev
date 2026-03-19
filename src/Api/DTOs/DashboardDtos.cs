@@ -19,3 +19,13 @@ public record UserDashboardDto(
     int BookedClasses,
     int UsedClasses
 );
+
+public record StudentSummaryDto(
+    int UserId,
+    string Name,
+    string Username,
+    int TotalClasses,
+    int CompletedClasses,
+    int ReservedClasses,
+    int PendingClasses
+);
