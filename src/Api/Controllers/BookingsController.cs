@@ -144,6 +144,23 @@ public class BookingsController : ControllerBase
         return NoContent();
     }
 
+    // Admin: mark booking as completed
+    [HttpPut("{id}/complete")]
+    public async Task<IActionResult> AdminComplete(int id)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var (success, error) = await _bookingService.AdminCompleteAsync(id);
+
+        if (!success)
+            return BadRequest(new { message = error });
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("Booking", id.ToString(), "complete", null, username);
+
+        return NoContent();
+    }
+
     private bool IsAdmin()
     {
         return User.FindFirst(ClaimTypes.Role)?.Value == "admin";

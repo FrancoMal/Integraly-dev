@@ -1,0 +1,509 @@
+@page "/tareas-admin"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<div class="view-header">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <div>
+            <h2>Tareas de Instructores</h2>
+            <p class="view-subtitle">Registro de tareas y horas trabajadas</p>
+        </div>
+        <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal">+ Nueva Tarea</button>
+    </div>
+</div>
+
+@* Filtros *@
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem;">
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <label style="font-size:0.8rem;font-weight:600;">Instructor:</label>
+                <select class="form-input" style="width:auto;min-width:180px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterInstructorId" @onchange="OnInstructorFilterChanged">
+                    <option value="0">Todos</option>
+                    @if (instructors is not null)
+                    {
+                        @foreach (var inst in instructors)
+                        {
+                            <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <label style="font-size:0.8rem;font-weight:600;">Desde:</label>
+                <input type="date" class="form-input" style="width:auto;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterFrom?.ToString("yyyy-MM-dd")" @onchange="OnFromChanged" />
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <label style="font-size:0.8rem;font-weight:600;">Hasta:</label>
+                <input type="date" class="form-input" style="width:auto;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterTo?.ToString("yyyy-MM-dd")" @onchange="OnToChanged" />
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+                <label style="font-size:0.8rem;font-weight:600;">Estado:</label>
+                <select class="form-input" style="width:auto;min-width:140px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterStatus" @onchange="OnStatusFilterChanged">
+                    <option value="">Todas</option>
+                    <option value="pendiente">Pendiente</option>
+                    <option value="en_progreso">En progreso</option>
+                    <option value="completada">Completada</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Resumen *@
+<div class="dashboard-cards-row" style="margin-bottom:1rem;">
+    <div class="stat-card">
+        <div class="stat-card-icon primary">@SvgIcons.Clock</div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@totalHours.ToString("0.#")</span>
+            <span class="stat-card-label">Horas del periodo</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon warning">@SvgIcons.ClipboardList</div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@pendingCount</span>
+            <span class="stat-card-label">Tareas pendientes</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon success">@SvgIcons.CheckCircle</div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@completedCount</span>
+            <span class="stat-card-label">Tareas completadas</span>
+        </div>
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando tareas...</p></div></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Instructor</th>
+                            <th>Tarea</th>
+                            <th>Tipo</th>
+                            <th>Horas</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (filteredTasks.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="7" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay tareas para mostrar</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var task in filteredTasks)
+                            {
+                                <tr>
+                                    <td>@task.TaskDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@task.InstructorName</td>
+                                    <td>
+                                        <div>@task.Title</div>
+                                        @if (task.AssignedByUserId.HasValue && !string.IsNullOrEmpty(task.AssignedByName))
+                                        {
+                                            <div style="font-size:0.7rem;color:var(--text-muted);">Asignada por @task.AssignedByName</div>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="status-badge" style="@GetTaskTypeBadgeStyle(task.TaskType)">@GetTaskTypeLabel(task.TaskType)</span>
+                                    </td>
+                                    <td style="font-weight:600;">@task.HoursWorked.ToString("0.#")h</td>
+                                    <td>
+                                        <span class="status-badge" style="@GetStatusBadgeStyle(task.Status)">@GetStatusLabel(task.Status)</span>
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;gap:0.3rem;">
+                                            @if (task.Status != "completada")
+                                            {
+                                                <button class="btn btn-sm" style="background:#10b981;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
+                                                        title="Completar"
+                                                        disabled="@saving"
+                                                        @onclick="() => CompleteTask(task.Id)">
+                                                    @SvgIcons.Check
+                                                </button>
+                                            }
+                                            <button class="btn btn-sm" style="background:var(--info);color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
+                                                    title="Editar"
+                                                    disabled="@saving"
+                                                    @onclick="() => OpenEditModal(task)">
+                                                @SvgIcons.Edit
+                                            </button>
+                                            <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
+                                                    title="Eliminar"
+                                                    disabled="@saving"
+                                                    @onclick="() => DeleteTask(task.Id)">
+                                                &times;
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal crear/editar *@
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:500px;">
+            <div class="modal-header">
+                <h3 style="margin:0;font-size:1rem;">@(editingTask is not null ? "Editar Tarea" : "Nueva Tarea")</h3>
+            </div>
+            <div class="modal-body">
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Instructor</label>
+                        <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formInstructorId">
+                            <option value="0">-- Seleccionar instructor --</option>
+                            @if (instructors is not null)
+                            {
+                                @foreach (var inst in instructors)
+                                {
+                                    <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Titulo</label>
+                        <input type="text" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formTitle" />
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Descripcion</label>
+                        <textarea class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;min-height:60px;resize:vertical;" @bind="formDescription"></textarea>
+                    </div>
+                    <div style="display:flex;gap:0.75rem;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Tipo</label>
+                            <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formTaskType">
+                                <option value="clase">Clase</option>
+                                <option value="preparacion">Preparacion</option>
+                                <option value="administrativa">Administrativa</option>
+                                <option value="otra">Otra</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Fecha</label>
+                            <input type="date" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formDate" />
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Horas trabajadas</label>
+                        <input type="number" step="0.5" min="0" class="form-input" style="width:120px;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formHours" />
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" @onclick="CloseModal" disabled="@saving">Cancelar</button>
+                <button class="btn btn-primary btn-sm" @onclick="SaveTask" disabled="@saving">
+                    @(saving ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // Data
+    private List<UserManageDto>? instructors;
+    private List<InstructorTaskDto>? tasks;
+
+    // Filters
+    private int filterInstructorId = 0;
+    private DateTime? filterFrom;
+    private DateTime? filterTo;
+    private string filterStatus = "";
+
+    // State
+    private bool loading = true;
+    private bool saving = false;
+
+    // Modal
+    private bool showModal = false;
+    private InstructorTaskDto? editingTask;
+    private int formInstructorId;
+    private string formTitle = "";
+    private string? formDescription;
+    private string formTaskType = "otra";
+    private DateTime formDate = DateTime.Today;
+    private decimal formHours = 1;
+
+    // Computed
+    private List<InstructorTaskDto> filteredTasks
+    {
+        get
+        {
+            if (tasks is null) return new();
+            var result = tasks.AsEnumerable();
+            if (filterInstructorId > 0)
+                result = result.Where(t => t.InstructorId == filterInstructorId);
+            if (!string.IsNullOrEmpty(filterStatus))
+                result = result.Where(t => t.Status == filterStatus);
+            return result.OrderByDescending(t => t.TaskDate).ThenByDescending(t => t.CreatedAt).ToList();
+        }
+    }
+
+    private decimal totalHours => filteredTasks.Sum(t => t.HoursWorked);
+    private int pendingCount => filteredTasks.Count(t => t.Status == "pendiente" || t.Status == "en_progreso");
+    private int completedCount => filteredTasks.Count(t => t.Status == "completada");
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            instructors = await Api.GetInstructorsAsync();
+            await LoadTasks();
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar datos");
+        }
+        loading = false;
+    }
+
+    private async Task LoadTasks()
+    {
+        try
+        {
+            tasks = await Api.GetInstructorTasksAsync(
+                filterInstructorId > 0 ? filterInstructorId : null,
+                filterFrom,
+                filterTo
+            );
+        }
+        catch
+        {
+            tasks = new();
+            ToastService.Error("Error al cargar tareas");
+        }
+    }
+
+    private async Task ApplyFilters()
+    {
+        loading = true;
+        StateHasChanged();
+        await LoadTasks();
+        loading = false;
+        StateHasChanged();
+    }
+
+    private async void OnInstructorFilterChanged(ChangeEventArgs e)
+    {
+        filterInstructorId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        await ApplyFilters();
+    }
+
+    private async void OnFromChanged(ChangeEventArgs e)
+    {
+        filterFrom = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : null;
+        await ApplyFilters();
+    }
+
+    private async void OnToChanged(ChangeEventArgs e)
+    {
+        filterTo = DateTime.TryParse(e.Value?.ToString(), out var d) ? d : null;
+        await ApplyFilters();
+    }
+
+    private async void OnStatusFilterChanged(ChangeEventArgs e)
+    {
+        filterStatus = e.Value?.ToString() ?? "";
+        StateHasChanged();
+    }
+
+    // Modal
+    private void OpenCreateModal()
+    {
+        editingTask = null;
+        formInstructorId = 0;
+        formTitle = "";
+        formDescription = null;
+        formTaskType = "otra";
+        formDate = DateTime.Today;
+        formHours = 1;
+        showModal = true;
+    }
+
+    private void OpenEditModal(InstructorTaskDto task)
+    {
+        editingTask = task;
+        formInstructorId = task.InstructorId;
+        formTitle = task.Title;
+        formDescription = task.Description;
+        formTaskType = task.TaskType;
+        formDate = task.TaskDate;
+        formHours = task.HoursWorked;
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task SaveTask()
+    {
+        if (formInstructorId == 0 || string.IsNullOrWhiteSpace(formTitle))
+        {
+            ToastService.Error("Completa los campos obligatorios (instructor y titulo)");
+            return;
+        }
+
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            if (editingTask is not null)
+            {
+                var request = new UpdateInstructorTaskRequest
+                {
+                    Title = formTitle,
+                    Description = formDescription,
+                    TaskType = formTaskType,
+                    TaskDate = formDate,
+                    HoursWorked = formHours
+                };
+                var result = await Api.UpdateInstructorTaskAsync(editingTask.Id, request);
+                if (result is not null)
+                {
+                    await LoadTasks();
+                    showModal = false;
+                    ToastService.Success("Tarea actualizada");
+                }
+                else
+                {
+                    ToastService.Error("Error al actualizar la tarea");
+                }
+            }
+            else
+            {
+                var request = new CreateInstructorTaskRequest
+                {
+                    InstructorId = formInstructorId,
+                    Title = formTitle,
+                    Description = formDescription,
+                    TaskType = formTaskType,
+                    TaskDate = formDate,
+                    HoursWorked = formHours
+                };
+                var result = await Api.CreateInstructorTaskAsync(request);
+                if (result is not null)
+                {
+                    await LoadTasks();
+                    showModal = false;
+                    ToastService.Success("Tarea creada");
+                }
+                else
+                {
+                    ToastService.Error("Error al crear la tarea");
+                }
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar la tarea");
+        }
+        saving = false;
+        StateHasChanged();
+    }
+
+    private async Task CompleteTask(int id)
+    {
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.CompleteInstructorTaskAsync(id);
+            if (success)
+            {
+                await LoadTasks();
+                ToastService.Success("Tarea completada");
+            }
+            else
+            {
+                ToastService.Error("Error al completar la tarea");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al completar la tarea");
+        }
+        saving = false;
+        StateHasChanged();
+    }
+
+    private async Task DeleteTask(int id)
+    {
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.DeleteInstructorTaskAsync(id);
+            if (success)
+            {
+                await LoadTasks();
+                ToastService.Success("Tarea eliminada");
+            }
+            else
+            {
+                ToastService.Error("Error al eliminar la tarea");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al eliminar la tarea");
+        }
+        saving = false;
+        StateHasChanged();
+    }
+
+    // Badge styles
+    private string GetTaskTypeBadgeStyle(string taskType) => taskType switch
+    {
+        "clase" => "background:var(--info-bg);color:var(--info);",
+        "preparacion" => "background:var(--warning-bg);color:#b45309;",
+        "administrativa" => "background:rgba(139,92,246,0.1);color:#7c3aed;",
+        _ => "background:rgba(100,116,139,0.1);color:#64748b;"
+    };
+
+    private string GetTaskTypeLabel(string taskType) => taskType switch
+    {
+        "clase" => "Clase",
+        "preparacion" => "Preparacion",
+        "administrativa" => "Administrativa",
+        "otra" => "Otra",
+        _ => taskType
+    };
+
+    private string GetStatusBadgeStyle(string status) => status switch
+    {
+        "pendiente" => "background:rgba(249,115,22,0.1);color:#ea580c;",
+        "en_progreso" => "background:var(--info-bg);color:var(--info);",
+        "completada" => "background:var(--primary-bg);color:var(--primary-dark);",
+        _ => "background:rgba(100,116,139,0.1);color:#64748b;"
+    };
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "pendiente" => "Pendiente",
+        "en_progreso" => "En progreso",
+        "completada" => "Completada",
+        _ => status
+    };
+}

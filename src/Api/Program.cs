@@ -50,6 +50,7 @@ builder.Services.AddScoped<TokenPackService>();
 builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddHostedService<BookingCompletionService>();
 builder.Services.AddHttpClient();
 
 // CORS

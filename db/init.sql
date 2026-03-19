@@ -355,5 +355,28 @@ BEGIN
 END
 GO
 
+-- InstructorTasks table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='InstructorTasks' AND xtype='U')
+BEGIN
+    CREATE TABLE InstructorTasks (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        InstructorId INT NOT NULL,
+        Title NVARCHAR(200) NOT NULL,
+        Description NVARCHAR(1000) NULL,
+        TaskType NVARCHAR(50) NOT NULL DEFAULT 'otra',
+        TaskDate DATE NOT NULL,
+        HoursWorked DECIMAL(5,2) NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'pendiente',
+        AssignedByUserId INT NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        CompletedAt DATETIME2 NULL,
+        CONSTRAINT FK_InstructorTasks_Instructor FOREIGN KEY (InstructorId) REFERENCES Users(Id),
+        CONSTRAINT FK_InstructorTasks_AssignedBy FOREIGN KEY (AssignedByUserId) REFERENCES Users(Id)
+    );
+    CREATE INDEX IX_InstructorTasks_InstructorId ON InstructorTasks (InstructorId);
+    CREATE INDEX IX_InstructorTasks_TaskDate ON InstructorTasks (TaskDate);
+END
+GO
+
 PRINT 'Database initialized successfully';
 GO

@@ -250,6 +250,12 @@ public class ApiClient
         return await DeleteAsync($"/api/bookings/{id}/admin-cancel");
     }
 
+    public async Task<bool> AdminCompleteBookingAsync(int id)
+    {
+        var result = await PutAsync<object>($"/api/bookings/{id}/complete", new { });
+        return result != null;
+    }
+
     public async Task<TokenPackDto?> UpdateTokenPackAsync(int id, object request)
     {
         return await PutAsync<TokenPackDto>($"/api/tokenpacks/{id}", request);
@@ -293,6 +299,31 @@ public class ApiClient
         var response = await _http.PostAsJsonAsync("/api/auth/register-invitation", request);
         return response.IsSuccessStatusCode;
     }
+
+    // --- Instructor Tasks ---
+    public async Task<List<InstructorTaskDto>?> GetInstructorTasksAsync(int? instructorId = null, DateTime? from = null, DateTime? to = null)
+    {
+        var query = "/api/instructor-tasks?";
+        if (instructorId.HasValue) query += $"instructorId={instructorId}&";
+        if (from.HasValue) query += $"from={from:yyyy-MM-dd}&";
+        if (to.HasValue) query += $"to={to:yyyy-MM-dd}&";
+        return await GetAsync<List<InstructorTaskDto>>(query.TrimEnd('&', '?'));
+    }
+
+    public async Task<InstructorTaskDto?> CreateInstructorTaskAsync(CreateInstructorTaskRequest request)
+        => await PostAsync<InstructorTaskDto>("/api/instructor-tasks", request);
+
+    public async Task<InstructorTaskDto?> UpdateInstructorTaskAsync(int id, UpdateInstructorTaskRequest request)
+        => await PutAsync<InstructorTaskDto>($"/api/instructor-tasks/{id}", request);
+
+    public async Task<bool> CompleteInstructorTaskAsync(int id)
+    {
+        var result = await PutAsync<object>($"/api/instructor-tasks/{id}/complete", new { });
+        return result != null;
+    }
+
+    public async Task<bool> DeleteInstructorTaskAsync(int id)
+        => await DeleteAsync($"/api/instructor-tasks/{id}");
 
     // --- HTTP helpers ---
     private bool IsOnLoginPage()

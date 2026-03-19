@@ -250,4 +250,19 @@ public class BookingService
 
         return (true, null);
     }
+
+    public async Task<(bool Success, string? Error)> AdminCompleteAsync(int bookingId)
+    {
+        var booking = await _db.Bookings.FindAsync(bookingId);
+        if (booking is null)
+            return (false, "Reserva no encontrada");
+
+        if (booking.Status != "confirmed")
+            return (false, "Solo se pueden completar reservas confirmadas");
+
+        booking.Status = "completed";
+        await _db.SaveChangesAsync();
+
+        return (true, null);
+    }
 }

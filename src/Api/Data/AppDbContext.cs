@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Availability> Availabilities => Set<Availability>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<WeekAvailability> WeekAvailabilities => Set<WeekAvailability>();
+    public DbSet<InstructorTask> InstructorTasks => Set<InstructorTask>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -115,6 +116,20 @@ public class AppDbContext : DbContext
             entity.HasOne(b => b.TokenPack)
                   .WithMany()
                   .HasForeignKey(b => b.TokenPackId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<InstructorTask>(entity =>
+        {
+            entity.HasIndex(t => t.InstructorId);
+            entity.HasIndex(t => t.TaskDate);
+            entity.HasOne(t => t.Instructor)
+                  .WithMany()
+                  .HasForeignKey(t => t.InstructorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.AssignedByUser)
+                  .WithMany()
+                  .HasForeignKey(t => t.AssignedByUserId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
