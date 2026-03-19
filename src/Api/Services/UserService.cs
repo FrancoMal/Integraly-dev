@@ -79,6 +79,12 @@ public class UserService
         var user = await _db.Users.Include(u => u.RoleNav).FirstOrDefaultAsync(u => u.Id == id);
         if (user is null) return null;
 
+        if (request.Username is not null && request.Username != user.Username)
+        {
+            if (await _db.Users.AnyAsync(u => u.Username == request.Username && u.Id != id))
+                return null;
+            user.Username = request.Username;
+        }
         if (request.FirstName is not null) user.FirstName = request.FirstName;
         if (request.LastName is not null) user.LastName = request.LastName;
         if (request.Phone is not null) user.Phone = request.Phone;

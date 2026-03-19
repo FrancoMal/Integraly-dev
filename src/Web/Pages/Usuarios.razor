@@ -85,12 +85,19 @@
                     <div class="form-error">@formError</div>
                 }
 
+                <div class="form-group">
+                    <label class="form-label">Usuario</label>
+                    @if (isEditing)
+                    {
+                        <input class="form-input" @bind="formUsername" placeholder="Nombre de usuario" />
+                    }
+                    else
+                    {
+                        <input class="form-input" @bind="newUser.Username" placeholder="Nombre de usuario" />
+                    }
+                </div>
                 @if (!isEditing)
                 {
-                    <div class="form-group">
-                        <label class="form-label">Usuario</label>
-                        <input class="form-input" @bind="newUser.Username" placeholder="Nombre de usuario" />
-                    </div>
                     <div class="form-group">
                         <label class="form-label">Contrasena</label>
                         <input class="form-input" type="password" @bind="newUser.Password" placeholder="Minimo 6 caracteres" />
@@ -182,6 +189,7 @@
     // Form fields
     private CreateUserRequest newUser = new();
     private int? editingUserId;
+    private string formUsername = "";
     private string formFirstName = "";
     private string formLastName = "";
     private string formEmail = "";
@@ -218,6 +226,7 @@
         isEditing = false;
         editingUserId = null;
         newUser = new CreateUserRequest { RoleId = 2 };
+        formUsername = "";
         formFirstName = "";
         formLastName = "";
         formEmail = "";
@@ -232,6 +241,7 @@
     {
         isEditing = true;
         editingUserId = user.Id;
+        formUsername = user.Username;
         formFirstName = user.FirstName ?? "";
         formLastName = user.LastName ?? "";
         formEmail = user.Email;
@@ -259,6 +269,7 @@
             {
                 var update = new UpdateUserRequest
                 {
+                    Username = formUsername,
                     FirstName = formFirstName,
                     LastName = formLastName,
                     Email = formEmail,

@@ -29,13 +29,21 @@ public record CreateUserRequest(
     string? Timezone
 );
 
-public record UpdateUserRequest(
-    [MaxLength(100)] string? FirstName,
-    [MaxLength(100)] string? LastName,
-    [EmailAddress][MaxLength(255)] string? Email,
-    [MaxLength(50)] string? Phone,
-    int? RoleId,
-    bool? IsActive,
-    string? VpsInfo,
-    string? Timezone
-);
+public class UpdateUserRequest
+{
+    [MaxLength(100)]
+    public string? Username { get; set; }
+    [MaxLength(100)]
+    public string? FirstName { get; set; }
+    [MaxLength(100)]
+    public string? LastName { get; set; }
+    [EmailAddress]
+    [MaxLength(255)]
+    public string? Email { get; set; }
+    [MaxLength(50)]
+    public string? Phone { get; set; }
+    public int? RoleId { get; set; }
+    public bool? IsActive { get; set; }
+    public string? VpsInfo { get; set; }
+    public string? Timezone { get; set; }
+}
