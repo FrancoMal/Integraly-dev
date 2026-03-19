@@ -58,30 +58,6 @@
     </div>
 </div>
 
-@* Leyenda *@
-<div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;font-size:0.75rem;align-items:center;">
-    <div style="display:flex;align-items:center;gap:4px;">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(59,130,246,0.12);border-left:3px solid #3b82f6;"></span>
-        Reserva
-    </div>
-    <div style="display:flex;align-items:center;gap:4px;">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.3);"></span>
-        Disponibilidad
-    </div>
-    <div style="display:flex;align-items:center;gap:4px;">
-        <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(239,68,68,0.08);border-left:3px solid #ef4444;"></span>
-        Cancelada
-    </div>
-    @if (selectedCells.Count > 0)
-    {
-        <div style="display:flex;align-items:center;gap:4px;">
-            <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(139,92,246,0.12);outline:2px solid #8b5cf6;"></span>
-            Seleccionado
-        </div>
-        <span style="color:var(--text-muted);font-style:italic;">Ctrl+clic para agregar, Shift+arrastrar para rango</span>
-    }
-</div>
-
 @if (loading)
 {
     <div class="card"><div class="card-body"><p class="text-muted">Cargando datos del calendario...</p></div></div>
