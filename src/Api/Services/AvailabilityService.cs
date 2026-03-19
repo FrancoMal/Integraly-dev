@@ -154,6 +154,36 @@ public class AvailabilityService
         return general?.IsActive ?? false;
     }
 
+    // Bulk toggle multiple week availability slots for admin
+    public async Task<int> BulkToggleSlotsAsync(int instructorId, List<AdminBulkToggleSlot> slots, bool isActive)
+    {
+        var count = 0;
+        foreach (var slot in slots)
+        {
+            var existing = await _db.WeekAvailabilities
+                .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.Date == slot.Date.Date && w.StartHour == slot.StartHour);
+
+            if (existing is not null)
+            {
+                existing.IsActive = isActive;
+            }
+            else
+            {
+                _db.WeekAvailabilities.Add(new WeekAvailability
+                {
+                    InstructorId = instructorId,
+                    Date = slot.Date.Date,
+                    StartHour = slot.StartHour,
+                    IsActive = isActive,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            count++;
+        }
+        await _db.SaveChangesAsync();
+        return count;
+    }
+
     // Toggle a single week availability slot for admin
     public async Task<WeekAvailabilityDto> ToggleSingleSlotAsync(int instructorId, DateTime date, int startHour, bool isActive)
     {

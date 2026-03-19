@@ -3,6 +3,8 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 @inject TimezoneService TzService
+@inject IJSRuntime JS
+@implements IDisposable
 
 <div class="view-header">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
@@ -71,6 +73,14 @@
         <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(239,68,68,0.08);border-left:3px solid #ef4444;"></span>
         Cancelada
     </div>
+    @if (selectedCells.Count > 0)
+    {
+        <div style="display:flex;align-items:center;gap:4px;">
+            <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:rgba(139,92,246,0.12);outline:2px solid #8b5cf6;"></span>
+            Seleccionado
+        </div>
+        <span style="color:var(--text-muted);font-style:italic;">Ctrl+clic para agregar, Shift+arrastrar para rango</span>
+    }
 </div>
 
 @if (loading)
@@ -83,7 +93,7 @@ else
     <div class="card">
         <div class="card-body" style="padding: 0.5rem;">
             <div class="table-responsive">
-                <table class="data-table calendar-compact">
+                <table class="data-table calendar-compact" style="user-select:none;">
                     <thead>
                         <tr>
                             <th style="width:50px;text-align:center;">Hora</th>
@@ -109,10 +119,16 @@ else
                                     var isToday = date.Date == DateTime.Today;
                                     var bookings = GetBookingsAt(date, hour);
                                     var availableInstructors = GetAvailableAt(date, hour);
-                                    var totalEntries = bookings.Count + (availableInstructors.Count > 0 ? 1 : 0);
+                                    var cellKey = $"{date:yyyy-MM-dd}_{hour}";
+                                    var isCellSelected = selectedCells.Contains(cellKey);
+                                    var dateStr = date.ToString("yyyy-MM-dd");
 
-                                    <td class="admin-cal-cell @(isToday ? "today-col" : "")"
-                                        @onclick="() => OpenModal(date, hour)">
+                                    <td class="admin-cal-cell @(isToday ? "today-col" : "") @(isCellSelected ? "cell-selected" : "")"
+                                        data-cell="@cellKey"
+                                        @onclick="e => OnCellClick(e, date, hour)"
+                                        @onmousedown="e => OnMouseDown(e, dateStr, hour)"
+                                        @onmouseenter="e => OnMouseEnter(e, dateStr, hour)"
+                                        @onmousedown:preventDefault="@false">
                                         @if (showDisponibilidad && availableInstructors.Count > 0)
                                         {
                                             <div class="cal-instructor-dots">
@@ -148,6 +164,37 @@ else
                 </table>
             </div>
         </div>
+
+        @* Barra de acciones en lote *@
+        @if (selectedCells.Count > 0)
+        {
+            <div class="bulk-action-bar">
+                <span style="font-size:0.8rem;font-weight:600;color:#8b5cf6;">@selectedCells.Count horarios</span>
+                <select class="form-input" style="width:auto;min-width:180px;padding:0.3rem 0.5rem;font-size:0.8rem;" @bind="bulkInstructorId">
+                    <option value="0">— Instructor —</option>
+                    @if (instructors is not null)
+                    {
+                        @foreach (var inst in instructors)
+                        {
+                            <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                        }
+                    }
+                </select>
+                <button class="btn btn-sm" style="background:#10b981;color:white;"
+                        disabled="@(bulkSaving || bulkInstructorId == 0)"
+                        @onclick="() => BulkToggleAvailability(true)">
+                    Agregar disponibilidad
+                </button>
+                <button class="btn btn-sm" style="background:#ef4444;color:white;"
+                        disabled="@(bulkSaving || bulkInstructorId == 0)"
+                        @onclick="() => BulkToggleAvailability(false)">
+                    Quitar disponibilidad
+                </button>
+                <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">
+                    Limpiar
+                </button>
+            </div>
+        }
     </div>
 }
 
@@ -356,6 +403,12 @@ else
     private int newBookingInstructorId = 0;
     private List<UserManageDto>? allUsers;
 
+    // Multi-select
+    private HashSet<string> selectedCells = new();
+    private int bulkInstructorId = 0;
+    private bool bulkSaving = false;
+    private DotNetObjectReference<CalendarioAdmin>? _dotnetRef;
+
     private static readonly string[] dayNames = { "Lun", "Mar", "Mie", "Jue", "Vie", "Sab", "Dom" };
 
     private static readonly string[] instructorColors = {
@@ -379,7 +432,6 @@ else
             {
                 selectedInstructorIds = new HashSet<int>(instructors.Select(i => i.Id));
 
-                // Load general availability for all instructors in parallel
                 var availTasks = instructors.Select(async inst =>
                 {
                     var avail = await Api.GetInstructorAvailabilityAsync(inst.Id);
@@ -399,11 +451,76 @@ else
         loading = false;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("calendarSelect.init", _dotnetRef);
+        }
+    }
+
+    public void Dispose()
+    {
+        try { JS.InvokeVoidAsync("calendarSelect.dispose"); } catch { }
+        _dotnetRef?.Dispose();
+    }
+
+    // Called from JS when Ctrl+click
+    [JSInvokable]
+    public void JsToggleCell(string date, int hour)
+    {
+        var key = $"{date}_{hour}";
+        if (!selectedCells.Add(key))
+            selectedCells.Remove(key);
+        StateHasChanged();
+    }
+
+    // Called from JS when Shift+drag ends
+    [JSInvokable]
+    public void JsAddCells(string json)
+    {
+        try
+        {
+            var cells = System.Text.Json.JsonSerializer.Deserialize<List<DragCell>>(json);
+            if (cells is not null)
+            {
+                foreach (var c in cells)
+                {
+                    selectedCells.Add($"{c.date}_{c.hour}");
+                }
+            }
+        }
+        catch { }
+        StateHasChanged();
+    }
+
+    private class DragCell
+    {
+        public string date { get; set; } = "";
+        public int hour { get; set; }
+    }
+
+    private async Task OnMouseDown(MouseEventArgs e, string dateStr, int hour)
+    {
+        if (e.ShiftKey || e.CtrlKey || e.MetaKey)
+        {
+            await JS.InvokeVoidAsync("calendarSelect.handleMouseDown", e, dateStr, hour);
+        }
+    }
+
+    private async Task OnMouseEnter(MouseEventArgs e, string dateStr, int hour)
+    {
+        if (e.ShiftKey)
+        {
+            await JS.InvokeVoidAsync("calendarSelect.handleMouseEnter", e, dateStr, hour);
+        }
+    }
+
     private async Task LoadWeekData()
     {
         try
         {
-            // Load bookings and week overrides in parallel
             var bookingsTask = Api.GetWeekBookingsAsync(weekStart, weekEnd);
 
             var overridesTasks = new List<Task<(int Id, List<WeekAvailabilityDto> Overrides)>>();
@@ -426,7 +543,6 @@ else
 
             instructorWeekOverrides = overridesResults.ToDictionary(r => r.Id, r => r.Overrides);
 
-            // Build unique users list from bookings
             uniqueUsers = new();
             if (weekBookings is not null)
             {
@@ -530,6 +646,7 @@ else
         weekStart = weekStart.AddDays(-7);
         weekEnd = weekEnd.AddDays(-7);
         loading = true;
+        selectedCells.Clear();
         StateHasChanged();
         await LoadWeekData();
         loading = false;
@@ -540,9 +657,57 @@ else
         weekStart = weekStart.AddDays(7);
         weekEnd = weekEnd.AddDays(7);
         loading = true;
+        selectedCells.Clear();
         StateHasChanged();
         await LoadWeekData();
         loading = false;
+    }
+
+    // Normal click (no modifier) opens the detail modal; Ctrl/Shift handled by JS
+    private void OnCellClick(MouseEventArgs e, DateTime date, int hour)
+    {
+        if (e.CtrlKey || e.MetaKey || e.ShiftKey) return;
+        OpenModal(date, hour);
+    }
+
+    private void ClearSelection()
+    {
+        selectedCells.Clear();
+    }
+
+    private async Task BulkToggleAvailability(bool isActive)
+    {
+        if (bulkInstructorId == 0 || selectedCells.Count == 0) return;
+
+        bulkSaving = true;
+        StateHasChanged();
+        try
+        {
+            var slots = selectedCells.Select(key =>
+            {
+                var parts = key.Split('_');
+                return (object)new { date = parts[0], startHour = int.Parse(parts[1]) };
+            }).ToList();
+
+            var success = await Api.AdminBulkToggleAvailabilityAsync(bulkInstructorId, isActive, slots);
+            if (success)
+            {
+                await LoadWeekData();
+                var action = isActive ? "agregada" : "quitada";
+                ToastService.Success($"Disponibilidad {action} en {selectedCells.Count} horarios");
+                selectedCells.Clear();
+            }
+            else
+            {
+                ToastService.Error("Error al actualizar disponibilidad");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al actualizar disponibilidad");
+        }
+        bulkSaving = false;
+        StateHasChanged();
     }
 
     private void OpenModal(DateTime date, int hour)
@@ -566,7 +731,6 @@ else
             if (success)
             {
                 await LoadWeekData();
-                // Also reload general availability in case it affects the view
                 if (instructorWeekOverrides.ContainsKey(instructorId))
                 {
                     var overrides = await Api.GetWeekAvailabilityAsync(instructorId, weekStart, weekEnd);

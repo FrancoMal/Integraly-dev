@@ -198,6 +198,12 @@ public class ApiClient
         return result != null;
     }
 
+    public async Task<bool> AdminBulkToggleAvailabilityAsync(int instructorId, bool isActive, List<object> slots)
+    {
+        var result = await PutAsync<object>("/api/availability/admin-bulk-toggle", new { instructorId, isActive, slots });
+        return result != null;
+    }
+
     // --- Bookings ---
     public async Task<List<BookingDto>?> GetAllBookingsAsync()
     {

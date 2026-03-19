@@ -90,6 +90,17 @@ public class AvailabilityController : ControllerBase
         return Ok(result);
     }
 
+    // Admin: bulk toggle availability for multiple date+hour slots
+    [HttpPut("admin-bulk-toggle")]
+    public async Task<IActionResult> AdminBulkToggleAvailability([FromBody] AdminBulkToggleRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var count = await _availabilityService.BulkToggleSlotsAsync(
+            request.InstructorId, request.Slots, request.IsActive);
+        return Ok(new { updated = count });
+    }
+
     private bool IsAdmin()
     {
         return User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "admin";

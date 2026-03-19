@@ -37,3 +37,16 @@ public record AdminToggleAvailabilityRequest(
     [Required][Range(0, 23)] int StartHour,
     [Required] bool IsActive
 );
+
+public class AdminBulkToggleSlot
+{
+    public DateTime Date { get; set; }
+    public int StartHour { get; set; }
+}
+
+public class AdminBulkToggleRequest
+{
+    public int InstructorId { get; set; }
+    public bool IsActive { get; set; }
+    public List<AdminBulkToggleSlot> Slots { get; set; } = new();
+}
