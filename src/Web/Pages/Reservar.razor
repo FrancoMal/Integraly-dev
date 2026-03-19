@@ -66,6 +66,26 @@
 
 <div class="card" style="margin-bottom: 1rem;">
     <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        @* Izquierda: Instructores *@
+        <div>
+            @if (currentView == "calendario" && instructors is not null && instructors.Count > 0)
+            {
+                <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
+                </button>
+            }
+        </div>
+        @* Centro: Selector de semana *@
+        @if (currentView == "calendario")
+        {
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left"></i></button>
+                <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        }
+        @* Derecha: Toggle vista *@
         <div style="display:flex;gap:0.25rem;background:var(--bg-secondary,#f1f5f9);border-radius:6px;padding:2px;">
             <button class="btn btn-sm @(currentView == "calendario" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick='() => currentView = "calendario"'>
                 <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Calendario
@@ -74,21 +94,6 @@
                 <i class="fa-solid fa-list" style="margin-right:0.3rem;"></i>Lista
             </button>
         </div>
-        @if (currentView == "calendario")
-        {
-            @if (instructors is not null && instructors.Count > 0)
-            {
-                <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
-                    <i class="fa-solid fa-users"></i>
-                    <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
-                </button>
-            }
-            <div class="week-navigator">
-                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left" style="margin-right:0.3rem;"></i>Anterior</button>
-                <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente<i class="fa-solid fa-chevron-right" style="margin-left:0.3rem;"></i></button>
-            </div>
-        }
     </div>
 </div>
 
