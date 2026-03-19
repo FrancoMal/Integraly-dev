@@ -365,6 +365,8 @@ BEGIN
         Description NVARCHAR(1000) NULL,
         TaskType NVARCHAR(50) NOT NULL DEFAULT 'otra',
         TaskDate DATE NOT NULL,
+        StartHour INT NOT NULL DEFAULT 8,
+        EndHour INT NOT NULL DEFAULT 9,
         HoursWorked DECIMAL(5,2) NOT NULL DEFAULT 0,
         Status NVARCHAR(50) NOT NULL DEFAULT 'pendiente',
         AssignedByUserId INT NULL,
@@ -375,6 +377,14 @@ BEGIN
     );
     CREATE INDEX IX_InstructorTasks_InstructorId ON InstructorTasks (InstructorId);
     CREATE INDEX IX_InstructorTasks_TaskDate ON InstructorTasks (TaskDate);
+END
+GO
+
+-- Add StartHour and EndHour to existing InstructorTasks tables
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InstructorTasks') AND name = 'StartHour')
+BEGIN
+    ALTER TABLE InstructorTasks ADD StartHour INT NOT NULL DEFAULT 8;
+    ALTER TABLE InstructorTasks ADD EndHour INT NOT NULL DEFAULT 9;
 END
 GO
 

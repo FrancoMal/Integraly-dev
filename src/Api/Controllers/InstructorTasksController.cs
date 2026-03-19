@@ -97,6 +97,8 @@ public class InstructorTasksController : ControllerBase
             Description = request.Description,
             TaskType = request.TaskType,
             TaskDate = request.TaskDate,
+            StartHour = request.StartHour,
+            EndHour = request.EndHour,
             HoursWorked = request.HoursWorked,
             Status = "pendiente",
             AssignedByUserId = IsAdmin() ? userId.Value : null,
@@ -140,6 +142,8 @@ public class InstructorTasksController : ControllerBase
         if (request.Description is not null) task.Description = request.Description;
         if (request.TaskType is not null) task.TaskType = request.TaskType;
         if (request.TaskDate.HasValue) task.TaskDate = request.TaskDate.Value;
+        if (request.StartHour.HasValue) task.StartHour = request.StartHour.Value;
+        if (request.EndHour.HasValue) task.EndHour = request.EndHour.Value;
         if (request.HoursWorked.HasValue) task.HoursWorked = request.HoursWorked.Value;
         if (request.Status is not null) task.Status = request.Status;
 
@@ -212,6 +216,8 @@ public class InstructorTasksController : ControllerBase
         t.Description,
         t.TaskType,
         t.TaskDate,
+        t.StartHour,
+        t.EndHour,
         t.HoursWorked,
         t.Status,
         t.AssignedByUserId,

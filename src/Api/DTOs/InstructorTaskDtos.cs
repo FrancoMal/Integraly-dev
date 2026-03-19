@@ -10,6 +10,8 @@ public record InstructorTaskDto(
     string? Description,
     string TaskType,
     DateTime TaskDate,
+    int StartHour,
+    int EndHour,
     decimal HoursWorked,
     string Status,
     int? AssignedByUserId,
@@ -24,6 +26,8 @@ public record CreateInstructorTaskRequest(
     string? Description,
     string TaskType = "otra",
     [Required] DateTime TaskDate = default,
+    int StartHour = 8,
+    int EndHour = 9,
     [Required] decimal HoursWorked = 0
 );
 
@@ -32,6 +36,8 @@ public record UpdateInstructorTaskRequest(
     string? Description,
     string? TaskType,
     DateTime? TaskDate,
+    int? StartHour,
+    int? EndHour,
     decimal? HoursWorked,
     string? Status
 );

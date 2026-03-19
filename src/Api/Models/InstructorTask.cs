@@ -25,6 +25,9 @@ public class InstructorTask
 
     public DateTime TaskDate { get; set; }
 
+    public int StartHour { get; set; } = 8;
+    public int EndHour { get; set; } = 9;
+
     [Column(TypeName = "decimal(5,2)")]
     public decimal HoursWorked { get; set; }
 

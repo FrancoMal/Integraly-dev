@@ -9,6 +9,8 @@ public class InstructorTaskDto
     public string? Description { get; set; }
     public string TaskType { get; set; } = string.Empty;
     public DateTime TaskDate { get; set; }
+    public int StartHour { get; set; }
+    public int EndHour { get; set; }
     public decimal HoursWorked { get; set; }
     public string Status { get; set; } = string.Empty;
     public int? AssignedByUserId { get; set; }
@@ -24,6 +26,8 @@ public class CreateInstructorTaskRequest
     public string? Description { get; set; }
     public string TaskType { get; set; } = "otra";
     public DateTime TaskDate { get; set; }
+    public int StartHour { get; set; } = 8;
+    public int EndHour { get; set; } = 9;
     public decimal HoursWorked { get; set; }
 }
 
@@ -33,6 +37,8 @@ public class UpdateInstructorTaskRequest
     public string? Description { get; set; }
     public string? TaskType { get; set; }
     public DateTime? TaskDate { get; set; }
+    public int? StartHour { get; set; }
+    public int? EndHour { get; set; }
     public decimal? HoursWorked { get; set; }
     public string? Status { get; set; }
 }
