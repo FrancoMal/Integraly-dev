@@ -463,10 +463,14 @@ else
 
     private void OnMouseEnter(MouseEventArgs e, DateTime date, int hour)
     {
-        if (isDragging)
+        if (isDragging && e.ShiftKey)
         {
             var key = $"{date:yyyy-MM-dd}_{hour}";
             selectedCells.Add(key);
+        }
+        else if (isDragging && !e.ShiftKey)
+        {
+            isDragging = false;
         }
     }
 
