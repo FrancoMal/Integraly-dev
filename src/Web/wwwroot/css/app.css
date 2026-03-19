@@ -2280,8 +2280,11 @@ button {
 }
 
 .btn-sm {
-  padding: 0.3rem 0.75rem;
+  padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
+  min-height: 29px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .integration-card-body {
@@ -3720,11 +3723,7 @@ textarea.form-input {
   margin-bottom: 1.5rem;
 }
 
-/* Small buttons */
-.btn-sm {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8rem;
-}
+/* Small buttons - defined above */
 
 /* Text colors */
 .text-success { color: #059669; font-weight: 600; }
