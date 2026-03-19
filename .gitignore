@@ -1,1 +1,4 @@
 .env
+ssl/
+integraly.dev.key
+integraly.dev.crt
