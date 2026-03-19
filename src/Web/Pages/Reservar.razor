@@ -33,21 +33,34 @@
 
 <div class="card" style="margin-bottom: 1rem;">
     <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
-        @if (instructors is not null && instructors.Count > 0)
-        {
-            <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
-                <i class="fa-solid fa-users"></i>
-                <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
+        <div style="display:flex;gap:0.25rem;background:var(--bg-secondary,#f1f5f9);border-radius:6px;padding:2px;">
+            <button class="btn btn-sm @(currentView == "calendario" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick='() => currentView = "calendario"'>
+                <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Calendario
             </button>
-        }
-        <div class="week-navigator">
-            <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left" style="margin-right:0.3rem;"></i>Anterior</button>
-            <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
-            <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente<i class="fa-solid fa-chevron-right" style="margin-left:0.3rem;"></i></button>
+            <button class="btn btn-sm @(currentView == "lista" ? "btn-primary" : "btn-ghost")" style="padding:0.25rem 0.6rem;font-size:0.75rem;" @onclick='() => currentView = "lista"'>
+                <i class="fa-solid fa-list" style="margin-right:0.3rem;"></i>Lista
+            </button>
         </div>
+        @if (currentView == "calendario")
+        {
+            @if (instructors is not null && instructors.Count > 0)
+            {
+                <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
+                </button>
+            }
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left" style="margin-right:0.3rem;"></i>Anterior</button>
+                <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente<i class="fa-solid fa-chevron-right" style="margin-left:0.3rem;"></i></button>
+            </div>
+        }
     </div>
 </div>
 
+@if (currentView == "calendario")
+{
 <div class="card">
     <div class="card-body" style="padding: 0.5rem;">
         @if (isLoading)
@@ -88,21 +101,26 @@
                                     {
                                         var booking = myBooking;
                                         var isCompleted = booking.Status == "completed";
+                                        var isCancelled = booking.Status == "cancelled";
                                         var instName = booking.InstructorName;
                                         <td style="text-align: center; padding: 4px; cursor: pointer;"
-                                            class="@(isCompleted ? "calendar-slot-completed" : "calendar-slot-booked")"
-                                            title="@(isCompleted ? $"Clase realizada con {instName}" : $"Reservada con {instName}")"
+                                            class="@(isCompleted ? "calendar-slot-completed" : isCancelled ? "calendar-slot-cancelled" : "calendar-slot-booked")"
+                                            title="@(isCompleted ? $"Clase realizada con {instName}" : isCancelled ? $"Clase cancelada con {instName}" : $"Reservada con {instName}")"
                                             @onclick="() => ShowBookingDetail(booking)">
-                                            <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+                                            <div style="display:flex;align-items:center;gap:6px;padding:2px 4px;">
                                                 @if (isCompleted)
                                                 {
-                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                }
+                                                else if (isCancelled)
+                                                {
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                                 }
                                                 else
                                                 {
-                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                                                 }
-                                                <span style="font-size: 0.6rem; line-height: 1; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@instName</span>
+                                                <span style="font-size:0.7rem;font-weight:500;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@instName</span>
                                             </div>
                                         </td>
                                     }
@@ -131,21 +149,80 @@
             </div>
             <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem; align-items: center;">
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #10b981;background:rgba(16,185,129,0.08);"></span>
                     Disponible
                 </span>
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;"></span>
-                    Reservada
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #f59e0b;background:rgba(245,158,11,0.08);"></span>
+                    Confirmada
                 </span>
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #10b981;"></span>
-                    Realizada
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #3b82f6;background:rgba(59,130,246,0.08);"></span>
+                    Completada
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #ef4444;background:rgba(239,68,68,0.08);"></span>
+                    Cancelada
                 </span>
             </div>
         }
     </div>
 </div>
+}
+
+@if (currentView == "lista")
+{
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
+            @if (allMyBookings is null || !allMyBookings.Any())
+            {
+                <p class="text-muted" style="padding:1.5rem;">No tenes reservas todavia</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Horario</th>
+                                <th>Instructor</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in allMyBookings.OrderByDescending(b => b.ScheduledDate).ThenByDescending(b => b.StartHour))
+                            {
+                                <tr>
+                                    <td>@b.ScheduledDate.ToString("dd/MM/yyyy")</td>
+                                    <td style="white-space:nowrap;">@($"{b.StartHour}:00 - {b.StartHour + 1}:00")</td>
+                                    <td>@b.InstructorName</td>
+                                    <td><span class="status-badge" style="@GetListStatusStyle(b.Status)">@GetListStatusLabel(b.Status)</span></td>
+                                    <td>
+                                        @if (b.Status == "confirmed" && b.ScheduledDate.Date >= DateTime.Today)
+                                        {
+                                            <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                    @onclick="() => ShowBookingDetail(b)">
+                                                <i class="fa-solid fa-ban" style="margin-right:0.3rem;"></i>Cancelar
+                                            </button>
+                                        }
+                                        @if (!string.IsNullOrEmpty(b.MeetLink) && b.Status == "confirmed")
+                                        {
+                                            <a href="@b.MeetLink" target="_blank" class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;">
+                                                <i class="fa-solid fa-video" style="margin-right:0.3rem;"></i>Meet
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
 
 @if (showInstructorModal)
 {
@@ -295,6 +372,7 @@
     private int? remainingTokens;
     private int bookedClasses;
     private int usedClasses;
+    private string currentView = "calendario";
 
     private List<UserManageDto>? instructors;
     private HashSet<int> selectedInstructorIds = new();
@@ -302,6 +380,7 @@
     private Dictionary<int, List<WeekAvailabilityDto>> instructorWeekOverrides = new();
     private List<BookingDto>? weekBookings;
     private List<BookingDto>? myBookings;
+    private List<BookingDto>? allMyBookings;
 
     private DateTime weekStart;
     private DateTime weekEnd;
@@ -391,10 +470,10 @@
             var myTask = Api.GetMyBookingsAsync();
             await Task.WhenAll(weekTask, myTask);
             weekBookings = weekTask.Result;
-            var allMyBookings = myTask.Result ?? new();
+            allMyBookings = myTask.Result ?? new();
             myBookings = allMyBookings.Where(b =>
                 b.ScheduledDate.Date >= weekStart.Date && b.ScheduledDate.Date <= weekEnd.Date
-                && (b.Status == "confirmed" || b.Status == "completed")).ToList();
+                && (b.Status == "confirmed" || b.Status == "completed" || b.Status == "cancelled")).ToList();
 
             // Reload week overrides for all instructors
             if (instructors is not null)
@@ -598,4 +677,20 @@
         }
         isCancelling = false;
     }
+
+    private string GetListStatusStyle(string s) => s switch
+    {
+        "confirmed" => "background:rgba(245,158,11,0.1);color:#b45309;",
+        "completed" => "background:rgba(59,130,246,0.1);color:#2563eb;",
+        "cancelled" => "background:rgba(239,68,68,0.1);color:#dc2626;",
+        _ => "background:rgba(100,116,139,0.1);color:#64748b;"
+    };
+
+    private string GetListStatusLabel(string s) => s switch
+    {
+        "confirmed" => "Confirmada",
+        "completed" => "Completada",
+        "cancelled" => "Cancelada",
+        _ => s
+    };
 }

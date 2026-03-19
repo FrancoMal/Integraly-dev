@@ -22,26 +22,10 @@
                      IsActive="@IsActive("")" OnClick="@(() => NavigateTo(""))" />
         }
 
-        @if (role != "admin" && (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas")))
+        @if (role != "admin" && HasPerm("reservar"))
         {
-            <NavGroup Label="Tutorias" Icon="@SvgIcons.Calendar"
-                      HasActiveChild="@(IsActive("calendario") || IsActive("reservar") || IsActive("mis-reservas"))">
-                @if (HasPerm("calendario"))
-                {
-                    <NavItem Href="calendario" Label="Calendario" Icon="@SvgIcons.Calendar"
-                             IsActive="@IsActive("calendario")" OnClick="@(() => NavigateTo("calendario"))" />
-                }
-                @if (HasPerm("reservar"))
-                {
-                    <NavItem Href="reservar" Label="Reservar" Icon="@SvgIcons.Clock"
-                             IsActive="@IsActive("reservar")" OnClick="@(() => NavigateTo("reservar"))" />
-                }
-                @if (HasPerm("mis-reservas"))
-                {
-                    <NavItem Href="mis-reservas" Label="Mis Reservas" Icon="@SvgIcons.CheckCircle"
-                             IsActive="@IsActive("mis-reservas")" OnClick="@(() => NavigateTo("mis-reservas"))" />
-                }
-            </NavGroup>
+            <NavItem Href="reservar" Label="Reservar" Icon="@SvgIcons.Clock"
+                     IsActive="@IsActive("reservar")" OnClick="@(() => NavigateTo("reservar"))" />
         }
 
         @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config") || role == "admin")

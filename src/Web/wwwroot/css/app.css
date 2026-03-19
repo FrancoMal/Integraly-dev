@@ -3820,18 +3820,27 @@ textarea.form-input {
   position: relative;
 }
 .calendar-slot-available {
-  background: rgba(16, 185, 129, 0.05) !important;
+  border-left: 3px solid #10b981 !important;
+  background: transparent !important;
 }
 .calendar-slot-available:hover {
-  background: rgba(16, 185, 129, 0.12) !important;
+  background: rgba(16, 185, 129, 0.08) !important;
+  cursor: pointer;
 }
+
 .calendar-slot-booked {
-  background: rgba(59, 130, 246, 0.1) !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  border-left: 3px solid #f59e0b !important;
+}
+
+.calendar-slot-completed {
+  background: rgba(59, 130, 246, 0.08) !important;
   border-left: 3px solid #3b82f6 !important;
 }
-.calendar-slot-completed {
-  background: rgba(16, 185, 129, 0.1) !important;
-  border-left: 3px solid #10b981 !important;
+
+.calendar-slot-cancelled {
+  background: rgba(239, 68, 68, 0.08) !important;
+  border-left: 3px solid #ef4444 !important;
 }
 
 /* Impersonate bar */
