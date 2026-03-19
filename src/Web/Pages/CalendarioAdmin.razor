@@ -88,6 +88,37 @@
 }
 else
 {
+    @* Barra de acciones en lote (arriba del calendario) *@
+    @if (selectedCells.Count > 0)
+    {
+        <div class="bulk-action-bar" style="margin-bottom:0.75rem;">
+            <span style="font-size:0.8rem;font-weight:600;color:#8b5cf6;">@selectedCells.Count horarios</span>
+            <select class="form-input" style="width:auto;min-width:180px;padding:0.3rem 0.5rem;font-size:0.8rem;" @bind="bulkInstructorId">
+                <option value="0">— Instructor —</option>
+                @if (instructors is not null)
+                {
+                    @foreach (var inst in instructors)
+                    {
+                        <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                    }
+                }
+            </select>
+            <button class="btn btn-sm" style="background:#10b981;color:white;"
+                    disabled="@(bulkSaving || bulkInstructorId == 0)"
+                    @onclick="() => BulkToggleAvailability(true)">
+                Agregar disponibilidad
+            </button>
+            <button class="btn btn-sm" style="background:#ef4444;color:white;"
+                    disabled="@(bulkSaving || bulkInstructorId == 0)"
+                    @onclick="() => BulkToggleAvailability(false)">
+                Quitar disponibilidad
+            </button>
+            <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">
+                Limpiar
+            </button>
+        </div>
+    }
+
     @* Calendario semanal *@
     <div class="card">
         <div class="card-body" style="padding: 0.5rem;">
@@ -163,36 +194,6 @@ else
             </div>
         </div>
 
-        @* Barra de acciones en lote *@
-        @if (selectedCells.Count > 0)
-        {
-            <div class="bulk-action-bar">
-                <span style="font-size:0.8rem;font-weight:600;color:#8b5cf6;">@selectedCells.Count horarios</span>
-                <select class="form-input" style="width:auto;min-width:180px;padding:0.3rem 0.5rem;font-size:0.8rem;" @bind="bulkInstructorId">
-                    <option value="0">— Instructor —</option>
-                    @if (instructors is not null)
-                    {
-                        @foreach (var inst in instructors)
-                        {
-                            <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
-                        }
-                    }
-                </select>
-                <button class="btn btn-sm" style="background:#10b981;color:white;"
-                        disabled="@(bulkSaving || bulkInstructorId == 0)"
-                        @onclick="() => BulkToggleAvailability(true)">
-                    Agregar disponibilidad
-                </button>
-                <button class="btn btn-sm" style="background:#ef4444;color:white;"
-                        disabled="@(bulkSaving || bulkInstructorId == 0)"
-                        @onclick="() => BulkToggleAvailability(false)">
-                    Quitar disponibilidad
-                </button>
-                <button class="btn btn-sm btn-secondary" @onclick="ClearSelection">
-                    Limpiar
-                </button>
-            </div>
-        }
     </div>
 }
 
@@ -266,11 +267,18 @@ else
                                     @if (b.Status == "confirmed")
                                     {
                                         var bookingId = b.Id;
-                                        <button class="btn btn-sm" style="background:#ef4444;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
-                                                disabled="@modalSaving"
-                                                @onclick="() => AdminCancelBooking(bookingId)">
-                                            Cancelar
-                                        </button>
+                                        <div style="display:flex;gap:0.3rem;">
+                                            <button class="btn btn-sm" style="background:#10b981;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
+                                                    disabled="@modalSaving"
+                                                    @onclick="() => AdminCompleteBooking(bookingId)">
+                                                Completar
+                                            </button>
+                                            <button class="btn btn-sm" style="background:#ef4444;color:white;padding:0.15rem 0.5rem;font-size:0.7rem;"
+                                                    disabled="@modalSaving"
+                                                    @onclick="() => AdminCancelBooking(bookingId)">
+                                                Cancelar
+                                            </button>
+                                        </div>
                                     }
                                 </div>
                                 <div style="display:flex;gap:0.5rem;align-items:center;margin-top:2px;">
@@ -779,6 +787,31 @@ else
         catch
         {
             ToastService.Error("Error al cancelar la reserva");
+        }
+        modalSaving = false;
+        StateHasChanged();
+    }
+
+    private async Task AdminCompleteBooking(int bookingId)
+    {
+        modalSaving = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.AdminCompleteBookingAsync(bookingId);
+            if (success)
+            {
+                await LoadWeekData();
+                ToastService.Success("Clase marcada como completada");
+            }
+            else
+            {
+                ToastService.Error("Error al completar la clase");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al completar la clase");
         }
         modalSaving = false;
         StateHasChanged();
