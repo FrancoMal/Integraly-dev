@@ -232,7 +232,7 @@
                         <tbody>
                             @foreach (var b in allMyBookings.OrderByDescending(b => b.ScheduledDate).ThenByDescending(b => b.StartHour))
                             {
-                                <tr>
+                                <tr style="@GetListRowStyle(b.Status)">
                                     <td>@b.ScheduledDate.ToString("dd/MM/yyyy")</td>
                                     <td style="white-space:nowrap;">@($"{b.StartHour}:00 - {b.StartHour + 1}:00")</td>
                                     <td>@b.InstructorName</td>
@@ -718,6 +718,14 @@
         }
         isCancelling = false;
     }
+
+    private string GetListRowStyle(string s) => s switch
+    {
+        "confirmed" => "background:rgba(245,158,11,0.05);border-left:3px solid #f59e0b;",
+        "completed" => "background:rgba(59,130,246,0.05);border-left:3px solid #3b82f6;",
+        "cancelled" => "background:rgba(239,68,68,0.05);border-left:3px solid #ef4444;",
+        _ => ""
+    };
 
     private string GetListStatusStyle(string s) => s switch
     {
