@@ -267,6 +267,11 @@ public class ApiClient
         return await PutAsync<TokenPackDto>($"/api/tokenpacks/{id}", request);
     }
 
+    public async Task<bool> DeleteTokenPackAsync(int id)
+    {
+        return await DeleteAsync($"/api/tokenpacks/{id}");
+    }
+
     // --- Audit Logs ---
     public async Task<AuditLogListResponse?> GetAuditLogsAsync(DateTime? from = null, DateTime? to = null, string? entityType = null, int page = 1)
     {

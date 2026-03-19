@@ -80,6 +80,20 @@ public class TokenPacksController : ControllerBase
         return Ok(pack);
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var success = await _tokenPackService.DeleteAsync(id);
+        if (!success) return NotFound();
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("TokenPack", id.ToString(), "delete", null, username);
+
+        return NoContent();
+    }
+
     private bool IsAdmin()
     {
         return User.FindFirst(ClaimTypes.Role)?.Value == "admin";

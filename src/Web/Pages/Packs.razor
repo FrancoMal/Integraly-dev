@@ -3,144 +3,225 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 
-<div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h3>Packs (@(packs?.Count ?? 0))</h3>
-        <button class="btn btn-primary" @onclick="ShowCreateForm"><i class="fa-solid fa-box" style="margin-right:0.3rem;"></i>Nuevo Pack</button>
+@* Filtros *@
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="font-size:0.8rem;font-weight:600;">Usuario:</label>
+                    <select class="form-input" style="width:auto;min-width:200px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterUserId" @onchange="OnUserFilterChanged">
+                        <option value="0">Todos</option>
+                        @foreach (var u in uniqueUsers)
+                        {
+                            <option value="@u.Key">@u.Value</option>
+                        }
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="font-size:0.8rem;font-weight:600;">Estado:</label>
+                    <select class="form-input" style="width:auto;min-width:140px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterState" @onchange="OnStateFilterChanged">
+                        <option value="">Todos</option>
+                        <option value="active">Con clases</option>
+                        <option value="empty">Sin clases</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal">
+                <i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>Nuevo Pack
+            </button>
+        </div>
     </div>
-    <div class="card-body" style="padding: 0;">
-        @if (isLoading)
-        {
-            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
-        }
-        else if (packs is null || !packs.Any())
-        {
-            <p class="text-muted" style="padding: 1.5rem;">No hay packs creados</p>
-        }
-        else
-        {
+</div>
+
+@* Resumen *@
+<div class="dashboard-cards-row" style="margin-bottom:1rem;">
+    <div class="stat-card">
+        <div class="stat-card-icon primary"><i class="fa-solid fa-box" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@(filteredPacks.Count)</span>
+            <span class="stat-card-label">Packs</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon success"><i class="fa-solid fa-graduation-cap" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@filteredPacks.Sum(p => p.TotalTokens)</span>
+            <span class="stat-card-label">Clases totales</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon warning"><i class="fa-solid fa-ticket" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@filteredPacks.Sum(p => p.RemainingTokens)</span>
+            <span class="stat-card-label">Clases restantes</span>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando...</p></div></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Usuario</th>
-                            <th>Clases totales</th>
-                            <th>Restantes</th>
                             <th>Descripcion</th>
+                            <th style="text-align:center;">Totales</th>
+                            <th style="text-align:center;">Restantes</th>
+                            <th style="text-align:center;">Usadas</th>
                             <th>Creado por</th>
                             <th>Fecha</th>
-                            <th>Acciones</th>
+                            <th style="min-width:160px;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pack in packs.OrderByDescending(p => p.CreatedAt))
+                        @if (filteredPacks.Count == 0)
                         {
                             <tr>
-                                <td><strong>@pack.UserName</strong></td>
-                                <td>@pack.TotalTokens</td>
-                                <td>
-                                    <span class="@(pack.RemainingTokens > 0 ? "text-success" : "text-muted")">
-                                        @pack.RemainingTokens
-                                    </span>
-                                </td>
-                                <td>@(string.IsNullOrEmpty(pack.Description) ? "-" : pack.Description)</td>
-                                <td>@pack.CreatedByName</td>
-                                <td>@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
-                                <td class="actions-cell">
-                                    <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditForm(pack)" title="Editar">
-                                        <i class="fa-solid fa-pen" style="margin-right:0.3rem;"></i>Editar
-                                    </button>
-                                </td>
+                                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay packs para mostrar</td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var pack in filteredPacks)
+                            {
+                                var used = pack.TotalTokens - pack.RemainingTokens;
+                                var pct = pack.TotalTokens > 0 ? (int)((double)pack.RemainingTokens / pack.TotalTokens * 100) : 0;
+                                <tr>
+                                    <td><strong>@pack.UserName</strong></td>
+                                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@(string.IsNullOrEmpty(pack.Description) ? "—" : pack.Description)</td>
+                                    <td style="text-align:center;font-weight:600;">@pack.TotalTokens</td>
+                                    <td style="text-align:center;">
+                                        <span style="font-weight:600;color:@(pack.RemainingTokens > 0 ? "#10b981" : "#ef4444");">@pack.RemainingTokens</span>
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center;">
+                                            <span style="font-size:0.8rem;">@used</span>
+                                            <div style="width:50px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                                                <div style="width:@(100-pct)%;height:100%;background:@(pct > 30 ? "#10b981" : pct > 0 ? "#f59e0b" : "#ef4444");border-radius:3px;"></div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style="font-size:0.8rem;color:var(--text-secondary);">@pack.CreatedByName</td>
+                                    <td style="font-size:0.8rem;">@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
+                                    <td>
+                                        <div style="display:flex;gap:0.4rem;align-items:center;">
+                                            <button class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                    disabled="@saving"
+                                                    @onclick="() => OpenEditModal(pack)">
+                                                <i class="fa-solid fa-pen" style="margin-right:0.3rem;"></i>Editar
+                                            </button>
+                                            <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                    disabled="@saving"
+                                                    @onclick="() => OpenDeleteConfirm(pack)">
+                                                <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
             </div>
-        }
+        </div>
     </div>
-</div>
+}
 
-@if (showForm)
+@* Modal crear/editar *@
+@if (showModal)
 {
-    <div class="modal-overlay" @onclick="CloseForm">
-        <div class="modal-card" @onclick:stopPropagation="true">
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:480px;">
             <div class="modal-header">
-                <h3>Nuevo Pack de Clases</h3>
-                <button class="btn-close" @onclick="CloseForm">&times;</button>
+                <h3 style="margin:0;font-size:1rem;">@(editingPack is not null ? "Editar Pack" : "Nuevo Pack")</h3>
             </div>
             <div class="modal-body">
-                @if (!string.IsNullOrEmpty(formError))
-                {
-                    <div class="form-error">@formError</div>
-                }
-
-                <div class="form-group">
-                    <label class="form-label">Usuario</label>
-                    <select class="form-input" @bind="formUserId">
-                        <option value="0">-- Seleccionar usuario --</option>
-                        @if (users is not null)
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    @if (editingPack is null)
+                    {
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Usuario</label>
+                            <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formUserId">
+                                <option value="0">-- Seleccionar usuario --</option>
+                                @if (users is not null)
+                                {
+                                    @foreach (var user in users.Where(u => u.IsActive))
+                                    {
+                                        <option value="@user.Id">@($"{user.FirstName} {user.LastName}".Trim()) (@user.Username)</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Usuario</label>
+                            <input class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;background:#f8fafc;" value="@editingPack.UserName" disabled />
+                        </div>
+                    }
+                    <div style="display:flex;gap:0.75rem;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">
+                                @(editingPack is null ? "Cantidad de clases" : "Clases totales")
+                            </label>
+                            <input type="number" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" min="1" max="1000"
+                                   @bind="formTotalTokens" disabled="@(editingPack is not null)" />
+                        </div>
+                        @if (editingPack is not null)
                         {
-                            @foreach (var user in users.Where(u => u.IsActive))
-                            {
-                                <option value="@user.Id">@user.Username - @($"{user.FirstName} {user.LastName}".Trim()) (@user.Role)</option>
-                            }
+                            <div style="flex:1;">
+                                <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Clases restantes</label>
+                                <input type="number" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" min="0" max="10000"
+                                       @bind="formRemainingTokens" />
+                            </div>
                         }
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Cantidad de clases</label>
-                    <input class="form-input" type="number" @bind="formTokens" min="1" max="100" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Descripcion (opcional)</label>
-                    <input class="form-input" @bind="formDescription" placeholder="Ej: Pack mensual marzo 2026" />
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Descripcion</label>
+                        <input type="text" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;"
+                               placeholder="Ej: Pack mensual marzo 2026" @bind="formDescription" />
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseForm"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
-                <button class="btn btn-primary" @onclick="CreatePack" disabled="@isSaving">
-                    <i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Pack")
+                <button class="btn btn-secondary btn-sm" @onclick="CloseModal" disabled="@saving">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-primary btn-sm" @onclick="SavePack" disabled="@saving">
+                    @if (saving) { @("Guardando...") } else { <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@("Guardar") }
                 </button>
             </div>
         </div>
     </div>
 }
 
-@if (showEditForm)
+@* Modal confirmar eliminacion *@
+@if (showDeleteConfirm)
 {
-    <div class="modal-overlay" @onclick="CloseEditForm">
-        <div class="modal-card" @onclick:stopPropagation="true">
+    <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:420px;">
             <div class="modal-header">
-                <h3>Editar Pack</h3>
-                <button class="btn-close" @onclick="CloseEditForm">&times;</button>
+                <h3 style="margin:0;font-size:1rem;color:var(--danger);">Eliminar Pack</h3>
             </div>
             <div class="modal-body">
-                @if (!string.IsNullOrEmpty(editFormError))
-                {
-                    <div class="form-error">@editFormError</div>
-                }
-
-                <div class="form-group">
-                    <label class="form-label">Usuario</label>
-                    <input class="form-input" value="@editPackUserName" disabled />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Clases restantes</label>
-                    <input class="form-input" type="number" @bind="editRemainingTokens" min="0" max="10000" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Descripcion</label>
-                    <input class="form-input" @bind="editDescription" placeholder="Descripcion del pack" />
-                </div>
+                <p style="font-size:0.9rem;">Estas seguro de eliminar el pack de <strong>@deletingPack?.UserName</strong>?</p>
+                <p style="font-size:0.8rem;color:var(--text-muted);">Este pack tiene @deletingPack?.RemainingTokens clases restantes de @deletingPack?.TotalTokens totales. Esta accion no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseEditForm"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
-                <button class="btn btn-primary" @onclick="SaveEdit" disabled="@isEditSaving">
-                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isEditSaving ? "Guardando..." : "Guardar")
+                <button class="btn btn-secondary btn-sm" @onclick="() => showDeleteConfirm = false" disabled="@saving">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-sm" style="background:var(--danger);color:white;" @onclick="DeletePack" disabled="@saving">
+                    <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>@(saving ? "Eliminando..." : "Eliminar")
                 </button>
             </div>
         </div>
@@ -151,22 +232,40 @@
     private List<TokenPackDto>? packs;
     private List<UserManageDto>? users;
     private bool isLoading = true;
-    private bool showForm;
-    private bool isSaving;
-    private string? formError;
+    private bool saving = false;
 
-    private int formUserId;
-    private int formTokens = 4;
+    // Filters
+    private int filterUserId = 0;
+    private string filterState = "";
+    private Dictionary<int, string> uniqueUsers = new();
+
+    // Modal
+    private bool showModal = false;
+    private TokenPackDto? editingPack;
+    private int formUserId = 0;
+    private int formTotalTokens = 4;
+    private int formRemainingTokens = 0;
     private string formDescription = "";
 
-    // Edit form
-    private bool showEditForm;
-    private bool isEditSaving;
-    private string? editFormError;
-    private int editPackId;
-    private string editPackUserName = "";
-    private int editRemainingTokens;
-    private string editDescription = "";
+    // Delete
+    private bool showDeleteConfirm = false;
+    private TokenPackDto? deletingPack;
+
+    private List<TokenPackDto> filteredPacks
+    {
+        get
+        {
+            if (packs is null) return new();
+            var result = packs.AsEnumerable();
+            if (filterUserId > 0)
+                result = result.Where(p => p.UserId == filterUserId);
+            if (filterState == "active")
+                result = result.Where(p => p.RemainingTokens > 0);
+            else if (filterState == "empty")
+                result = result.Where(p => p.RemainingTokens == 0);
+            return result.OrderByDescending(p => p.CreatedAt).ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -183,6 +282,16 @@
             await Task.WhenAll(packsTask, usersTask);
             packs = packsTask.Result;
             users = usersTask.Result;
+
+            uniqueUsers = new();
+            if (packs is not null)
+            {
+                foreach (var p in packs)
+                {
+                    if (!uniqueUsers.ContainsKey(p.UserId))
+                        uniqueUsers[p.UserId] = p.UserName;
+                }
+            }
         }
         catch
         {
@@ -191,109 +300,136 @@
         isLoading = false;
     }
 
-    private void ShowCreateForm()
+    private void OnUserFilterChanged(ChangeEventArgs e)
     {
+        filterUserId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+    }
+
+    private void OnStateFilterChanged(ChangeEventArgs e)
+    {
+        filterState = e.Value?.ToString() ?? "";
+    }
+
+    // Modal
+    private void OpenCreateModal()
+    {
+        editingPack = null;
         formUserId = 0;
-        formTokens = 4;
+        formTotalTokens = 4;
+        formRemainingTokens = 0;
         formDescription = "";
-        formError = null;
-        showForm = true;
+        showModal = true;
     }
 
-    private void CloseForm()
+    private void OpenEditModal(TokenPackDto pack)
     {
-        showForm = false;
-        formError = null;
+        editingPack = pack;
+        formUserId = pack.UserId;
+        formTotalTokens = pack.TotalTokens;
+        formRemainingTokens = pack.RemainingTokens;
+        formDescription = pack.Description ?? "";
+        showModal = true;
     }
 
-    private async Task CreatePack()
+    private void CloseModal() => showModal = false;
+
+    private async Task SavePack()
     {
-        formError = null;
-
-        if (formUserId == 0)
-        {
-            formError = "Selecciona un usuario";
-            return;
-        }
-
-        if (formTokens < 1)
-        {
-            formError = "La cantidad de clases debe ser al menos 1";
-            return;
-        }
-
-        isSaving = true;
+        saving = true;
+        StateHasChanged();
         try
         {
-            var request = new CreateTokenPackRequest
+            if (editingPack is not null)
             {
-                UserId = formUserId,
-                TotalTokens = formTokens,
-                Description = formDescription
-            };
-
-            var result = await Api.CreateTokenPackAsync(request);
-            if (result is not null)
-            {
-                ToastService.Success("Pack creado correctamente");
-                showForm = false;
-                await LoadData();
+                var result = await Api.UpdateTokenPackAsync(editingPack.Id, new
+                {
+                    RemainingTokens = formRemainingTokens,
+                    Description = formDescription
+                });
+                if (result is not null)
+                {
+                    await LoadData();
+                    showModal = false;
+                    ToastService.Success("Pack actualizado");
+                }
+                else
+                {
+                    ToastService.Error("Error al actualizar el pack");
+                }
             }
             else
             {
-                formError = "Error al crear el pack";
+                if (formUserId == 0)
+                {
+                    ToastService.Error("Selecciona un usuario");
+                    saving = false;
+                    return;
+                }
+                if (formTotalTokens < 1)
+                {
+                    ToastService.Error("La cantidad de clases debe ser al menos 1");
+                    saving = false;
+                    return;
+                }
+
+                var request = new CreateTokenPackRequest
+                {
+                    UserId = formUserId,
+                    TotalTokens = formTotalTokens,
+                    Description = formDescription
+                };
+                var result = await Api.CreateTokenPackAsync(request);
+                if (result is not null)
+                {
+                    await LoadData();
+                    showModal = false;
+                    ToastService.Success("Pack creado");
+                }
+                else
+                {
+                    ToastService.Error("Error al crear el pack");
+                }
             }
         }
         catch
         {
-            formError = "Error al crear el pack";
+            ToastService.Error("Error al guardar el pack");
         }
-        isSaving = false;
+        saving = false;
+        StateHasChanged();
     }
 
-    private void ShowEditForm(TokenPackDto pack)
+    // Delete
+    private void OpenDeleteConfirm(TokenPackDto pack)
     {
-        editPackId = pack.Id;
-        editPackUserName = pack.UserName;
-        editRemainingTokens = pack.RemainingTokens;
-        editDescription = pack.Description ?? "";
-        editFormError = null;
-        showEditForm = true;
+        deletingPack = pack;
+        showDeleteConfirm = true;
     }
 
-    private void CloseEditForm()
+    private async Task DeletePack()
     {
-        showEditForm = false;
-        editFormError = null;
-    }
-
-    private async Task SaveEdit()
-    {
-        editFormError = null;
-        isEditSaving = true;
+        if (deletingPack is null) return;
+        saving = true;
+        StateHasChanged();
         try
         {
-            var result = await Api.UpdateTokenPackAsync(editPackId, new
+            var success = await Api.DeleteTokenPackAsync(deletingPack.Id);
+            if (success)
             {
-                RemainingTokens = editRemainingTokens,
-                Description = editDescription
-            });
-
-            if (result is not null)
-            {
-                ToastService.Success("Pack actualizado correctamente");
-                showEditForm = false;
                 await LoadData();
+                showDeleteConfirm = false;
+                ToastService.Success("Pack eliminado");
             }
             else
             {
-                editFormError = "Error al actualizar el pack";
+                ToastService.Error("Error al eliminar el pack");
             }
         }
         catch
         {
-            editFormError = "Error al actualizar el pack";
+            ToastService.Error("Error al eliminar el pack");
         }
-        isEditSaving = false;
+        saving = false;
+        StateHasChanged();
     }
 }
