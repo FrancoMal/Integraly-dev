@@ -16,4 +16,7 @@ COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/admin
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/panel
 # Override panel's index.html with the one that has base href="/panel/"
 COPY panel-index.html /usr/share/nginx/html/panel/index.html
+# Blazor app under /webinar/
+COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/webinar
+COPY webinar-index.html /usr/share/nginx/html/webinar/index.html
 EXPOSE 80

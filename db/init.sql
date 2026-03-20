@@ -243,7 +243,7 @@ GO
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
 (1, 'dashboard'), (1, 'calendario'), (1, 'reservar'), (1, 'mis-reservas'),
 (1, 'usuarios'), (1, 'invitaciones'), (1, 'packs'), (1, 'todas-reservas'),
-(1, 'auditoria'), (1, 'config'), (1, 'perfil');
+(1, 'auditoria'), (1, 'config'), (1, 'perfil'), (1, 'webinar');
 GO
 
 -- Seed instructor permissions
@@ -395,6 +395,60 @@ IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Instructor
 BEGIN
     ALTER TABLE InstructorTasks ADD StartHour INT NOT NULL DEFAULT 8;
     ALTER TABLE InstructorTasks ADD EndHour INT NOT NULL DEFAULT 9;
+END
+GO
+
+-- WebinarDates table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarDates' AND xtype='U')
+BEGIN
+    CREATE TABLE WebinarDates (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Date DATETIME2 NOT NULL,
+        MeetingLink NVARCHAR(500) NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE()
+    );
+END
+GO
+
+-- WebinarContacts table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarContacts' AND xtype='U')
+BEGIN
+    CREATE TABLE WebinarContacts (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Email NVARCHAR(255) NOT NULL,
+        FirstName NVARCHAR(100) NOT NULL,
+        LastName NVARCHAR(100) NOT NULL,
+        Phone NVARCHAR(50) NULL,
+        UUID NVARCHAR(100) NOT NULL UNIQUE,
+        WebinarDateId INT NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        CONSTRAINT FK_WebinarContacts_WebinarDate FOREIGN KEY (WebinarDateId) REFERENCES WebinarDates(Id)
+    );
+    CREATE UNIQUE INDEX IX_WebinarContacts_UUID ON WebinarContacts (UUID);
+END
+GO
+
+-- WebinarRegistrations table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarRegistrations' AND xtype='U')
+BEGIN
+    CREATE TABLE WebinarRegistrations (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        ContactId INT NOT NULL,
+        WebinarDateId INT NOT NULL,
+        KnowsChatGPT BIT DEFAULT 0,
+        KnowsClaude BIT DEFAULT 0,
+        KnowsGrok BIT DEFAULT 0,
+        KnowsGemini BIT DEFAULT 0,
+        KnowsCopilot BIT DEFAULT 0,
+        KnowsPerplexity BIT DEFAULT 0,
+        KnowsDeepSeek BIT DEFAULT 0,
+        VibeCodingKnowledge NVARCHAR(50) NOT NULL DEFAULT 'no_idea',
+        RegisteredAt DATETIME2 DEFAULT GETDATE(),
+        CONSTRAINT FK_WebinarRegistrations_Contact FOREIGN KEY (ContactId) REFERENCES WebinarContacts(Id),
+        CONSTRAINT FK_WebinarRegistrations_WebinarDate FOREIGN KEY (WebinarDateId) REFERENCES WebinarDates(Id)
+    );
+    CREATE INDEX IX_WebinarRegistrations_ContactId ON WebinarRegistrations (ContactId);
+    CREATE INDEX IX_WebinarRegistrations_WebinarDateId ON WebinarRegistrations (WebinarDateId);
 END
 GO
 

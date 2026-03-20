@@ -1,0 +1,256 @@
+@page "/webinar/{Uuid}"
+@layout LoginLayout
+@inject ApiClient Api
+@inject ToastService ToastService
+
+@if (loading)
+{
+    <div class="login-card" role="main" style="max-width: 520px;">
+        <div class="login-header">
+            <div class="login-logo" aria-hidden="true">
+                @SvgIcons.Brand
+            </div>
+            <h1>integraly<span class="brand-dot">.dev</span></h1>
+            <p>Cargando formulario...</p>
+        </div>
+    </div>
+}
+else if (notFound)
+{
+    <div class="login-card" role="main" style="max-width: 520px;">
+        <div class="login-header">
+            <div class="login-logo" aria-hidden="true">
+                @SvgIcons.Brand
+            </div>
+            <h1>integraly<span class="brand-dot">.dev</span></h1>
+        </div>
+        <div class="login-body">
+            <div class="login-error visible" role="alert">
+                @SvgIcons.AlertCircle
+                <span>Enlace no valido</span>
+            </div>
+            <p style="text-align: center; color: var(--text-muted, #888); margin-top: 0.5rem;">
+                Este enlace no existe o ya no esta disponible.
+            </p>
+        </div>
+    </div>
+}
+else if (alreadyRegistered || submitted)
+{
+    <div class="login-card" role="main" style="max-width: 520px;">
+        <div class="login-header">
+            <div class="login-logo" aria-hidden="true">
+                @SvgIcons.Brand
+            </div>
+            <h1>integraly<span class="brand-dot">.dev</span></h1>
+        </div>
+        <div class="login-body">
+            <div class="form-success" style="margin-bottom: 1rem; text-align: center; font-size: 1.05rem;">
+                @if (submitted)
+                {
+                    <span>🎉 ¡Te inscribiste exitosamente!</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted, #888); font-size: 0.9rem;">
+                        Te vamos a enviar un recordatorio antes del webinar.
+                    </p>
+                }
+                else
+                {
+                    <span>Ya estas inscripto en este webinar.</span>
+                    <p style="margin-top: 0.5rem; color: var(--text-muted, #888); font-size: 0.9rem;">
+                        No necesitas hacer nada mas. ¡Te esperamos!
+                    </p>
+                }
+            </div>
+        </div>
+    </div>
+}
+else if (formData is not null)
+{
+    <div class="login-card" role="main" style="max-width: 520px;">
+        <div class="login-header">
+            <div class="login-logo" aria-hidden="true">
+                @SvgIcons.Brand
+            </div>
+            <h1>integraly<span class="brand-dot">.dev</span></h1>
+            <p>Webinar gratuito</p>
+        </div>
+
+        <div class="login-body">
+            <h2 style="margin: 0 0 0.25rem; font-size: 1.3rem; color: var(--text-primary, #1a1a2e);">
+                ¡Hola @formData.FirstName!
+            </h2>
+            <p style="margin: 0 0 1.25rem; color: var(--text-muted, #888); font-size: 0.95rem;">
+                Completa el formulario para inscribirte al webinar
+            </p>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="login-error visible" role="alert">
+                    @SvgIcons.AlertCircle
+                    <span>@errorMessage</span>
+                </div>
+            }
+
+            <!-- Fecha -->
+            <div class="form-group">
+                <label class="form-label">Elegí una fecha</label>
+                <select class="form-input" @bind="model.WebinarDateId">
+                    <option value="0" disabled>Selecciona una fecha</option>
+                    @foreach (var date in formData.AvailableDates)
+                    {
+                        <option value="@date.Id">@FormatDate(date.Date)</option>
+                    }
+                </select>
+            </div>
+
+            <!-- Herramientas de IA -->
+            <div class="form-group">
+                <label class="form-label">¿Que herramientas de IA conoces?</label>
+                <p style="margin: 0 0 0.5rem; color: var(--text-muted, #888); font-size: 0.85rem;">
+                    Selecciona todas las que conozcas
+                </p>
+                <div class="checkbox-grid">
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsChatGPT" />
+                        <span>ChatGPT</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsClaude" />
+                        <span>Claude</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsGrok" />
+                        <span>Grok</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsGemini" />
+                        <span>Gemini</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsCopilot" />
+                        <span>Copilot</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsPerplexity" />
+                        <span>Perplexity</span>
+                    </label>
+                    <label class="checkbox-item">
+                        <input type="checkbox" @bind="model.KnowsDeepSeek" />
+                        <span>DeepSeek</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Vibe Coding -->
+            <div class="form-group">
+                <label class="form-label">¿Sabes que es Vibe Coding?</label>
+                <div class="radio-group">
+                    <label class="radio-item">
+                        <input type="radio" name="vibecoding" value="yes_use_it"
+                               checked="@(model.VibeCodingKnowledge == "yes_use_it")"
+                               @onchange="@(() => model.VibeCodingKnowledge = "yes_use_it")" />
+                        <span>Si, lo uso</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="vibecoding" value="yes_not_tried"
+                               checked="@(model.VibeCodingKnowledge == "yes_not_tried")"
+                               @onchange="@(() => model.VibeCodingKnowledge = "yes_not_tried")" />
+                        <span>Si, pero no lo probe</span>
+                    </label>
+                    <label class="radio-item">
+                        <input type="radio" name="vibecoding" value="no_idea"
+                               checked="@(model.VibeCodingKnowledge == "no_idea")"
+                               @onchange="@(() => model.VibeCodingKnowledge = "no_idea")" />
+                        <span>No se que es</span>
+                    </label>
+                </div>
+            </div>
+
+            <button class="login-btn" @onclick="HandleSubmit" disabled="@submitting" style="margin-top: 0.5rem;">
+                @(submitting ? "Enviando..." : "Inscribirme")
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Uuid { get; set; } = "";
+
+    private WebinarFormDataDto? formData;
+    private WebinarFormSubmitRequest model = new();
+    private bool loading = true;
+    private bool submitting;
+    private bool submitted;
+    private bool notFound;
+    private bool alreadyRegistered;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            formData = await Api.GetWebinarFormAsync(Uuid);
+            if (formData is null)
+            {
+                notFound = true;
+            }
+            else if (formData.AlreadyRegistered)
+            {
+                alreadyRegistered = true;
+            }
+            else if (formData.AvailableDates.Count > 0)
+            {
+                model.WebinarDateId = formData.AvailableDates[0].Id;
+            }
+        }
+        catch
+        {
+            notFound = true;
+        }
+
+        loading = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        errorMessage = null;
+
+        if (model.WebinarDateId == 0)
+        {
+            errorMessage = "Selecciona una fecha para el webinar";
+            return;
+        }
+
+        submitting = true;
+
+        try
+        {
+            var success = await Api.SubmitWebinarFormAsync(Uuid, model);
+            if (success)
+            {
+                submitted = true;
+                ToastService.Success("¡Inscripcion exitosa!");
+            }
+            else
+            {
+                errorMessage = "No se pudo completar la inscripcion. Intenta de nuevo.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Ocurrio un error al enviar el formulario. Intenta de nuevo.";
+        }
+
+        submitting = false;
+    }
+
+    private static string FormatDate(DateTime date)
+    {
+        var culture = new System.Globalization.CultureInfo("es-AR");
+        var dayName = date.ToString("dddd", culture);
+        dayName = char.ToUpper(dayName[0]) + dayName.Substring(1);
+        var monthName = date.ToString("MMMM", culture);
+        monthName = char.ToUpper(monthName[0]) + monthName.Substring(1);
+        return $"{dayName} {date.Day} de {monthName}, {date.Year}";
+    }
+}

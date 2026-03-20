@@ -80,6 +80,8 @@ public static MarkupString Timer => (MarkupString)@"<svg viewBox=""0 0 24 24"" f
 
     public static MarkupString ClipboardList => (MarkupString)@"<svg viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round""><path d=""M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2""/><rect x=""8"" y=""2"" width=""8"" height=""4"" rx=""1"" ry=""1""/><line x1=""9"" y1=""12"" x2=""15"" y2=""12""/><line x1=""9"" y1=""16"" x2=""15"" y2=""16""/></svg>";
 
+    public static MarkupString Video => (MarkupString)@"<svg xmlns=""http://www.w3.org/2000/svg"" width=""20"" height=""20"" viewBox=""0 0 24 24"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round""><polygon points=""23 7 16 12 23 17 23 7""/><rect x=""1"" y=""5"" width=""15"" height=""14"" rx=""2"" ry=""2""/></svg>";
+
     public static MarkupString GetByName(string name)
     {
         return name switch
@@ -114,6 +116,7 @@ public static MarkupString Timer => (MarkupString)@"<svg viewBox=""0 0 24 24"" f
             "Mail" => Mail,
             "List" => List,
             "ClipboardList" => ClipboardList,
+            "Video" => Video,
             _ => Brand
         };
     }
@@ -124,7 +127,7 @@ public static MarkupString Timer => (MarkupString)@"<svg viewBox=""0 0 24 24"" f
         "Box", "Inventory", "Server", "Database", "Memory", "Shield",
         "Users", "Settings", "Admin", "Code", "Link", "Timer",
         "History", "Edit", "Check", "Table",
-        "Calendar", "Clock", "CheckCircle", "Mail", "List", "ClipboardList"
+        "Calendar", "Clock", "CheckCircle", "Mail", "List", "ClipboardList", "Video"
     };
 
 }

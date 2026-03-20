@@ -21,7 +21,8 @@ public static class MenuDefinition
             new MenuItem("packs", "Packs", "/packs"),
             new MenuItem("todas-reservas", "Todas las Reservas", "/todas-reservas"),
             new MenuItem("auditoria", "Auditoria", "/auditoria"),
-            new MenuItem("config", "Configuracion", "/config")
+            new MenuItem("config", "Configuracion", "/config"),
+            new MenuItem("webinar", "Webinar", "/webinar")
         }),
         new MenuGroup("cuenta", "Cuenta", new[]
         {

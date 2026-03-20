@@ -1,0 +1,670 @@
+@page "/webinar-admin"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject IJSRuntime JS
+@inject ToastService Toast
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <h2 class="page-title">Webinar</h2>
+</div>
+
+@* Tabs *@
+<div style="margin-bottom: 1rem;">
+    <div class="view-toggle">
+        <button class="btn btn-sm @(activeTab == "fechas" ? "btn-primary" : "btn-ghost")" @onclick='() => SwitchTab("fechas")'>
+            <i class="fa-solid fa-calendar-days" style="margin-right:0.35rem;"></i>Fechas
+        </button>
+        <button class="btn btn-sm @(activeTab == "contactos" ? "btn-primary" : "btn-ghost")" @onclick='() => SwitchTab("contactos")'>
+            <i class="fa-solid fa-address-book" style="margin-right:0.35rem;"></i>Contactos
+        </button>
+        <button class="btn btn-sm @(activeTab == "estadisticas" ? "btn-primary" : "btn-ghost")" @onclick='() => SwitchTab("estadisticas")'>
+            <i class="fa-solid fa-chart-bar" style="margin-right:0.35rem;"></i>Estadisticas
+        </button>
+    </div>
+</div>
+
+@* ==================== TAB: FECHAS ==================== *@
+@if (activeTab == "fechas")
+{
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Fechas del Webinar (@(dates?.Count ?? 0))</h3>
+            <button class="btn btn-primary" @onclick="ShowDateForm">
+                <i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>Nueva Fecha
+            </button>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            @if (isLoadingDates)
+            {
+                <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+            }
+            else if (dates is null || !dates.Any())
+            {
+                <p class="text-muted" style="padding: 1.5rem;">No hay fechas configuradas</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Link de reunion</th>
+                                <th>Inscriptos</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var d in dates.OrderBy(x => x.Date))
+                            {
+                                <tr>
+                                    <td><strong>@d.Date.ToString("dddd dd/MM/yyyy HH:mm")</strong></td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(d.MeetingLink))
+                                        {
+                                            <a href="@d.MeetingLink" target="_blank" style="word-break:break-all;">@d.MeetingLink</a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td>@d.RegistrationCount</td>
+                                    <td class="actions-cell">
+                                        <button class="btn-icon btn-delete" @onclick="() => ConfirmDeleteDate(d)" title="Eliminar">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ==================== TAB: CONTACTOS ==================== *@
+@if (activeTab == "contactos")
+{
+    <div class="card">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Contactos (@(contacts?.Count ?? 0))</h3>
+            <button class="btn btn-primary" @onclick="ShowContactForm">
+                <i class="fa-solid fa-user-plus" style="margin-right:0.3rem;"></i>Nuevo Contacto
+            </button>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            @if (isLoadingContacts)
+            {
+                <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
+            }
+            else if (contacts is null || !contacts.Any())
+            {
+                <p class="text-muted" style="padding: 1.5rem;">No hay contactos</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre completo</th>
+                                <th>Email</th>
+                                <th>Telefono</th>
+                                <th>Inscripto</th>
+                                <th>Fecha inscripcion</th>
+                                <th>Link</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in contacts.OrderByDescending(x => x.CreatedAt))
+                            {
+                                <tr>
+                                    <td><strong>@c.FirstName @c.LastName</strong></td>
+                                    <td>@c.Email</td>
+                                    <td>@(!string.IsNullOrEmpty(c.Phone) ? c.Phone : "-")</td>
+                                    <td>
+                                        @if (c.HasRegistration)
+                                        {
+                                            <span class="status-badge status-active">Si</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-badge status-inactive">No</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(c.WebinarDateDisplay))
+                                        {
+                                            @c.WebinarDateDisplay
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button class="btn btn-sm btn-secondary" @onclick="() => CopyContactLink(c.UUID)" title="Copiar link">
+                                            <i class="fa-solid fa-copy" style="margin-right:0.3rem;"></i>Copiar
+                                        </button>
+                                    </td>
+                                    <td class="actions-cell">
+                                        <button class="btn-icon btn-delete" @onclick="() => ConfirmDeleteContact(c)" title="Eliminar">
+                                            <i class="fa-solid fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ==================== TAB: ESTADISTICAS ==================== *@
+@if (activeTab == "estadisticas")
+{
+    @if (isLoadingStats)
+    {
+        <p class="text-muted" style="padding: 1.5rem;">Cargando estadisticas...</p>
+    }
+    else if (stats is null)
+    {
+        <p class="text-muted" style="padding: 1.5rem;">No se pudieron cargar las estadisticas</p>
+    }
+    else
+    {
+        <div class="stats-grid" style="margin-bottom: 1.5rem;">
+            <div class="stat-card">
+                <div class="stat-card-icon primary">
+                    <i class="fa-solid fa-address-book"></i>
+                </div>
+                <div class="stat-card-info">
+                    <span class="stat-card-value">@stats.TotalContacts</span>
+                    <span class="stat-card-label">Total Contactos</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-card-icon success">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <div class="stat-card-info">
+                    <span class="stat-card-value">@stats.TotalRegistrations</span>
+                    <span class="stat-card-label">Total Inscriptos</span>
+                </div>
+            </div>
+        </div>
+
+        @if (stats.PerDate.Any())
+        {
+            @foreach (var dateStat in stats.PerDate.OrderBy(x => x.Date))
+            {
+                <div class="card" style="margin-bottom: 1rem;">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-calendar-day" style="margin-right:0.5rem;"></i>@dateStat.Date.ToString("dddd dd/MM/yyyy HH:mm")</h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="margin-bottom: 1rem;"><strong>Inscriptos:</strong> @dateStat.Registrations</p>
+
+                        @if (dateStat.Registrations > 0)
+                        {
+                            <h4 style="margin-bottom: 0.75rem; font-size: 0.95rem; color: var(--text-secondary);">Herramientas de IA conocidas</h4>
+                            <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1.5rem;">
+                                @foreach (var tool in GetAiToolStats(dateStat))
+                                {
+                                    var pct = dateStat.Registrations > 0 ? (int)Math.Round(100.0 * tool.Count / dateStat.Registrations) : 0;
+                                    <div>
+                                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.25rem;">
+                                            <span style="font-weight:600;font-size:0.9rem;">@tool.Name</span>
+                                            <span style="font-size:0.85rem;color:var(--text-secondary);">@pct% (@tool.Count/@dateStat.Registrations)</span>
+                                        </div>
+                                        <div style="background:var(--bg-secondary, #e5e7eb);border-radius:6px;height:8px;overflow:hidden;">
+                                            <div style="background:var(--primary, #4f46e5);height:100%;width:@(pct)%;border-radius:6px;transition:width 0.3s;"></div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+
+                            <h4 style="margin-bottom: 0.75rem; font-size: 0.95rem; color: var(--text-secondary);">Conocimiento de Vibe Coding</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.75rem;">
+                                @foreach (var vc in dateStat.VibeCodingBreakdown)
+                                {
+                                    <div style="background:var(--bg-secondary, #f3f4f6);border-radius:8px;padding:0.5rem 1rem;text-align:center;">
+                                        <div style="font-weight:700;font-size:1.1rem;color:var(--text-primary);">@vc.Value</div>
+                                        <div style="font-size:0.8rem;color:var(--text-secondary);">@GetVibeCodingLabel(vc.Key)</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">No hay datos por fecha todavia</p>
+        }
+    }
+}
+
+@* ==================== MODAL: NUEVA FECHA ==================== *@
+@if (showDateModal)
+{
+    <div class="modal-overlay" @onclick="CloseDateForm">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Nueva Fecha de Webinar</h3>
+                <button class="btn-close" @onclick="CloseDateForm">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(dateFormError))
+                {
+                    <div class="form-error">@dateFormError</div>
+                }
+                <div class="form-group">
+                    <label class="form-label">Fecha y hora</label>
+                    <input class="form-input" type="datetime-local" @bind="formDate" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Link de reunion (opcional)</label>
+                    <input class="form-input" type="url" @bind="formMeetingLink" placeholder="https://meet.google.com/..." />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseDateForm">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-primary" @onclick="CreateDate" disabled="@isSaving">
+                    <i class="fa-solid fa-check" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Fecha")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ==================== MODAL: NUEVO CONTACTO ==================== *@
+@if (showContactModal)
+{
+    <div class="modal-overlay" @onclick="CloseContactForm">
+        <div class="modal-card" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Nuevo Contacto</h3>
+                <button class="btn-close" @onclick="CloseContactForm">&times;</button>
+            </div>
+            <div class="modal-body">
+                @if (!string.IsNullOrEmpty(contactFormError))
+                {
+                    <div class="form-error">@contactFormError</div>
+                }
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input class="form-input" type="email" @bind="formEmail" placeholder="correo@ejemplo.com" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nombre</label>
+                    <input class="form-input" type="text" @bind="formFirstName" placeholder="Juan" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Apellido</label>
+                    <input class="form-input" type="text" @bind="formLastName" placeholder="Perez" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefono (opcional)</label>
+                    <input class="form-input" type="tel" @bind="formPhone" placeholder="+54 11 1234-5678" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="CloseContactForm">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-primary" @onclick="CreateContact" disabled="@isSaving">
+                    <i class="fa-solid fa-user-plus" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Contacto")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ==================== MODAL: CONFIRMAR ELIMINACION FECHA ==================== *@
+@if (showDeleteDateConfirm)
+{
+    <div class="modal-overlay" @onclick="() => showDeleteDateConfirm = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirmar eliminacion</h3>
+            </div>
+            <div class="modal-body">
+                <p>Estas seguro que queres eliminar la fecha <strong>@dateToDelete?.Date.ToString("dd/MM/yyyy HH:mm")</strong>?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showDeleteDateConfirm = false">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-danger" @onclick="DeleteDate">
+                    <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ==================== MODAL: CONFIRMAR ELIMINACION CONTACTO ==================== *@
+@if (showDeleteContactConfirm)
+{
+    <div class="modal-overlay" @onclick="() => showDeleteContactConfirm = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirmar eliminacion</h3>
+            </div>
+            <div class="modal-body">
+                <p>Estas seguro que queres eliminar el contacto <strong>@contactToDelete?.FirstName @contactToDelete?.LastName</strong> (@contactToDelete?.Email)?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showDeleteContactConfirm = false">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-danger" @onclick="DeleteContact">
+                    <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "fechas";
+
+    // Dates
+    private List<WebinarDateDto>? dates;
+    private bool isLoadingDates = true;
+    private bool showDateModal;
+    private DateTime formDate = DateTime.Now;
+    private string formMeetingLink = "";
+    private string? dateFormError;
+    private WebinarDateDto? dateToDelete;
+    private bool showDeleteDateConfirm;
+
+    // Contacts
+    private List<WebinarContactDto>? contacts;
+    private bool isLoadingContacts = true;
+    private bool showContactModal;
+    private string formEmail = "";
+    private string formFirstName = "";
+    private string formLastName = "";
+    private string formPhone = "";
+    private string? contactFormError;
+    private WebinarContactDto? contactToDelete;
+    private bool showDeleteContactConfirm;
+
+    // Stats
+    private WebinarStatsDto? stats;
+    private bool isLoadingStats = true;
+
+    // Shared
+    private bool isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDates();
+    }
+
+    private async Task SwitchTab(string tab)
+    {
+        activeTab = tab;
+        if (tab == "fechas" && dates is null)
+            await LoadDates();
+        else if (tab == "contactos" && contacts is null)
+            await LoadContacts();
+        else if (tab == "estadisticas")
+            await LoadStats();
+    }
+
+    // ==================== DATES ====================
+
+    private async Task LoadDates()
+    {
+        isLoadingDates = true;
+        try
+        {
+            dates = await Api.GetWebinarDatesAsync();
+        }
+        catch
+        {
+            Toast.Error("Error al cargar las fechas");
+        }
+        isLoadingDates = false;
+    }
+
+    private void ShowDateForm()
+    {
+        formDate = DateTime.Now.AddDays(7).Date.AddHours(10);
+        formMeetingLink = "";
+        dateFormError = null;
+        showDateModal = true;
+    }
+
+    private void CloseDateForm()
+    {
+        showDateModal = false;
+        dateFormError = null;
+    }
+
+    private async Task CreateDate()
+    {
+        dateFormError = null;
+        isSaving = true;
+        try
+        {
+            var request = new CreateWebinarDateRequest
+            {
+                Date = formDate,
+                MeetingLink = string.IsNullOrWhiteSpace(formMeetingLink) ? null : formMeetingLink.Trim()
+            };
+            var result = await Api.CreateWebinarDateAsync(request);
+            if (result is not null)
+            {
+                Toast.Success("Fecha creada exitosamente");
+                showDateModal = false;
+                await LoadDates();
+            }
+            else
+            {
+                dateFormError = "Error al crear la fecha";
+            }
+        }
+        catch
+        {
+            dateFormError = "Error al crear la fecha";
+        }
+        isSaving = false;
+    }
+
+    private void ConfirmDeleteDate(WebinarDateDto d)
+    {
+        dateToDelete = d;
+        showDeleteDateConfirm = true;
+    }
+
+    private async Task DeleteDate()
+    {
+        if (dateToDelete is null) return;
+        var ok = await Api.DeleteWebinarDateAsync(dateToDelete.Id);
+        if (ok)
+        {
+            Toast.Success("Fecha eliminada");
+            await LoadDates();
+        }
+        else
+        {
+            Toast.Error("Error al eliminar la fecha");
+        }
+        showDeleteDateConfirm = false;
+        dateToDelete = null;
+    }
+
+    // ==================== CONTACTS ====================
+
+    private async Task LoadContacts()
+    {
+        isLoadingContacts = true;
+        try
+        {
+            contacts = await Api.GetWebinarContactsAsync();
+        }
+        catch
+        {
+            Toast.Error("Error al cargar los contactos");
+        }
+        isLoadingContacts = false;
+    }
+
+    private void ShowContactForm()
+    {
+        formEmail = "";
+        formFirstName = "";
+        formLastName = "";
+        formPhone = "";
+        contactFormError = null;
+        showContactModal = true;
+    }
+
+    private void CloseContactForm()
+    {
+        showContactModal = false;
+        contactFormError = null;
+    }
+
+    private async Task CreateContact()
+    {
+        contactFormError = null;
+        if (string.IsNullOrWhiteSpace(formEmail))
+        {
+            contactFormError = "El email es obligatorio";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(formFirstName))
+        {
+            contactFormError = "El nombre es obligatorio";
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(formLastName))
+        {
+            contactFormError = "El apellido es obligatorio";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var request = new CreateWebinarContactRequest
+            {
+                Email = formEmail.Trim(),
+                FirstName = formFirstName.Trim(),
+                LastName = formLastName.Trim(),
+                Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone.Trim()
+            };
+            var result = await Api.CreateWebinarContactAsync(request);
+            if (result is not null)
+            {
+                Toast.Success("Contacto creado exitosamente");
+                showContactModal = false;
+                await LoadContacts();
+            }
+            else
+            {
+                contactFormError = "Error al crear el contacto. Puede que el email ya exista.";
+            }
+        }
+        catch
+        {
+            contactFormError = "Error al crear el contacto";
+        }
+        isSaving = false;
+    }
+
+    private async Task CopyContactLink(string uuid)
+    {
+        try
+        {
+            var uri = new Uri(Navigation.BaseUri);
+            var origin = $"{uri.Scheme}://{uri.Authority}";
+            var url = $"{origin}/webinar/{uuid}";
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", url);
+            Toast.Success("Link copiado al portapapeles");
+        }
+        catch
+        {
+            Toast.Error("No se pudo copiar el link");
+        }
+    }
+
+    private void ConfirmDeleteContact(WebinarContactDto c)
+    {
+        contactToDelete = c;
+        showDeleteContactConfirm = true;
+    }
+
+    private async Task DeleteContact()
+    {
+        if (contactToDelete is null) return;
+        var ok = await Api.DeleteWebinarContactAsync(contactToDelete.Id);
+        if (ok)
+        {
+            Toast.Success("Contacto eliminado");
+            await LoadContacts();
+        }
+        else
+        {
+            Toast.Error("Error al eliminar el contacto");
+        }
+        showDeleteContactConfirm = false;
+        contactToDelete = null;
+    }
+
+    // ==================== STATS ====================
+
+    private async Task LoadStats()
+    {
+        isLoadingStats = true;
+        try
+        {
+            stats = await Api.GetWebinarStatsAsync();
+        }
+        catch
+        {
+            Toast.Error("Error al cargar las estadisticas");
+        }
+        isLoadingStats = false;
+    }
+
+    private List<(string Name, int Count)> GetAiToolStats(WebinarDateStatsDto dateStat)
+    {
+        return new List<(string Name, int Count)>
+        {
+            ("ChatGPT", dateStat.KnowsChatGPT),
+            ("Claude", dateStat.KnowsClaude),
+            ("Gemini", dateStat.KnowsGemini),
+            ("Copilot", dateStat.KnowsCopilot),
+            ("Perplexity", dateStat.KnowsPerplexity),
+            ("Grok", dateStat.KnowsGrok),
+            ("DeepSeek", dateStat.KnowsDeepSeek)
+        }.OrderByDescending(x => x.Count).ToList();
+    }
+
+    private string GetVibeCodingLabel(string key)
+    {
+        return key switch
+        {
+            "yes_use_it" => "Si, lo usa",
+            "yes_not_tried" => "Si, pero no lo probo",
+            "no_idea" => "No sabe que es",
+            _ => key
+        };
+    }
+}

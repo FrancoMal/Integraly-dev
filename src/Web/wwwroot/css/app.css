@@ -2551,6 +2551,52 @@ textarea.form-input {
   min-height: 60px;
 }
 
+/* --- Checkbox Grid & Radio Group (Webinar Form) --- */
+.checkbox-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.checkbox-item,
+.radio-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary, #1a1a2e);
+  transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+
+.checkbox-item:hover,
+.radio-item:hover {
+  background: var(--bg-secondary, #f5f5f5);
+  border-color: var(--primary-color, #6366f1);
+}
+
+.checkbox-item input[type="checkbox"],
+.radio-item input[type="radio"] {
+  accent-color: var(--primary-color, #6366f1);
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radio-item {
+  width: 100%;
+}
+
 /* --- Product Linking in Publicaciones --- */
 .td-product {
     min-width: 140px;

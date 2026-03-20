@@ -350,6 +350,61 @@ public class ApiClient
     public async Task<bool> DeleteInstructorTaskAsync(int id)
         => await DeleteAsync($"/api/instructor-tasks/{id}");
 
+    // --- Webinar ---
+    public async Task<List<WebinarDateDto>?> GetWebinarDatesAsync()
+    {
+        return await GetAsync<List<WebinarDateDto>>("/api/webinar/dates");
+    }
+
+    public async Task<WebinarDateDto?> CreateWebinarDateAsync(CreateWebinarDateRequest request)
+    {
+        return await PostAsync<WebinarDateDto>("/api/webinar/dates", request);
+    }
+
+    public async Task<bool> DeleteWebinarDateAsync(int id)
+    {
+        return await DeleteAsync($"/api/webinar/dates/{id}");
+    }
+
+    public async Task<List<WebinarContactDto>?> GetWebinarContactsAsync()
+    {
+        return await GetAsync<List<WebinarContactDto>>("/api/webinar/contacts");
+    }
+
+    public async Task<WebinarContactDto?> CreateWebinarContactAsync(CreateWebinarContactRequest request)
+    {
+        return await PostAsync<WebinarContactDto>("/api/webinar/contacts", request);
+    }
+
+    public async Task<bool> DeleteWebinarContactAsync(int id)
+    {
+        return await DeleteAsync($"/api/webinar/contacts/{id}");
+    }
+
+    public async Task<WebinarStatsDto?> GetWebinarStatsAsync()
+    {
+        return await GetAsync<WebinarStatsDto>("/api/webinar/stats");
+    }
+
+    public async Task<WebinarFormDataDto?> GetWebinarFormAsync(string uuid)
+    {
+        return await GetAsync<WebinarFormDataDto>($"/api/webinar/form/{uuid}");
+    }
+
+    public async Task<bool> SubmitWebinarFormAsync(string uuid, WebinarFormSubmitRequest request)
+    {
+        try
+        {
+            await SetAuthHeaderAsync();
+            var response = await _http.PostAsJsonAsync($"/api/webinar/form/{uuid}", request);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {
