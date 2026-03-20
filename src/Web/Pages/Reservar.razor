@@ -159,6 +159,10 @@
                                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                                                 }
                                                 <span style="font-size:0.7rem;font-weight:500;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@instName</span>
+                                                @if (!string.IsNullOrEmpty(booking.UserNotes) || !string.IsNullOrEmpty(booking.AdminNotes))
+                                                {
+                                                    <i class="fa-solid fa-sticky-note" style="font-size:0.6rem;color:#8b5cf6;" title="Tiene notas"></i>
+                                                }
                                             </div>
                                         </td>
                                     }
@@ -226,6 +230,7 @@
                                 <th>Horario</th>
                                 <th>Instructor</th>
                                 <th>Estado</th>
+                                <th>Notas</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -237,6 +242,24 @@
                                     <td style="white-space:nowrap;">@($"{b.StartHour}:00 - {b.StartHour + 1}:00")</td>
                                     <td>@b.InstructorName</td>
                                     <td><span class="status-badge" style="@GetListStatusStyle(b.Status)">@GetListStatusLabel(b.Status)</span></td>
+                                    <td style="text-align:center;">
+                                        @if (!string.IsNullOrEmpty(b.UserNotes) || !string.IsNullOrEmpty(b.AdminNotes))
+                                        {
+                                            <button class="btn btn-sm" style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:0.2rem 0.5rem;font-size:0.75rem;border:1px solid rgba(139,92,246,0.25);"
+                                                    title="@(!string.IsNullOrEmpty(b.UserNotes) ? b.UserNotes : "Tiene notas del admin")"
+                                                    @onclick="() => ShowBookingDetail(b)">
+                                                <i class="fa-solid fa-sticky-note" style="margin-right:0.25rem;"></i>Ver
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-ghost" style="padding:0.2rem 0.5rem;font-size:0.75rem;color:var(--text-muted);"
+                                                    title="Agregar notas"
+                                                    @onclick="() => ShowBookingDetail(b)">
+                                                <i class="fa-solid fa-sticky-note" style="margin-right:0.25rem;"></i>Agregar
+                                            </button>
+                                        }
+                                    </td>
                                     <td style="display:flex;gap:6px;align-items:center;">
                                         @if (b.Status == "confirmed" && b.ScheduledDate.Date >= DateTime.Today)
                                         {
