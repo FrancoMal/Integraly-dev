@@ -137,13 +137,121 @@ else
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-card-icon success">@SvgIcons.Calendar</div>
+            <div class="stat-card-icon warning">@SvgIcons.Calendar</div>
             <div class="stat-card-info">
                 <span class="stat-card-value">@userStats?.UpcomingBookings</span>
-                <span class="stat-card-label">Proximas clases</span>
+                <span class="stat-card-label">Reservadas</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon success">@SvgIcons.CheckCircle</div>
+            <div class="stat-card-info">
+                <span class="stat-card-value">@userStats?.UsedClasses</span>
+                <span class="stat-card-label">Completadas</span>
             </div>
         </div>
     </div>
+
+    @* Proxima clase destacada *@
+    @if (nextClass is not null)
+    {
+        <div class="card" style="margin-top:1rem;border-left:4px solid #f59e0b;">
+            <div class="card-body" style="padding:1rem 1.25rem;">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.75rem;">
+                    <div>
+                        <div style="font-size:0.75rem;font-weight:600;text-transform:uppercase;color:#f59e0b;letter-spacing:0.5px;margin-bottom:0.4rem;">
+                            <i class="fa-solid fa-bell" style="margin-right:0.3rem;"></i>Proxima clase
+                        </div>
+                        <div style="font-size:1.1rem;font-weight:700;margin-bottom:0.25rem;">
+                            @nextClass.ScheduledDate.ToString("dddd dd 'de' MMMM", new System.Globalization.CultureInfo("es-AR"))
+                        </div>
+                        <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-size:0.85rem;color:var(--text-secondary);">
+                            <span><i class="fa-solid fa-clock" style="margin-right:0.3rem;"></i>@($"{nextClass.StartHour:00}:00 - {nextClass.StartHour + 1:00}:00")</span>
+                            <span><i class="fa-solid fa-user" style="margin-right:0.3rem;"></i>@nextClass.InstructorName</span>
+                            @{ var daysUntil = (nextClass.ScheduledDate.Date - DateTime.Today).Days; }
+                            @if (daysUntil == 0)
+                            {
+                                <span class="status-badge" style="background:rgba(16,185,129,0.12);color:#10b981;font-weight:600;">Hoy</span>
+                            }
+                            else if (daysUntil == 1)
+                            {
+                                <span class="status-badge" style="background:rgba(245,158,11,0.12);color:#b45309;font-weight:600;">Manana</span>
+                            }
+                            else
+                            {
+                                <span class="status-badge" style="background:rgba(59,130,246,0.1);color:#3b82f6;">En @daysUntil dias</span>
+                            }
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                        @if (!string.IsNullOrEmpty(nextClass.MeetLink))
+                        {
+                            <a href="@nextClass.MeetLink" target="_blank" class="btn btn-sm" style="background:#10b981;color:white;text-decoration:none;">
+                                <i class="fa-solid fa-video" style="margin-right:0.3rem;"></i>Unirse a Meet
+                            </a>
+                        }
+                        <a href="reservar" class="btn btn-sm btn-secondary" style="text-decoration:none;">
+                            <i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Ver calendario
+                        </a>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(nextClass.UserNotes))
+                {
+                    <div style="margin-top:0.75rem;padding:0.5rem 0.75rem;background:rgba(139,92,246,0.06);border-radius:6px;font-size:0.82rem;color:var(--text-secondary);">
+                        <i class="fa-solid fa-sticky-note" style="margin-right:0.3rem;color:#8b5cf6;"></i>@nextClass.UserNotes
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card" style="margin-top:1rem;">
+            <div class="card-body" style="padding:1.25rem;text-align:center;">
+                <div style="font-size:2rem;margin-bottom:0.5rem;opacity:0.3;">
+                    <i class="fa-solid fa-calendar-plus"></i>
+                </div>
+                <p style="color:var(--text-muted);margin-bottom:0.75rem;">No tenes clases reservadas</p>
+                <a href="reservar" class="btn btn-primary btn-sm" style="text-decoration:none;">
+                    <i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>Reservar una clase
+                </a>
+            </div>
+        </div>
+    }
+
+    @* Ultimas clases *@
+    @if (recentBookings is not null && recentBookings.Count > 0)
+    {
+        <div class="card" style="margin-top:1rem;">
+            <div class="card-body" style="padding:0.75rem 1rem;">
+                <h3 style="margin:0 0 0.75rem 0;font-size:0.95rem;">
+                    <i class="fa-solid fa-history" style="margin-right:0.4rem;color:var(--text-muted);"></i>Ultimas clases
+                </h3>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                    @foreach (var b in recentBookings)
+                    {
+                        var statusColor = b.Status switch { "completed" => "#3b82f6", "confirmed" => "#f59e0b", "cancelled" => "#ef4444", _ => "#64748b" };
+                        var statusLabel = b.Status switch { "completed" => "Completada", "confirmed" => "Confirmada", "cancelled" => "Cancelada", _ => b.Status };
+                        var statusIcon = b.Status switch { "completed" => "fa-circle-check", "confirmed" => "fa-calendar-check", "cancelled" => "fa-circle-xmark", _ => "fa-circle-question" };
+                        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0.6rem;border-radius:8px;background:var(--bg-secondary);font-size:0.83rem;">
+                            <i class="fa-solid @statusIcon" style="color:@statusColor;font-size:0.9rem;width:18px;text-align:center;"></i>
+                            <div style="flex:1;min-width:0;">
+                                <span style="font-weight:600;">@b.ScheduledDate.ToString("ddd dd/MM", new System.Globalization.CultureInfo("es-AR"))</span>
+                                <span style="color:var(--text-muted);margin:0 0.3rem;">@($"{b.StartHour:00}:00")</span>
+                                <span style="color:var(--text-secondary);">con @b.InstructorName</span>
+                            </div>
+                            <span style="font-size:0.72rem;color:@statusColor;font-weight:600;white-space:nowrap;">@statusLabel</span>
+                        </div>
+                    }
+                </div>
+                <div style="text-align:center;margin-top:0.75rem;">
+                    <a href="reservar" style="font-size:0.8rem;color:var(--primary);text-decoration:none;">
+                        Ver todas las reservas <i class="fa-solid fa-arrow-right" style="font-size:0.7rem;"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -155,6 +263,10 @@ else
     private InstructorDashboardDto? instructorStats;
     private UserDashboardDto? userStats;
     private List<StudentSummaryDto>? studentsSummary;
+
+    // User dashboard extras
+    private BookingDto? nextClass;
+    private List<BookingDto>? recentBookings;
 
     protected override async Task OnInitializedAsync()
     {
@@ -178,7 +290,22 @@ else
             }
             else
             {
-                userStats = await Api.GetUserDashboardAsync();
+                var statsTask = Api.GetUserDashboardAsync();
+                var bookingsTask = Api.GetMyBookingsAsync();
+                await Task.WhenAll(statsTask, bookingsTask);
+
+                userStats = statsTask.Result;
+                var allBookings = bookingsTask.Result ?? new();
+
+                nextClass = allBookings
+                    .Where(b => b.Status == "confirmed" && b.ScheduledDate.Date >= DateTime.Today)
+                    .OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour)
+                    .FirstOrDefault();
+
+                recentBookings = allBookings
+                    .OrderByDescending(b => b.ScheduledDate).ThenByDescending(b => b.StartHour)
+                    .Take(5)
+                    .ToList();
             }
         }
         catch
