@@ -237,7 +237,7 @@
                                     <td style="white-space:nowrap;">@($"{b.StartHour}:00 - {b.StartHour + 1}:00")</td>
                                     <td>@b.InstructorName</td>
                                     <td><span class="status-badge" style="@GetListStatusStyle(b.Status)">@GetListStatusLabel(b.Status)</span></td>
-                                    <td>
+                                    <td style="display:flex;gap:6px;align-items:center;">
                                         @if (b.Status == "confirmed" && b.ScheduledDate.Date >= DateTime.Today)
                                         {
                                             <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
