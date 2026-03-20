@@ -214,6 +214,33 @@
 
 @if (currentView == "lista")
 {
+    <div class="card" style="margin-bottom:0.75rem;">
+        <div class="card-body" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;padding:0.6rem 1rem;">
+            <span style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);"><i class="fa-solid fa-filter" style="margin-right:0.3rem;"></i>Filtros:</span>
+            <select class="form-input" style="width:auto;min-width:140px;font-size:0.8rem;padding:0.3rem 0.5rem;" @bind="listFilterStatus">
+                <option value="all">Todos los estados</option>
+                <option value="confirmed">Confirmada</option>
+                <option value="completed">Completada</option>
+                <option value="cancelled">Cancelada</option>
+            </select>
+            @if (instructors is not null && instructors.Count > 0)
+            {
+                <select class="form-input" style="width:auto;min-width:160px;font-size:0.8rem;padding:0.3rem 0.5rem;" @bind="listFilterInstructor">
+                    <option value="all">Todos los instructores</option>
+                    @foreach (var inst in instructors)
+                    {
+                        <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                    }
+                </select>
+            }
+            @if (listFilterStatus != "all" || listFilterInstructor != "all")
+            {
+                <button class="btn btn-sm btn-ghost" style="font-size:0.78rem;color:var(--text-muted);" @onclick="ClearListFilters">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.2rem;"></i>Limpiar
+                </button>
+            }
+        </div>
+    </div>
     <div class="card">
         <div class="card-body" style="padding: 0.5rem;">
             @if (allMyBookings is null || !allMyBookings.Any())
@@ -222,6 +249,13 @@
             }
             else
             {
+                var filtered = GetFilteredBookings().ToList();
+                @if (filtered.Count == 0)
+                {
+                    <p class="text-muted" style="padding:1.5rem;">No hay reservas con los filtros seleccionados</p>
+                }
+                else
+                {
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
@@ -235,7 +269,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var b in allMyBookings.OrderByDescending(b => b.ScheduledDate).ThenByDescending(b => b.StartHour))
+                            @foreach (var b in filtered)
                             {
                                 <tr style="@GetListRowStyle(b.Status)">
                                     <td><strong style="text-transform:uppercase;">@b.ScheduledDate.ToString("ddd")</strong> @b.ScheduledDate.ToString("dd/MM/yyyy")</td>
@@ -280,6 +314,7 @@
                         </tbody>
                     </table>
                 </div>
+                }
             }
         </div>
     </div>
@@ -463,6 +498,10 @@
     private List<BookingDto>? weekBookings;
     private List<BookingDto>? myBookings;
     private List<BookingDto>? allMyBookings;
+
+    // Filtros de lista
+    private string listFilterStatus = "all";
+    private string listFilterInstructor = "all";
 
     private DateTime weekStart;
     private DateTime weekEnd;
@@ -792,6 +831,23 @@
         }
         savingNotes = false;
         StateHasChanged();
+    }
+
+    private void ClearListFilters()
+    {
+        listFilterStatus = "all";
+        listFilterInstructor = "all";
+    }
+
+    private IEnumerable<BookingDto> GetFilteredBookings()
+    {
+        if (allMyBookings is null) return Enumerable.Empty<BookingDto>();
+        var query = allMyBookings.AsEnumerable();
+        if (listFilterStatus != "all")
+            query = query.Where(b => b.Status == listFilterStatus);
+        if (listFilterInstructor != "all" && int.TryParse(listFilterInstructor, out var instId))
+            query = query.Where(b => b.InstructorId == instId);
+        return query.OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour);
     }
 
     private string GetListRowStyle(string s) => s switch
