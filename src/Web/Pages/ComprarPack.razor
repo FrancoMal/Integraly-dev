@@ -138,12 +138,12 @@ else
             }
             else
             {
-                ToastService.ShowError("No se pudo crear el pago. Intenta de nuevo.");
+                ToastService.Error("No se pudo crear el pago. Intenta de nuevo.");
             }
         }
         catch
         {
-            ToastService.ShowError("Error al procesar el pago. Intenta de nuevo.");
+            ToastService.Error("Error al procesar el pago. Intenta de nuevo.");
         }
         finally
         {
