@@ -356,7 +356,7 @@
             if (result is not null)
             {
                 await AuthService.ImpersonateAsync(result);
-                var targetPanel = user.Role?.ToLower() == "admin" ? "/admin/" : "/panel/";
+                var targetPanel = "/panel/";
                 Navigation.NavigateTo(targetPanel, forceLoad: true);
             }
             else

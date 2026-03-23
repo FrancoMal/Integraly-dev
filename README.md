@@ -52,7 +52,7 @@ El script `setup.sh` instala automaticamente:
 | Que | Direccion |
 |-----|-----------|
 | Landing page | http://localhost:3000 |
-| Panel de admin | http://localhost:3000/admin |
+| Panel de admin | http://localhost:3000/panel |
 
 **Login:** admin / admin123
 
@@ -69,7 +69,7 @@ cp .env.example .env
 # 3. Levantar la app
 docker compose up --build -d
 
-# 4. Abrir http://localhost:3000 (landing) o http://localhost:3000/admin (panel)
+# 4. Abrir http://localhost:3000 (landing) o http://localhost:3000/panel (panel)
 ```
 
 ## Herramientas AI
@@ -116,7 +116,7 @@ ai-coding-environment/
 |----------|----------|--------|
 | sqlserver | Base de datos SQL Server Express | 1433 (interno) |
 | api | Backend .NET 8 con autenticacion JWT | 80 (interno) |
-| web | Landing + Blazor WASM + Nginx (/ = landing, /admin = panel) | 3000 |
+| web | Landing + Blazor WASM + Nginx (/ = landing, /panel = panel) | 3000 |
 
 ## Credenciales por defecto
 

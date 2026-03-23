@@ -215,7 +215,7 @@
         { "pago-pendiente", "" }
     };
 
-    private bool IsAdminPanel => Navigation.BaseUri.Contains("/admin/");
+    private bool IsAdminPanel => Navigation.BaseUri.Contains("/panel/");
 
     protected override async Task OnInitializedAsync()
     {
@@ -231,18 +231,6 @@
 
             // Don't redirect if impersonating
             if (isImpersonating) return;
-
-            // Redirect to correct panel based on role
-            if (role == "admin" && !IsAdminPanel)
-            {
-                Navigation.NavigateTo("/admin/", forceLoad: true);
-                return;
-            }
-            else if (role != "admin" && IsAdminPanel)
-            {
-                Navigation.NavigateTo("/panel/", forceLoad: true);
-                return;
-            }
         }
     }
 
@@ -320,7 +308,7 @@
     private async Task StopImpersonating()
     {
         await AuthService.StopImpersonatingAsync();
-        Navigation.NavigateTo("/admin/", forceLoad: true);
+        Navigation.NavigateTo("/panel/", forceLoad: true);
     }
 
     private async Task Logout()

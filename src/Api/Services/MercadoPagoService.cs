@@ -58,9 +58,9 @@ public class MercadoPagoService
             },
             back_urls = new
             {
-                success = $"{baseUrl}/admin/pago-exitoso",
-                failure = $"{baseUrl}/admin/pago-fallido",
-                pending = $"{baseUrl}/admin/pago-pendiente"
+                success = $"{baseUrl}/panel/pago-exitoso",
+                failure = $"{baseUrl}/panel/pago-fallido",
+                pending = $"{baseUrl}/panel/pago-pendiente"
             },
             auto_return = "approved",
             external_reference = payment.Id.ToString(),

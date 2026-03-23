@@ -360,7 +360,7 @@ public class PaymentsController : ControllerBase
                     </tr>
                 </table>
             </div>
-            <p>Podes reservar tus clases ingresando al panel en <a href=""https://integraly.dev/admin"">integraly.dev/admin</a>.</p>
+            <p>Podes reservar tus clases ingresando al panel en <a href=""https://integraly.dev/panel"">integraly.dev/panel</a>.</p>
         </div>
         <div class=""footer"">
             <p>Integraly - Clases particulares de tecnologia</p>
