@@ -50,7 +50,9 @@ public class PaymentsController : ControllerBase
                 p.Description,
                 p.Classes,
                 p.Price,
-                p.Currency
+                p.Currency,
+                isActive = p.Active,
+                isPopular = p.Classes == 5
             })
             .ToListAsync();
 
