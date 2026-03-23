@@ -19,9 +19,9 @@ public class WebinarContactDto
 {
     public int Id { get; set; }
     public string Email { get; set; } = "";
-    public string FirstName { get; set; } = "";
-    public string LastName { get; set; } = "";
+    public string FullName { get; set; } = "";
     public string? Phone { get; set; }
+    public string? Company { get; set; }
     public string UUID { get; set; } = "";
     public int? WebinarDateId { get; set; }
     public string? WebinarDateDisplay { get; set; }
@@ -32,14 +32,14 @@ public class WebinarContactDto
 public class CreateWebinarContactRequest
 {
     public string Email { get; set; } = "";
-    public string FirstName { get; set; } = "";
-    public string LastName { get; set; } = "";
+    public string FullName { get; set; } = "";
     public string? Phone { get; set; }
+    public string? Company { get; set; }
 }
 
 public class WebinarFormDataDto
 {
-    public string FirstName { get; set; } = "";
+    public string FullName { get; set; } = "";
     public List<WebinarDateOptionDto> AvailableDates { get; set; } = new();
     public bool AlreadyRegistered { get; set; }
 }

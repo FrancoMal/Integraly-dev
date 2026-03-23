@@ -91,8 +91,8 @@ public class WebinarController : ControllerBase
             }
             result.Add(new WebinarContactDto
             {
-                Id = c.Id, Email = c.Email, FirstName = c.FirstName, LastName = c.LastName,
-                Phone = c.Phone, UUID = c.UUID, WebinarDateId = c.WebinarDateId,
+                Id = c.Id, Email = c.Email, FullName = c.FullName,
+                Phone = c.Phone, Company = c.Company, UUID = c.UUID, WebinarDateId = c.WebinarDateId,
                 WebinarDateDisplay = dateDisplay, HasRegistration = hasReg, CreatedAt = c.CreatedAt
             });
         }
@@ -106,10 +106,10 @@ public class WebinarController : ControllerBase
     {
         var contact = new WebinarContact
         {
-            FirstName = request.FirstName,
-            LastName = request.LastName,
+            FullName = request.FullName,
             Email = request.Email,
             Phone = request.Phone,
+            Company = request.Company,
             UUID = Guid.NewGuid().ToString("N"),
             CreatedAt = DateTime.UtcNow
         };
@@ -120,8 +120,8 @@ public class WebinarController : ControllerBase
         return Created($"/api/webinar/contacts/{contact.Id}",
             new WebinarContactDto
             {
-                Id = contact.Id, Email = contact.Email, FirstName = contact.FirstName,
-                LastName = contact.LastName, Phone = contact.Phone, UUID = contact.UUID,
+                Id = contact.Id, Email = contact.Email, FullName = contact.FullName,
+                Phone = contact.Phone, Company = contact.Company, UUID = contact.UUID,
                 HasRegistration = false, CreatedAt = contact.CreatedAt
             });
     }
@@ -209,7 +209,7 @@ public class WebinarController : ControllerBase
 
         return Ok(new WebinarFormDataDto
         {
-            FirstName = contact.FirstName,
+            FullName = contact.FullName,
             AvailableDates = availableDates,
             AlreadyRegistered = hasRegistration
         });

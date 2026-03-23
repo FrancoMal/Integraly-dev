@@ -416,15 +416,32 @@ BEGIN
     CREATE TABLE WebinarContacts (
         Id INT PRIMARY KEY IDENTITY(1,1),
         Email NVARCHAR(255) NOT NULL,
-        FirstName NVARCHAR(100) NOT NULL,
-        LastName NVARCHAR(100) NOT NULL,
+        FullName NVARCHAR(200) NOT NULL,
         Phone NVARCHAR(50) NULL,
+        Company NVARCHAR(200) NULL,
         UUID NVARCHAR(100) NOT NULL UNIQUE,
         WebinarDateId INT NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
         CONSTRAINT FK_WebinarContacts_WebinarDate FOREIGN KEY (WebinarDateId) REFERENCES WebinarDates(Id)
     );
     CREATE UNIQUE INDEX IX_WebinarContacts_UUID ON WebinarContacts (UUID);
+END
+GO
+
+-- Migrate WebinarContacts: FirstName+LastName -> FullName, add Company
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'FirstName')
+BEGIN
+    ALTER TABLE WebinarContacts ADD FullName NVARCHAR(200) NULL;
+    EXEC('UPDATE WebinarContacts SET FullName = FirstName + '' '' + LastName');
+    ALTER TABLE WebinarContacts ALTER COLUMN FullName NVARCHAR(200) NOT NULL;
+    ALTER TABLE WebinarContacts DROP COLUMN FirstName;
+    ALTER TABLE WebinarContacts DROP COLUMN LastName;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'Company')
+BEGIN
+    ALTER TABLE WebinarContacts ADD Company NVARCHAR(200) NULL;
 END
 GO
 

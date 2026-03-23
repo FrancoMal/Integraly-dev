@@ -111,9 +111,10 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Nombre completo</th>
+                                <th>Nombre y Apellido</th>
                                 <th>Email</th>
                                 <th>Telefono</th>
+                                <th>Empresa</th>
                                 <th>Inscripto</th>
                                 <th>Fecha inscripcion</th>
                                 <th>Link</th>
@@ -124,9 +125,10 @@
                             @foreach (var c in contacts.OrderByDescending(x => x.CreatedAt))
                             {
                                 <tr>
-                                    <td><strong>@c.FirstName @c.LastName</strong></td>
+                                    <td><strong>@c.FullName</strong></td>
                                     <td>@c.Email</td>
                                     <td>@(!string.IsNullOrEmpty(c.Phone) ? c.Phone : "-")</td>
+                                    <td>@(!string.IsNullOrEmpty(c.Company) ? c.Company : "-")</td>
                                     <td>
                                         @if (c.HasRegistration)
                                         {
@@ -307,16 +309,16 @@
                     <input class="form-input" type="email" @bind="formEmail" placeholder="correo@ejemplo.com" />
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Nombre</label>
-                    <input class="form-input" type="text" @bind="formFirstName" placeholder="Juan" />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Apellido</label>
-                    <input class="form-input" type="text" @bind="formLastName" placeholder="Perez" />
+                    <label class="form-label">Nombre y Apellido</label>
+                    <input class="form-input" type="text" @bind="formFullName" placeholder="Juan Perez" />
                 </div>
                 <div class="form-group">
                     <label class="form-label">Telefono (opcional)</label>
                     <input class="form-input" type="tel" @bind="formPhone" placeholder="+54 11 1234-5678" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Empresa (opcional)</label>
+                    <input class="form-input" type="text" @bind="formCompany" placeholder="Nombre de la empresa" />
                 </div>
             </div>
             <div class="modal-footer">
@@ -363,7 +365,7 @@
                 <h3>Confirmar eliminacion</h3>
             </div>
             <div class="modal-body">
-                <p>Estas seguro que queres eliminar el contacto <strong>@contactToDelete?.FirstName @contactToDelete?.LastName</strong> (@contactToDelete?.Email)?</p>
+                <p>Estas seguro que queres eliminar el contacto <strong>@contactToDelete?.FullName</strong> (@contactToDelete?.Email)?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="() => showDeleteContactConfirm = false">
@@ -395,9 +397,9 @@
     private bool isLoadingContacts = true;
     private bool showContactModal;
     private string formEmail = "";
-    private string formFirstName = "";
-    private string formLastName = "";
+    private string formFullName = "";
     private string formPhone = "";
+    private string formCompany = "";
     private string? contactFormError;
     private WebinarContactDto? contactToDelete;
     private bool showDeleteContactConfirm;
@@ -527,9 +529,9 @@
     private void ShowContactForm()
     {
         formEmail = "";
-        formFirstName = "";
-        formLastName = "";
+        formFullName = "";
         formPhone = "";
+        formCompany = "";
         contactFormError = null;
         showContactModal = true;
     }
@@ -548,14 +550,9 @@
             contactFormError = "El email es obligatorio";
             return;
         }
-        if (string.IsNullOrWhiteSpace(formFirstName))
+        if (string.IsNullOrWhiteSpace(formFullName))
         {
-            contactFormError = "El nombre es obligatorio";
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(formLastName))
-        {
-            contactFormError = "El apellido es obligatorio";
+            contactFormError = "El nombre y apellido es obligatorio";
             return;
         }
 
@@ -565,9 +562,9 @@
             var request = new CreateWebinarContactRequest
             {
                 Email = formEmail.Trim(),
-                FirstName = formFirstName.Trim(),
-                LastName = formLastName.Trim(),
-                Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone.Trim()
+                FullName = formFullName.Trim(),
+                Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone.Trim(),
+                Company = string.IsNullOrWhiteSpace(formCompany) ? null : formCompany.Trim()
             };
             var result = await Api.CreateWebinarContactAsync(request);
             if (result is not null)

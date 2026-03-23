@@ -15,15 +15,14 @@ public class WebinarContact
     public string Email { get; set; } = string.Empty;
 
     [Required]
-    [MaxLength(100)]
-    public string FirstName { get; set; } = string.Empty;
-
-    [Required]
-    [MaxLength(100)]
-    public string LastName { get; set; } = string.Empty;
+    [MaxLength(200)]
+    public string FullName { get; set; } = string.Empty;
 
     [MaxLength(50)]
     public string? Phone { get; set; }
+
+    [MaxLength(200)]
+    public string? Company { get; set; }
 
     [Required]
     [MaxLength(100)]
