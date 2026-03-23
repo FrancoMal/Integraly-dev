@@ -45,6 +45,7 @@ services:
       - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=AIcoding;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
       - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN:-}
       - MP_PUBLIC_KEY=${MP_PUBLIC_KEY:-}
+      - APP_BASE_URL=https://integraly.dev:3000
     volumes:
       - /proc:/host_proc:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
