@@ -3,7 +3,6 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 @inject NavigationManager Navigation
-@inject IJSRuntime JS
 
 @if (isLoading)
 {
@@ -134,7 +133,7 @@ else
             var result = await Api.CreatePaymentAsync(plan.Id);
             if (result is not null && !string.IsNullOrEmpty(result.CheckoutUrl))
             {
-                await JS.InvokeVoidAsync("open", result.CheckoutUrl, "_self");
+                Navigation.NavigateTo(result.CheckoutUrl, forceLoad: true);
             }
             else
             {
