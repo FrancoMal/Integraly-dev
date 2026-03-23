@@ -13,7 +13,7 @@ public class PaymentPlanDto
 public class CreatePaymentResponse
 {
     public string CheckoutUrl { get; set; } = string.Empty;
-    public string PaymentId { get; set; } = string.Empty;
+    public int PaymentId { get; set; }
 }
 
 public class PaymentDto

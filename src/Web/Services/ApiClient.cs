@@ -410,7 +410,15 @@ public class ApiClient
         => await GetAsync<List<PaymentPlanDto>>("/api/payments/plans");
 
     public async Task<CreatePaymentResponse?> CreatePaymentAsync(int planId)
-        => await PostAsync<CreatePaymentResponse>("/api/payments/create", new { planId });
+    {
+        await SetAuthHeaderAsync();
+        var response = await _http.PostAsJsonAsync("/api/payments/create", new { planId });
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        Console.WriteLine($"CreatePayment response: {json}");
+        return System.Text.Json.JsonSerializer.Deserialize<CreatePaymentResponse>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
 
     public async Task<List<PaymentDto>?> GetMyPaymentsAsync()
         => await GetAsync<List<PaymentDto>>("/api/payments/my");
