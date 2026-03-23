@@ -28,6 +28,12 @@
                      IsActive="@IsActive("reservar")" OnClick="@(() => NavigateTo("reservar"))" />
         }
 
+        @if (role != "admin" && HasPerm("comprar"))
+        {
+            <NavItem Href="comprar" Label="Comprar Pack" Icon="@SvgIcons.ShoppingCart"
+                     IsActive="@IsActive("comprar")" OnClick="@(() => NavigateTo("comprar"))" />
+        }
+
         @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config") || HasPerm("webinar") || role == "admin")
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
@@ -172,7 +178,11 @@
         { "auditoria", "Auditoria" },
         { "config", "Configuracion" },
         { "perfil", "Mi Perfil" },
-        { "webinar-admin", "Webinar" }
+        { "webinar-admin", "Webinar" },
+        { "comprar", "Comprar Pack" },
+        { "pago-exitoso", "Pago Exitoso" },
+        { "pago-fallido", "Pago Fallido" },
+        { "pago-pendiente", "Pago Pendiente" }
     };
 
     private string GetPageTitle()
@@ -198,7 +208,11 @@
         { "auditoria", "auditoria" },
         { "config", "config" },
         { "perfil", "" }, // perfil always allowed
-        { "webinar-admin", "webinar" }
+        { "webinar-admin", "webinar" },
+        { "comprar", "comprar" },
+        { "pago-exitoso", "" },
+        { "pago-fallido", "" },
+        { "pago-pendiente", "" }
     };
 
     private bool IsAdminPanel => Navigation.BaseUri.Contains("/admin/");

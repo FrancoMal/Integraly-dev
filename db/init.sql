@@ -469,5 +469,65 @@ BEGIN
 END
 GO
 
+-- PaymentPlans table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='PaymentPlans' AND xtype='U')
+BEGIN
+    CREATE TABLE PaymentPlans (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Name NVARCHAR(100) NOT NULL,
+        Description NVARCHAR(500),
+        Classes INT NOT NULL,
+        Price DECIMAL(10,2) NOT NULL,
+        Currency NVARCHAR(10) DEFAULT 'ARS',
+        Active BIT DEFAULT 1,
+        DisplayOrder INT DEFAULT 0,
+        CreatedAt DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- Payments table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Payments' AND xtype='U')
+BEGIN
+    CREATE TABLE Payments (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        UserId INT NOT NULL FOREIGN KEY REFERENCES Users(Id),
+        PaymentPlanId INT NOT NULL FOREIGN KEY REFERENCES PaymentPlans(Id),
+        Amount DECIMAL(10,2) NOT NULL,
+        Currency NVARCHAR(10) DEFAULT 'ARS',
+        Status NVARCHAR(50) DEFAULT 'pending',
+        MercadoPagoOrderId NVARCHAR(200),
+        MercadoPagoPaymentId NVARCHAR(200),
+        TokenPackId INT NULL FOREIGN KEY REFERENCES TokenPacks(Id),
+        CreatedAt DATETIME DEFAULT GETDATE(),
+        ApprovedAt DATETIME NULL
+    );
+    CREATE INDEX IX_Payments_UserId ON Payments (UserId);
+    CREATE INDEX IX_Payments_Status ON Payments (Status);
+END
+GO
+
+-- Seed payment plans
+IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Clase individual')
+BEGIN
+    INSERT INTO PaymentPlans (Name, Description, Classes, Price, Currency, Active, DisplayOrder) VALUES
+    ('Clase individual', '1 clase particular', 1, 20000, 'ARS', 1, 1);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Pack 5 clases')
+BEGIN
+    INSERT INTO PaymentPlans (Name, Description, Classes, Price, Currency, Active, DisplayOrder) VALUES
+    ('Pack 5 clases', '5 clases particulares', 5, 80000, 'ARS', 1, 2);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Pack 10 clases')
+BEGIN
+    INSERT INTO PaymentPlans (Name, Description, Classes, Price, Currency, Active, DisplayOrder) VALUES
+    ('Pack 10 clases', '10 clases particulares', 10, 140000, 'ARS', 1, 3);
+END
+GO
+
 PRINT 'Database initialized successfully';
 GO

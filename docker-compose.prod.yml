@@ -43,6 +43,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Server=sqlserver-prod;Database=AIcoding;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN:-}
+      - MP_PUBLIC_KEY=${MP_PUBLIC_KEY:-}
     volumes:
       - /proc:/host_proc:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

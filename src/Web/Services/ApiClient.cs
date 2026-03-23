@@ -405,6 +405,16 @@ public class ApiClient
         }
     }
 
+    // --- Payments ---
+    public async Task<List<PaymentPlanDto>?> GetPaymentPlansAsync()
+        => await GetAsync<List<PaymentPlanDto>>("/api/payments/plans");
+
+    public async Task<CreatePaymentResponse?> CreatePaymentAsync(int planId)
+        => await PostAsync<CreatePaymentResponse>("/api/payments/create", new { planId });
+
+    public async Task<List<PaymentDto>?> GetMyPaymentsAsync()
+        => await GetAsync<List<PaymentDto>>("/api/payments/my");
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {

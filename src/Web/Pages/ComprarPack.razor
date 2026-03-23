@@ -1,0 +1,175 @@
+@page "/comprar"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@if (isLoading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando planes...</p></div></div>
+}
+else
+{
+    <div class="pricing-grid">
+        @foreach (var plan in plans)
+        {
+            var pricePerClass = plan.Classes > 0 ? plan.Price / plan.Classes : 0;
+            var savingsPercent = basePricePerClass > 0 && plan.Classes > 1
+                ? (int)Math.Round((1 - (double)(pricePerClass / basePricePerClass)) * 100)
+                : 0;
+
+            <div class="pricing-card @(plan.IsPopular ? "pricing-card-popular" : "")">
+                @if (plan.IsPopular)
+                {
+                    <div class="pricing-badge">Mas popular</div>
+                }
+                <div class="pricing-header">
+                    <h3 class="pricing-name">@plan.Name</h3>
+                    <div class="pricing-classes">@plan.Classes @(plan.Classes == 1 ? "clase" : "clases")</div>
+                </div>
+                <div class="pricing-body">
+                    <div class="pricing-price">$@FormatPrice(plan.Price)</div>
+                    <div class="pricing-per-class">$@FormatPrice(pricePerClass) por clase</div>
+                    @if (savingsPercent > 0)
+                    {
+                        <div class="pricing-savings">Ahorra @savingsPercent%</div>
+                    }
+                </div>
+                <div class="pricing-footer">
+                    <button class="btn btn-primary pricing-btn @(plan.IsPopular ? "pricing-btn-popular" : "")"
+                            disabled="@(processingPlanId == plan.Id)"
+                            @onclick="() => ComprarPlan(plan)">
+                        @if (processingPlanId == plan.Id)
+                        {
+                            <span>Procesando...</span>
+                        }
+                        else
+                        {
+                            <span>Comprar</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (payments is not null && payments.Count > 0)
+    {
+        <div class="card" style="margin-top: 2rem;">
+            <div class="card-body">
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">Historial de pagos</h3>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Plan</th>
+                                <th style="text-align:center;">Clases</th>
+                                <th style="text-align:right;">Monto</th>
+                                <th style="text-align:center;">Estado</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var payment in payments)
+                            {
+                                <tr>
+                                    <td><strong>@payment.PlanName</strong></td>
+                                    <td style="text-align:center;">@payment.Classes</td>
+                                    <td style="text-align:right;">$@FormatPrice(payment.Amount)</td>
+                                    <td style="text-align:center;">
+                                        <span class="status-badge @GetStatusClass(payment.Status)">
+                                            @GetStatusLabel(payment.Status)
+                                        </span>
+                                    </td>
+                                    <td>@payment.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<PaymentPlanDto> plans = new();
+    private List<PaymentDto>? payments;
+    private bool isLoading = true;
+    private int? processingPlanId;
+    private decimal basePricePerClass;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var plansResult = await Api.GetPaymentPlansAsync();
+            if (plansResult is not null && plansResult.Count > 0)
+            {
+                plans = plansResult.Where(p => p.IsActive).OrderBy(p => p.Classes).ToList();
+                var singlePlan = plans.FirstOrDefault(p => p.Classes == 1);
+                basePricePerClass = singlePlan != null ? singlePlan.Price : (plans.First().Price / plans.First().Classes);
+            }
+
+            payments = await Api.GetMyPaymentsAsync();
+        }
+        catch
+        {
+            // Plans endpoint may not exist yet - show empty state
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ComprarPlan(PaymentPlanDto plan)
+    {
+        processingPlanId = plan.Id;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Api.CreatePaymentAsync(plan.Id);
+            if (result is not null && !string.IsNullOrEmpty(result.CheckoutUrl))
+            {
+                await JS.InvokeVoidAsync("open", result.CheckoutUrl, "_self");
+            }
+            else
+            {
+                ToastService.ShowError("No se pudo crear el pago. Intenta de nuevo.");
+            }
+        }
+        catch
+        {
+            ToastService.ShowError("Error al procesar el pago. Intenta de nuevo.");
+        }
+        finally
+        {
+            processingPlanId = null;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatPrice(decimal price)
+    {
+        return price.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-AR"));
+    }
+
+    private string GetStatusClass(string status) => status?.ToLower() switch
+    {
+        "approved" or "aprobado" => "status-success",
+        "pending" or "pendiente" => "status-warning",
+        "rejected" or "rechazado" => "status-danger",
+        _ => "status-muted"
+    };
+
+    private string GetStatusLabel(string status) => status?.ToLower() switch
+    {
+        "approved" or "aprobado" => "Aprobado",
+        "pending" or "pendiente" => "Pendiente",
+        "rejected" or "rechazado" => "Rechazado",
+        _ => status ?? "—"
+    };
+}

@@ -1,0 +1,21 @@
+@page "/pago-exitoso"
+@attribute [Authorize]
+@inject NavigationManager Navigation
+
+<div class="pago-result-container">
+    <div class="pago-result-card pago-success">
+        <div class="pago-result-icon">
+            @SvgIcons.CheckCircle
+        </div>
+        <h2 class="pago-result-title">Pago exitoso</h2>
+        <p class="pago-result-message">Tu pago fue procesado correctamente. Tu pack ya esta activo.</p>
+        <div class="pago-result-actions">
+            <button class="btn btn-primary" @onclick='() => Navigation.NavigateTo("reservar")'>
+                Reservar una clase
+            </button>
+            <button class="btn btn-outline" @onclick='() => Navigation.NavigateTo("")'>
+                Ir al Dashboard
+            </button>
+        </div>
+    </div>
+</div>

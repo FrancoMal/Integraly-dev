@@ -21,6 +21,8 @@ public class AppDbContext : DbContext
     public DbSet<WebinarDate> WebinarDates => Set<WebinarDate>();
     public DbSet<WebinarContact> WebinarContacts => Set<WebinarContact>();
     public DbSet<WebinarRegistration> WebinarRegistrations => Set<WebinarRegistration>();
+    public DbSet<PaymentPlan> PaymentPlans => Set<PaymentPlan>();
+    public DbSet<Payment> Payments => Set<Payment>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -156,6 +158,29 @@ public class AppDbContext : DbContext
             entity.HasOne(r => r.WebinarDate)
                   .WithMany()
                   .HasForeignKey(r => r.WebinarDateId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PaymentPlan>(entity =>
+        {
+            entity.HasIndex(p => p.Active);
+        });
+
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasIndex(p => p.UserId);
+            entity.HasIndex(p => p.Status);
+            entity.HasOne(p => p.User)
+                  .WithMany()
+                  .HasForeignKey(p => p.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.PaymentPlan)
+                  .WithMany()
+                  .HasForeignKey(p => p.PaymentPlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.TokenPack)
+                  .WithMany()
+                  .HasForeignKey(p => p.TokenPackId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
