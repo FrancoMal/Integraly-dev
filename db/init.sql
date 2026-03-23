@@ -253,7 +253,7 @@ GO
 
 -- Seed usuario permissions
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
-(3, 'dashboard'), (3, 'reservar'), (3, 'mis-reservas'), (3, 'perfil');
+(3, 'dashboard'), (3, 'reservar'), (3, 'mis-reservas'), (3, 'perfil'), (3, 'comprar');
 GO
 
 -- Seed AppSettings
