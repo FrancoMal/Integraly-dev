@@ -326,10 +326,11 @@ public class PaymentsController : ControllerBase
         .body h2 {{ color: #1a1a2e; margin-top: 0; }}
         .body p {{ color: #555; line-height: 1.6; }}
         .detail-box {{ background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 20px 0; }}
-        .detail-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #dcfce7; }}
-        .detail-row:last-child {{ border-bottom: none; }}
-        .detail-label {{ color: #666; font-weight: 500; }}
-        .detail-value {{ color: #1a1a2e; font-weight: 600; }}
+        .steps {{ background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin: 20px 0; }}
+        .steps h3 {{ color: #0369a1; margin-top: 0; font-size: 16px; }}
+        .steps ol {{ color: #555; padding-left: 20px; margin: 0; }}
+        .steps li {{ padding: 6px 0; line-height: 1.5; }}
+        .steps a {{ color: #0369a1; text-decoration: none; font-weight: 600; }}
         .footer {{ background: #f9fafb; padding: 20px; text-align: center; color: #999; font-size: 12px; }}
     </style>
 </head>
@@ -342,6 +343,7 @@ public class PaymentsController : ControllerBase
         <div class=""body"">
             <h2>Hola {user.FirstName ?? user.Username},</h2>
             <p>Tu pago fue procesado exitosamente. Ya tenes tus clases disponibles para reservar.</p>
+
             <div class=""detail-box"">
                 <table width=""100%"" cellpadding=""8"" cellspacing=""0"">
                     <tr>
@@ -349,11 +351,11 @@ public class PaymentsController : ControllerBase
                         <td style=""color:#1a1a2e;font-weight:600;text-align:right;"">{plan.Name}</td>
                     </tr>
                     <tr>
-                        <td style=""color:#666;font-weight:500;"">Clases</td>
+                        <td style=""color:#666;font-weight:500;"">Clases disponibles</td>
                         <td style=""color:#1a1a2e;font-weight:600;text-align:right;"">{plan.Classes}</td>
                     </tr>
                     <tr>
-                        <td style=""color:#666;font-weight:500;"">Monto</td>
+                        <td style=""color:#666;font-weight:500;"">Monto abonado</td>
                         <td style=""color:#1a1a2e;font-weight:600;text-align:right;"">$ {plan.Price:N0} {plan.Currency}</td>
                     </tr>
                     <tr>
@@ -362,7 +364,19 @@ public class PaymentsController : ControllerBase
                     </tr>
                 </table>
             </div>
-            <p>Podes reservar tus clases ingresando al panel en <a href=""https://integraly.dev/panel"">integraly.dev/panel</a>.</p>
+
+            <div class=""steps"">
+                <h3>¿Que podes hacer con tus clases?</h3>
+                <ol>
+                    <li>Ingresa a tu panel en <a href=""https://integraly.dev/panel"">integraly.dev/panel</a></li>
+                    <li>Anda a la seccion <strong>""Reservar""</strong> en el menu lateral</li>
+                    <li>Elegi el instructor, dia y horario que prefieras</li>
+                    <li>Confirma tu reserva y listo, vas a recibir un link de Google Meet para conectarte</li>
+                </ol>
+            </div>
+
+            <p>Tus clases no tienen vencimiento, asi que podes usarlas cuando quieras.</p>
+            <p>Si tenes alguna duda, respondenos a este mail y te ayudamos.</p>
         </div>
         <div class=""footer"">
             <p>Integraly - Clases particulares de tecnologia</p>
@@ -371,7 +385,7 @@ public class PaymentsController : ControllerBase
 </body>
 </html>";
 
-        await _emailService.SendEmailAsync(user.Email, "Tu pago fue confirmado - Integraly", htmlBody);
+        await _emailService.SendEmailAsync(user.Email, "Tu pago fue confirmado - Integraly", htmlBody, bcc: "ventas@integraly.com");
     }
 
     private bool IsAdmin()
