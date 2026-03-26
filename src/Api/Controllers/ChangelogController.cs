@@ -22,11 +22,12 @@ public class ChangelogController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] string? search,
-        [FromQuery] string? tag,
+        [FromQuery] string? tags,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await _service.GetListAsync(from, to, search, tag, page, pageSize);
+        var tagList = string.IsNullOrWhiteSpace(tags) ? null : tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim().ToLower()).ToList();
+        var result = await _service.GetListAsync(from, to, search, tagList, page, pageSize);
         return Ok(result);
     }
 

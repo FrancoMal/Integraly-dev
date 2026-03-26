@@ -30,12 +30,12 @@
             <span style="color:var(--text-secondary); font-size:0.85rem; margin-right:0.25rem; align-self:center;">Etiquetas:</span>
             @foreach (var tag in allTags)
             {
-                <button class="changelog-tag changelog-tag-@tag.ToLower() @(filterTag == tag ? "changelog-tag-active" : "")"
+                <button class="changelog-tag changelog-tag-@tag.ToLower() @(filterTags.Contains(tag) ? "changelog-tag-active" : "")"
                         style="cursor:pointer; border:none;" @onclick="() => ToggleTagFilter(tag)">
                     @tag
                 </button>
             }
-            @if (!string.IsNullOrEmpty(filterTag))
+            @if (filterTags.Count > 0)
             {
                 <button class="btn btn-secondary" style="padding:0.15rem 0.5rem; font-size:0.75rem;" @onclick="ClearTagFilter">
                     <i class="fa-solid fa-xmark"></i> Limpiar
@@ -64,7 +64,7 @@
                     <span class="status-badge" style="background:#e0e7ff;color:#3730a3;">@detail.TotalGroups grupos</span>
                 </div>
 
-                @foreach (var group in detail.Groups)
+                @foreach (var group in FilteredGroups())
                 {
                     <div class="changelog-group @(IsGroupExpanded(group.Id) ? "expanded" : "")">
                         <div class="changelog-group-header" @onclick="() => ToggleGroup(group.Id)">
@@ -190,7 +190,7 @@ else
     private DateTime? filterFrom;
     private DateTime? filterTo;
     private string? filterSearch;
-    private string? filterTag;
+    private HashSet<string> filterTags = new();
     private bool isLoading = true;
     private List<DailyChangeSummaryListDto>? items;
     private int total;
@@ -233,7 +233,8 @@ else
         {
             isLoading = true;
             StateHasChanged();
-            var result = await Api.GetChangelogAsync(filterFrom, filterTo, filterSearch, filterTag, currentPage);
+            var tagsList = filterTags.Count > 0 ? filterTags.ToList() : null;
+            var result = await Api.GetChangelogAsync(filterFrom, filterTo, filterSearch, tagsList, currentPage);
             if (result is not null)
             {
                 items = result.Items;
@@ -263,16 +264,26 @@ else
 
     private async Task ToggleTagFilter(string tag)
     {
-        filterTag = filterTag == tag ? null : tag;
+        if (!filterTags.Remove(tag))
+            filterTags.Add(tag);
         currentPage = 1;
         await LoadList();
     }
 
     private async Task ClearTagFilter()
     {
-        filterTag = null;
+        filterTags.Clear();
         currentPage = 1;
         await LoadList();
+    }
+
+    private List<CommitGroupDto> FilteredGroups()
+    {
+        if (detail is null) return new();
+        if (filterTags.Count == 0) return detail.Groups;
+        return detail.Groups
+            .Where(g => filterTags.All(ft => g.Tags.Any(gt => gt.Equals(ft, StringComparison.OrdinalIgnoreCase))))
+            .ToList();
     }
 
     private async Task PrevPage()

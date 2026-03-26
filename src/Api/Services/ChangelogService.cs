@@ -14,7 +14,7 @@ public class ChangelogService
         _db = db;
     }
 
-    public async Task<ChangelogListResponse> GetListAsync(DateTime? from, DateTime? to, string? search, string? tag, int page, int pageSize)
+    public async Task<ChangelogListResponse> GetListAsync(DateTime? from, DateTime? to, string? search, List<string>? tags, int page, int pageSize)
     {
         var query = _db.DailyChangeSummaries.AsQueryable();
 
@@ -23,16 +23,17 @@ public class ChangelogService
         if (to.HasValue)
             query = query.Where(d => d.Date <= DateOnly.FromDateTime(to.Value).ToDateTime(TimeOnly.MaxValue));
 
-        if (!string.IsNullOrWhiteSpace(tag))
+        if (tags is not null && tags.Count > 0)
         {
-            var tagLower = tag.ToLower();
-            var tagSummaryIds = await _db.CommitGroups
-                .Where(g => g.Tags.ToLower().Contains(tagLower))
+            // Buscar grupos que contengan TODAS las tags seleccionadas
+            var allGroups = await _db.CommitGroups.Select(g => new { g.DailySummaryId, g.Tags }).ToListAsync();
+            var matchingIds = allGroups
+                .Where(g => tags.All(t => g.Tags.ToLower().Contains(t)))
                 .Select(g => g.DailySummaryId)
                 .Distinct()
-                .ToListAsync();
+                .ToList();
 
-            query = query.Where(d => tagSummaryIds.Contains(d.Id));
+            query = query.Where(d => matchingIds.Contains(d.Id));
         }
 
         if (!string.IsNullOrWhiteSpace(search))

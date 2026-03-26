@@ -506,13 +506,13 @@ public class ApiClient
     }
 
     // --- Changelog ---
-    public async Task<ChangelogListResponse?> GetChangelogAsync(DateTime? from = null, DateTime? to = null, string? search = null, string? tag = null, int page = 1)
+    public async Task<ChangelogListResponse?> GetChangelogAsync(DateTime? from = null, DateTime? to = null, string? search = null, List<string>? tags = null, int page = 1)
     {
         var url = $"/api/changelog?page={page}";
         if (from.HasValue) url += $"&from={from.Value:yyyy-MM-dd}";
         if (to.HasValue) url += $"&to={to.Value:yyyy-MM-dd}";
         if (!string.IsNullOrEmpty(search)) url += $"&search={Uri.EscapeDataString(search)}";
-        if (!string.IsNullOrEmpty(tag)) url += $"&tag={Uri.EscapeDataString(tag)}";
+        if (tags is not null && tags.Count > 0) url += $"&tags={Uri.EscapeDataString(string.Join(",", tags))}";
         return await GetAsync<ChangelogListResponse>(url);
     }
 
