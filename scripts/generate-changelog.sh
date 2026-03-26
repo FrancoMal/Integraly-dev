@@ -1,50 +1,24 @@
 #!/bin/bash
-# Genera un resumen de changelog para una fecha específica usando Claude
+# Genera un resumen de changelog para una fecha específica usando Claude Code
 # Uso: ./scripts/generate-changelog.sh [YYYY-MM-DD]
+# Requisito: tener claude autenticado (claude code ya logueado)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-
-# Cargar variables de entorno
-if [ -f "$PROJECT_DIR/.env" ]; then
-    set -a
-    source "$PROJECT_DIR/.env"
-    set +a
-fi
-
 DATE="${1:-$(date +%Y-%m-%d)}"
-API_URL="${CHANGELOG_API_URL:-http://localhost:3000/api/changelog}"
-API_KEY="${CHANGELOG_API_KEY:-changelog-secret-key-2024}"
-AUTH_USER="${CHANGELOG_USER:-admin}"
-AUTH_PASS="${CHANGELOG_PASS:-admin123}"
-AUTH_LOGIN_URL="${CHANGELOG_LOGIN_URL:-http://localhost:3000/api/auth/login}"
+
+# Conexion a SQL Server (container de desarrollo)
+SQLCMD="docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong@Passw0rd -d AIcoding -C"
 
 cd "$PROJECT_DIR"
 
 echo "[$DATE] Generando changelog..."
 
-# Obtener JWT token via login
-echo "[$DATE] Autenticando..."
-LOGIN_RESPONSE=$(curl -s -X POST "$AUTH_LOGIN_URL" \
-    -H "Content-Type: application/json" \
-    -d "{\"username\":\"$AUTH_USER\",\"password\":\"$AUTH_PASS\"}" 2>/dev/null || true)
-
-JWT_TOKEN=$(echo "$LOGIN_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || true)
-
-if [ -n "$JWT_TOKEN" ]; then
-    AUTH_HEADER="Authorization: Bearer $JWT_TOKEN"
-    echo "[$DATE] Autenticado con JWT"
-else
-    AUTH_HEADER="X-Changelog-Key: $API_KEY"
-    echo "[$DATE] JWT no disponible, usando API key"
-fi
-
 # Obtener commits del día en develop
 NEXT_DATE=$(date -d "$DATE + 1 day" +%Y-%m-%d 2>/dev/null || date -v+1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d)
 
-# Git log con formato estructurado: hash, mensaje, timestamp, y archivos
 RAW_LOG=$(git log develop --after="$DATE 00:00:00" --before="$NEXT_DATE 00:00:00" \
     --pretty=format:'COMMIT_START%n{"hash":"%H","message":"%s","timestamp":"%ai"}%nCOMMIT_FILES' \
     --name-only 2>/dev/null || true)
@@ -54,7 +28,7 @@ if [ -z "$RAW_LOG" ]; then
     exit 0
 fi
 
-# Parsear el log para construir un texto estructurado con archivos por commit
+# Parsear el log para construir texto estructurado con archivos por commit
 FORMATTED_COMMITS=""
 CURRENT_COMMIT=""
 IN_FILES=false
@@ -62,7 +36,6 @@ COMMIT_COUNT=0
 
 while IFS= read -r line; do
     if [[ "$line" == "COMMIT_START" ]]; then
-        # Guardar el commit anterior si existe
         if [ -n "$CURRENT_COMMIT" ]; then
             FORMATTED_COMMITS="$FORMATTED_COMMITS$CURRENT_COMMIT\n"
         fi
@@ -72,7 +45,6 @@ while IFS= read -r line; do
     elif [[ "$line" == "COMMIT_FILES" ]]; then
         IN_FILES=true
     elif [ "$IN_FILES" = true ] && [ -n "$line" ]; then
-        # Es un nombre de archivo
         if [[ "$CURRENT_COMMIT" == *'"filesChanged":['* ]]; then
             CURRENT_COMMIT="${CURRENT_COMMIT},\"$line\""
         else
@@ -83,7 +55,6 @@ while IFS= read -r line; do
     fi
 done <<< "$RAW_LOG"
 
-# Guardar el último commit
 if [ -n "$CURRENT_COMMIT" ]; then
     FORMATTED_COMMITS="$FORMATTED_COMMITS$CURRENT_COMMIT\n"
 fi
@@ -125,7 +96,7 @@ Reglas IMPORTANTES:
 Commits del dia:
 $(echo -e "$FORMATTED_COMMITS")"
 
-# Llamar a Claude CLI
+# Llamar a Claude Code (usa tu autenticacion existente)
 RESULT=$(echo "$PROMPT" | claude -p 2>/dev/null)
 
 if [ -z "$RESULT" ]; then
@@ -133,7 +104,7 @@ if [ -z "$RESULT" ]; then
     exit 1
 fi
 
-# Limpiar posible markdown del resultado (```json ... ```)
+# Limpiar posible markdown del resultado
 CLEAN_RESULT=$(echo "$RESULT" | sed '/^```/d' | sed 's/^```json//' | sed 's/^```//')
 
 # Verificar que es JSON válido
@@ -143,19 +114,80 @@ if ! echo "$CLEAN_RESULT" | python3 -c "import sys,json; json.load(sys.stdin)" 2
     exit 1
 fi
 
-echo "[$DATE] Enviando a la API..."
+echo "[$DATE] Guardando en la base de datos..."
 
-# POST a la API
-HTTP_CODE=$(curl -s -o /tmp/changelog-response.txt -w "%{http_code}" \
-    -X POST "$API_URL" \
-    -H "Content-Type: application/json" \
-    -H "$AUTH_HEADER" \
-    -d "$CLEAN_RESULT")
+# Parsear el JSON y guardar directo en SQL Server
+python3 -c "
+import json, subprocess, sys
 
-if [ "$HTTP_CODE" -eq 200 ]; then
+data = json.loads('''$CLEAN_RESULT''')
+
+date = data['date']
+summary = data['generalSummary'].replace(\"'\", \"''\")
+total_commits = data['totalCommits']
+total_groups = len(data['groups'])
+
+# Borrar si ya existe (CASCADE borra los grupos)
+delete_sql = f\"DELETE FROM DailyChangeSummaries WHERE Date = '{date}'\"
+
+# Insertar resumen del dia
+insert_summary = f\"\"\"
+INSERT INTO DailyChangeSummaries (Date, GeneralSummary, TotalCommits, TotalGroups, CreatedAt)
+OUTPUT INSERTED.Id
+VALUES ('{date}', N'{summary}', {total_commits}, {total_groups}, GETDATE())
+\"\"\"
+
+# Ejecutar delete + insert y obtener el ID
+sql = f\"{delete_sql}; {insert_summary}\"
+result = subprocess.run(
+    ['docker', 'compose', 'exec', '-T', 'sqlserver',
+     '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', 'sa',
+     '-P', 'YourStrong@Passw0rd', '-d', 'AIcoding', '-C', '-h', '-1', '-Q', sql],
+    capture_output=True, text=True, cwd='$PROJECT_DIR'
+)
+
+if result.returncode != 0:
+    print(f'Error SQL: {result.stderr}', file=sys.stderr)
+    sys.exit(1)
+
+# Obtener el ID insertado
+summary_id = result.stdout.strip().split('\n')[-1].strip()
+if not summary_id.isdigit():
+    print(f'Error obteniendo ID: {result.stdout}', file=sys.stderr)
+    sys.exit(1)
+
+print(f'  DailyChangeSummary ID: {summary_id}')
+
+# Insertar cada grupo
+for g in data['groups']:
+    title = g['groupTitle'].replace(\"'\", \"''\")
+    gsummary = g['groupSummary'].replace(\"'\", \"''\")
+    tags = ','.join(g['tags']) if isinstance(g['tags'], list) else g['tags']
+    commits_json = g['commitsJson'].replace(\"'\", \"''\") if isinstance(g['commitsJson'], str) else json.dumps(g['commitsJson']).replace(\"'\", \"''\")
+    order = g.get('displayOrder', 0)
+
+    insert_group = f\"\"\"
+    INSERT INTO CommitGroups (DailySummaryId, GroupTitle, GroupSummary, Tags, CommitsJson, DisplayOrder)
+    VALUES ({summary_id}, N'{title}', N'{gsummary}', N'{tags}', N'{commits_json}', {order})
+    \"\"\"
+
+    result = subprocess.run(
+        ['docker', 'compose', 'exec', '-T', 'sqlserver',
+         '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', 'sa',
+         '-P', 'YourStrong@Passw0rd', '-d', 'AIcoding', '-C', '-Q', insert_group],
+        capture_output=True, text=True, cwd='$PROJECT_DIR'
+    )
+    if result.returncode != 0:
+        print(f'  Error insertando grupo: {result.stderr}', file=sys.stderr)
+    else:
+        print(f'  Grupo: {g[\"groupTitle\"]}')
+
+print('Listo!')
+"
+
+if [ $? -eq 0 ]; then
     echo "[$DATE] Changelog generado exitosamente"
 else
-    echo "[$DATE] Error HTTP $HTTP_CODE al guardar en la API"
-    cat /tmp/changelog-response.txt 2>/dev/null
+    echo "[$DATE] Error al guardar en la base de datos"
     exit 1
 fi

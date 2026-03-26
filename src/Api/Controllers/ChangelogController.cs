@@ -10,12 +10,10 @@ namespace Api.Controllers;
 public class ChangelogController : ControllerBase
 {
     private readonly ChangelogService _service;
-    private readonly IConfiguration _config;
 
-    public ChangelogController(ChangelogService service, IConfiguration config)
+    public ChangelogController(ChangelogService service)
     {
         _service = service;
-        _config = config;
     }
 
     [HttpGet]
@@ -41,20 +39,9 @@ public class ChangelogController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize]
     public async Task<IActionResult> Create([FromBody] CreateDailyChangelogRequest request)
     {
-        // Aceptar JWT auth o API key
-        var isAuthenticated = User.Identity?.IsAuthenticated == true;
-
-        if (!isAuthenticated)
-        {
-            var apiKey = _config["Changelog:ApiKey"];
-            var providedKey = Request.Headers["X-Changelog-Key"].FirstOrDefault();
-
-            if (string.IsNullOrEmpty(apiKey) || providedKey != apiKey)
-                return Unauthorized("Se requiere autenticacion JWT o API key valida");
-        }
-
         var result = await _service.CreateOrUpdateAsync(request);
         return Ok(result);
     }
