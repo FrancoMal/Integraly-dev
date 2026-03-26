@@ -22,10 +22,11 @@ public class ChangelogController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] string? search,
+        [FromQuery] string? tag,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        var result = await _service.GetListAsync(from, to, search, page, pageSize);
+        var result = await _service.GetListAsync(from, to, search, tag, page, pageSize);
         return Ok(result);
     }
 

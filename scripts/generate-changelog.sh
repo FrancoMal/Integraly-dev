@@ -87,7 +87,8 @@ Formato esperado:
 
 Reglas IMPORTANTES:
 - Agrupa commits relacionados (ej: 5 commits arreglando lo mismo = 1 grupo)
-- Tags posibles: backend, frontend, infra, database, fix, feature, refactor
+- Tags posibles: backend, frontend, infra, database, fix, feature, refactor, admin, usuario, instructor
+- Usa las tags admin, usuario, instructor cuando el cambio afecta a ese rol (ej: cambios en el dashboard de admin = tag admin, cambios en reservas del alumno = tag usuario)
 - El resumen general y de cada grupo debe ser entendible para alguien NO tecnico
 - El campo commitsJson debe ser un STRING con JSON escapado adentro (no un objeto JSON directo)
 - Cada commit en commitsJson debe tener: hash, message, timestamp, filesChanged (array de strings)

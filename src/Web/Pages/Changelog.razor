@@ -26,6 +26,22 @@
                 <i class="fa-solid fa-magnifying-glass" style="margin-right:0.3rem;"></i>Buscar
             </button>
         </div>
+        <div style="display:flex; gap:0.4rem; flex-wrap:wrap; margin-top:0.75rem;">
+            <span style="color:var(--text-secondary); font-size:0.85rem; margin-right:0.25rem; align-self:center;">Etiquetas:</span>
+            @foreach (var tag in allTags)
+            {
+                <button class="changelog-tag changelog-tag-@tag.ToLower() @(filterTag == tag ? "changelog-tag-active" : "")"
+                        style="cursor:pointer; border:none;" @onclick="() => ToggleTagFilter(tag)">
+                    @tag
+                </button>
+            }
+            @if (!string.IsNullOrEmpty(filterTag))
+            {
+                <button class="btn btn-secondary" style="padding:0.15rem 0.5rem; font-size:0.75rem;" @onclick="ClearTagFilter">
+                    <i class="fa-solid fa-xmark"></i> Limpiar
+                </button>
+            }
+        </div>
     </div>
 </div>
 
@@ -66,10 +82,16 @@
                                 <div class="changelog-author" @onclick:stopPropagation="true">
                                     @if (editingAuthorGroupId == group.Id)
                                     {
-                                        <input class="form-input" type="text" @bind="editingAuthorValue"
-                                               placeholder="Nombre del autor" style="width:150px; font-size:0.85rem; padding:0.25rem 0.5rem;"
-                                               @onkeydown="(e) => HandleAuthorKeyDown(e, group.Id)" />
-                                        <button class="btn btn-primary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" @onclick="() => SaveAuthor(group.Id)">OK</button>
+                                        <select class="form-input" style="width:160px; font-size:0.85rem; padding:0.25rem 0.5rem;"
+                                                @onchange="(e) => OnAuthorSelected(e, group.Id)">
+                                            <option value="">-- Seleccionar --</option>
+                                            @foreach (var inst in instructors)
+                                            {
+                                                var name = $"{inst.FirstName} {inst.LastName}".Trim();
+                                                if (string.IsNullOrEmpty(name)) name = inst.Username;
+                                                <option value="@name" selected="@(name == editingAuthorValue)">@name</option>
+                                            }
+                                        </select>
                                         <button class="btn btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.8rem;" @onclick="CancelEditAuthor">X</button>
                                     }
                                     else
@@ -168,6 +190,7 @@ else
     private DateTime? filterFrom;
     private DateTime? filterTo;
     private string? filterSearch;
+    private string? filterTag;
     private bool isLoading = true;
     private List<DailyChangeSummaryListDto>? items;
     private int total;
@@ -183,10 +206,25 @@ else
     // Author editing
     private int? editingAuthorGroupId;
     private string? editingAuthorValue;
+    private List<UserManageDto> instructors = new();
+
+    // All available tags
+    private readonly string[] allTags = { "backend", "frontend", "infra", "database", "fix", "feature", "refactor", "admin", "usuario", "instructor" };
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadList();
+        var loadList = LoadList();
+        var loadInstructors = LoadInstructors();
+        await Task.WhenAll(loadList, loadInstructors);
+    }
+
+    private async Task LoadInstructors()
+    {
+        try
+        {
+            instructors = await Api.GetInstructorsAsync() ?? new();
+        }
+        catch { }
     }
 
     private async Task LoadList()
@@ -195,7 +233,7 @@ else
         {
             isLoading = true;
             StateHasChanged();
-            var result = await Api.GetChangelogAsync(filterFrom, filterTo, filterSearch, currentPage);
+            var result = await Api.GetChangelogAsync(filterFrom, filterTo, filterSearch, filterTag, currentPage);
             if (result is not null)
             {
                 items = result.Items;
@@ -221,6 +259,20 @@ else
     private async Task HandleSearchKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter") await Search();
+    }
+
+    private async Task ToggleTagFilter(string tag)
+    {
+        filterTag = filterTag == tag ? null : tag;
+        currentPage = 1;
+        await LoadList();
+    }
+
+    private async Task ClearTagFilter()
+    {
+        filterTag = null;
+        currentPage = 1;
+        await LoadList();
     }
 
     private async Task PrevPage()
@@ -281,10 +333,14 @@ else
         editingAuthorValue = null;
     }
 
-    private async Task HandleAuthorKeyDown(KeyboardEventArgs e, int groupId)
+    private async Task OnAuthorSelected(ChangeEventArgs e, int groupId)
     {
-        if (e.Key == "Enter") await SaveAuthor(groupId);
-        if (e.Key == "Escape") CancelEditAuthor();
+        var selectedName = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(selectedName))
+        {
+            editingAuthorValue = selectedName;
+            await SaveAuthor(groupId);
+        }
     }
 
     private async Task SaveAuthor(int groupId)

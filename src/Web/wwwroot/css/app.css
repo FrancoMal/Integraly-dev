@@ -4703,3 +4703,11 @@ td.calendar-slot-unavailable {
 .changelog-tag-fix { background: #fee2e2; color: #dc2626; }
 .changelog-tag-feature { background: #ecfdf5; color: #059669; }
 .changelog-tag-refactor { background: #f1f5f9; color: #475569; }
+.changelog-tag-admin { background: #fef3c7; color: #92400e; }
+.changelog-tag-usuario { background: #e0f2fe; color: #0369a1; }
+.changelog-tag-instructor { background: #fce7f3; color: #9d174d; }
+
+.changelog-tag-active {
+    outline: 2px solid var(--text-primary);
+    outline-offset: 1px;
+}
