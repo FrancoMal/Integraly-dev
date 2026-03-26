@@ -116,76 +116,17 @@ fi
 
 echo "[$DATE] Guardando en la base de datos..."
 
-# Parsear el JSON y guardar directo en SQL Server
-python3 -c "
-import json, subprocess, sys
+# Guardar JSON en archivo temporal
+TMPFILE=$(mktemp /tmp/changelog-XXXXXX.json)
+echo "$CLEAN_RESULT" > "$TMPFILE"
 
-data = json.loads('''$CLEAN_RESULT''')
+# Usar script Python para insertar en la DB
+python3 "$SCRIPT_DIR/save-changelog-to-db.py" "$TMPFILE" "$PROJECT_DIR"
+SAVE_RESULT=$?
 
-date = data['date']
-summary = data['generalSummary'].replace(\"'\", \"''\")
-total_commits = data['totalCommits']
-total_groups = len(data['groups'])
+rm -f "$TMPFILE"
 
-# Borrar si ya existe (CASCADE borra los grupos)
-delete_sql = f\"DELETE FROM DailyChangeSummaries WHERE Date = '{date}'\"
-
-# Insertar resumen del dia
-insert_summary = f\"\"\"
-INSERT INTO DailyChangeSummaries (Date, GeneralSummary, TotalCommits, TotalGroups, CreatedAt)
-OUTPUT INSERTED.Id
-VALUES ('{date}', N'{summary}', {total_commits}, {total_groups}, GETDATE())
-\"\"\"
-
-# Ejecutar delete + insert y obtener el ID
-sql = f\"{delete_sql}; {insert_summary}\"
-result = subprocess.run(
-    ['docker', 'compose', 'exec', '-T', 'sqlserver',
-     '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', 'sa',
-     '-P', 'YourStrong@Passw0rd', '-d', 'AIcoding', '-C', '-h', '-1', '-Q', sql],
-    capture_output=True, text=True, cwd='$PROJECT_DIR'
-)
-
-if result.returncode != 0:
-    print(f'Error SQL: {result.stderr}', file=sys.stderr)
-    sys.exit(1)
-
-# Obtener el ID insertado
-summary_id = result.stdout.strip().split('\n')[-1].strip()
-if not summary_id.isdigit():
-    print(f'Error obteniendo ID: {result.stdout}', file=sys.stderr)
-    sys.exit(1)
-
-print(f'  DailyChangeSummary ID: {summary_id}')
-
-# Insertar cada grupo
-for g in data['groups']:
-    title = g['groupTitle'].replace(\"'\", \"''\")
-    gsummary = g['groupSummary'].replace(\"'\", \"''\")
-    tags = ','.join(g['tags']) if isinstance(g['tags'], list) else g['tags']
-    commits_json = g['commitsJson'].replace(\"'\", \"''\") if isinstance(g['commitsJson'], str) else json.dumps(g['commitsJson']).replace(\"'\", \"''\")
-    order = g.get('displayOrder', 0)
-
-    insert_group = f\"\"\"
-    INSERT INTO CommitGroups (DailySummaryId, GroupTitle, GroupSummary, Tags, CommitsJson, DisplayOrder)
-    VALUES ({summary_id}, N'{title}', N'{gsummary}', N'{tags}', N'{commits_json}', {order})
-    \"\"\"
-
-    result = subprocess.run(
-        ['docker', 'compose', 'exec', '-T', 'sqlserver',
-         '/opt/mssql-tools18/bin/sqlcmd', '-S', 'localhost', '-U', 'sa',
-         '-P', 'YourStrong@Passw0rd', '-d', 'AIcoding', '-C', '-Q', insert_group],
-        capture_output=True, text=True, cwd='$PROJECT_DIR'
-    )
-    if result.returncode != 0:
-        print(f'  Error insertando grupo: {result.stderr}', file=sys.stderr)
-    else:
-        print(f'  Grupo: {g[\"groupTitle\"]}')
-
-print('Listo!')
-"
-
-if [ $? -eq 0 ]; then
+if [ "$SAVE_RESULT" -eq 0 ]; then
     echo "[$DATE] Changelog generado exitosamente"
 else
     echo "[$DATE] Error al guardar en la base de datos"
