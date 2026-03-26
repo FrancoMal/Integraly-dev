@@ -17,10 +17,29 @@ fi
 DATE="${1:-$(date +%Y-%m-%d)}"
 API_URL="${CHANGELOG_API_URL:-http://localhost:3000/api/changelog}"
 API_KEY="${CHANGELOG_API_KEY:-changelog-secret-key-2024}"
+AUTH_USER="${CHANGELOG_USER:-admin}"
+AUTH_PASS="${CHANGELOG_PASS:-admin123}"
+AUTH_LOGIN_URL="${CHANGELOG_LOGIN_URL:-http://localhost:3000/api/auth/login}"
 
 cd "$PROJECT_DIR"
 
 echo "[$DATE] Generando changelog..."
+
+# Obtener JWT token via login
+echo "[$DATE] Autenticando..."
+LOGIN_RESPONSE=$(curl -s -X POST "$AUTH_LOGIN_URL" \
+    -H "Content-Type: application/json" \
+    -d "{\"username\":\"$AUTH_USER\",\"password\":\"$AUTH_PASS\"}" 2>/dev/null || true)
+
+JWT_TOKEN=$(echo "$LOGIN_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || true)
+
+if [ -n "$JWT_TOKEN" ]; then
+    AUTH_HEADER="Authorization: Bearer $JWT_TOKEN"
+    echo "[$DATE] Autenticado con JWT"
+else
+    AUTH_HEADER="X-Changelog-Key: $API_KEY"
+    echo "[$DATE] JWT no disponible, usando API key"
+fi
 
 # Obtener commits del día en develop
 NEXT_DATE=$(date -d "$DATE + 1 day" +%Y-%m-%d 2>/dev/null || date -v+1d -j -f "%Y-%m-%d" "$DATE" +%Y-%m-%d)
@@ -130,7 +149,7 @@ echo "[$DATE] Enviando a la API..."
 HTTP_CODE=$(curl -s -o /tmp/changelog-response.txt -w "%{http_code}" \
     -X POST "$API_URL" \
     -H "Content-Type: application/json" \
-    -H "X-Changelog-Key: $API_KEY" \
+    -H "$AUTH_HEADER" \
     -d "$CLEAN_RESULT")
 
 if [ "$HTTP_CODE" -eq 200 ]; then

@@ -43,11 +43,17 @@ public class ChangelogController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateDailyChangelogRequest request)
     {
-        var apiKey = _config["Changelog:ApiKey"];
-        var providedKey = Request.Headers["X-Changelog-Key"].FirstOrDefault();
+        // Aceptar JWT auth o API key
+        var isAuthenticated = User.Identity?.IsAuthenticated == true;
 
-        if (string.IsNullOrEmpty(apiKey) || providedKey != apiKey)
-            return Unauthorized("Invalid API key");
+        if (!isAuthenticated)
+        {
+            var apiKey = _config["Changelog:ApiKey"];
+            var providedKey = Request.Headers["X-Changelog-Key"].FirstOrDefault();
+
+            if (string.IsNullOrEmpty(apiKey) || providedKey != apiKey)
+                return Unauthorized("Se requiere autenticacion JWT o API key valida");
+        }
 
         var result = await _service.CreateOrUpdateAsync(request);
         return Ok(result);
