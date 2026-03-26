@@ -34,10 +34,10 @@
                      IsActive="@IsActive("comprar")" OnClick="@(() => NavigateTo("comprar"))" />
         }
 
-        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config") || HasPerm("webinar") || role == "admin")
+        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("changelog") || HasPerm("config") || HasPerm("webinar") || role == "admin")
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("config") || IsActive("webinar-admin"))">
+                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("changelog") || IsActive("config") || IsActive("webinar-admin"))">
                 @if (role == "admin")
                 {
                     <NavItem Href="calendario-admin" Label="Calendario" Icon="@SvgIcons.Calendar"
@@ -77,6 +77,11 @@
                 {
                     <NavItem Href="auditoria" Label="Auditoria" Icon="@SvgIcons.History"
                              IsActive="@IsActive("auditoria")" OnClick="@(() => NavigateTo("auditoria"))" />
+                }
+                @if (HasPerm("changelog"))
+                {
+                    <NavItem Href="changelog" Label="Changelog" Icon="@SvgIcons.Code"
+                             IsActive="@IsActive("changelog")" OnClick="@(() => NavigateTo("changelog"))" />
                 }
                 @if (HasPerm("config"))
                 {
@@ -182,7 +187,8 @@
         { "comprar", "Comprar Pack" },
         { "pago-exitoso", "Pago Exitoso" },
         { "pago-fallido", "Pago Fallido" },
-        { "pago-pendiente", "Pago Pendiente" }
+        { "pago-pendiente", "Pago Pendiente" },
+        { "changelog", "Historial de Cambios" }
     };
 
     private string GetPageTitle()
@@ -212,7 +218,8 @@
         { "comprar", "comprar" },
         { "pago-exitoso", "" },
         { "pago-fallido", "" },
-        { "pago-pendiente", "" }
+        { "pago-pendiente", "" },
+        { "changelog", "changelog" }
     };
 
     private bool IsAdminPanel => Navigation.BaseUri.Contains("/panel/");

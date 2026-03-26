@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<WebinarRegistration> WebinarRegistrations => Set<WebinarRegistration>();
     public DbSet<PaymentPlan> PaymentPlans => Set<PaymentPlan>();
     public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<DailyChangeSummary> DailyChangeSummaries => Set<DailyChangeSummary>();
+    public DbSet<CommitGroup> CommitGroups => Set<CommitGroup>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -182,6 +184,20 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(p => p.TokenPackId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DailyChangeSummary>(entity =>
+        {
+            entity.HasIndex(d => d.Date).IsUnique();
+        });
+
+        modelBuilder.Entity<CommitGroup>(entity =>
+        {
+            entity.HasIndex(c => c.DailySummaryId);
+            entity.HasOne(c => c.DailySummary)
+                  .WithMany(d => d.CommitGroups)
+                  .HasForeignKey(c => c.DailySummaryId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
     }

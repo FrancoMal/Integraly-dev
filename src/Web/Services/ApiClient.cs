@@ -504,4 +504,26 @@ public class ApiClient
             _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
     }
+
+    // --- Changelog ---
+    public async Task<ChangelogListResponse?> GetChangelogAsync(DateTime? from = null, DateTime? to = null, string? search = null, int page = 1)
+    {
+        var url = $"/api/changelog?page={page}";
+        if (from.HasValue) url += $"&from={from.Value:yyyy-MM-dd}";
+        if (to.HasValue) url += $"&to={to.Value:yyyy-MM-dd}";
+        if (!string.IsNullOrEmpty(search)) url += $"&search={Uri.EscapeDataString(search)}";
+        return await GetAsync<ChangelogListResponse>(url);
+    }
+
+    public async Task<DailyChangeSummaryDetailDto?> GetChangelogDetailAsync(DateTime date)
+    {
+        return await GetAsync<DailyChangeSummaryDetailDto>($"/api/changelog/{date:yyyy-MM-dd}");
+    }
+
+    public async Task<bool> UpdateCommitGroupAuthorAsync(int groupId, string? author)
+    {
+        await SetAuthHeaderAsync();
+        var response = await _http.PutAsJsonAsync($"/api/changelog/groups/{groupId}/author", new { Author = author });
+        return response.IsSuccessStatusCode;
+    }
 }

@@ -4558,3 +4558,148 @@ td.calendar-slot-unavailable {
   background: rgba(148, 163, 184, 0.1);
   color: #64748b;
 }
+
+/* ===== CHANGELOG ===== */
+.changelog-day-card {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.changelog-day-card:hover {
+    background: var(--bg);
+}
+
+.changelog-day-card:last-child {
+    border-bottom: none;
+}
+
+.changelog-day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.changelog-group {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-bottom: 0.75rem;
+    overflow: hidden;
+}
+
+.changelog-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    gap: 1rem;
+}
+
+.changelog-group-header:hover {
+    background: var(--bg);
+}
+
+.changelog-group.expanded .changelog-group-header {
+    border-bottom: 1px solid var(--border);
+}
+
+.changelog-group-body {
+    padding: 0.75rem 1.25rem;
+    background: #fafbfc;
+}
+
+.changelog-chevron {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.changelog-author {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.changelog-edit-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.2rem;
+    font-size: 0.75rem;
+    transition: color 0.15s;
+}
+
+.changelog-edit-btn:hover {
+    color: var(--primary);
+}
+
+.changelog-commit {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.changelog-commit:last-child {
+    border-bottom: none;
+}
+
+.changelog-hash {
+    font-family: 'SFMono-Regular', Consolas, monospace;
+    font-size: 0.8rem;
+    color: var(--primary);
+    background: #ecfdf5;
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.changelog-message {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.changelog-time {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+.changelog-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    padding: 0.2rem 0 0.5rem 4.5rem;
+}
+
+.changelog-file {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: #f1f5f9;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+}
+
+/* Tag colors */
+.changelog-tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.changelog-tag-backend { background: #dbeafe; color: #1d4ed8; }
+.changelog-tag-frontend { background: #dcfce7; color: #16a34a; }
+.changelog-tag-infra { background: #ffedd5; color: #c2410c; }
+.changelog-tag-database { background: #ede9fe; color: #7c3aed; }
+.changelog-tag-fix { background: #fee2e2; color: #dc2626; }
+.changelog-tag-feature { background: #ecfdf5; color: #059669; }
+.changelog-tag-refactor { background: #f1f5f9; color: #475569; }

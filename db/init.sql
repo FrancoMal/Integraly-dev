@@ -243,7 +243,7 @@ GO
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
 (1, 'dashboard'), (1, 'calendario'), (1, 'reservar'), (1, 'mis-reservas'),
 (1, 'usuarios'), (1, 'invitaciones'), (1, 'packs'), (1, 'todas-reservas'),
-(1, 'auditoria'), (1, 'config'), (1, 'perfil'), (1, 'webinar');
+(1, 'auditoria'), (1, 'config'), (1, 'perfil'), (1, 'webinar'), (1, 'changelog');
 GO
 
 -- Seed instructor permissions
@@ -528,6 +528,39 @@ BEGIN
     ('Pack 10 clases', '10 clases particulares', 10, 140000, 'ARS', 1, 3);
 END
 GO
+
+-- Changelog tables
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DailyChangeSummaries')
+BEGIN
+    CREATE TABLE DailyChangeSummaries (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Date DATE NOT NULL,
+        GeneralSummary NVARCHAR(MAX) NOT NULL,
+        TotalCommits INT NOT NULL DEFAULT 0,
+        TotalGroups INT NOT NULL DEFAULT 0,
+        CreatedAt DATETIME2 DEFAULT GETDATE()
+    );
+    CREATE UNIQUE INDEX IX_DailyChangeSummaries_Date ON DailyChangeSummaries(Date);
+    PRINT 'Table DailyChangeSummaries created';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CommitGroups')
+BEGIN
+    CREATE TABLE CommitGroups (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        DailySummaryId INT NOT NULL,
+        GroupTitle NVARCHAR(200) NOT NULL,
+        GroupSummary NVARCHAR(MAX) NOT NULL,
+        Tags NVARCHAR(500) NOT NULL DEFAULT '',
+        CommitsJson NVARCHAR(MAX) NOT NULL DEFAULT '[]',
+        DisplayOrder INT NOT NULL DEFAULT 0,
+        Author NVARCHAR(100) NULL,
+        CONSTRAINT FK_CommitGroups_DailyChangeSummaries FOREIGN KEY (DailySummaryId)
+            REFERENCES DailyChangeSummaries(Id) ON DELETE CASCADE
+    );
+    CREATE INDEX IX_CommitGroups_DailySummaryId ON CommitGroups(DailySummaryId);
+    PRINT 'Table CommitGroups created';
+END
 
 PRINT 'Database initialized successfully';
 GO

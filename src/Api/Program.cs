@@ -51,6 +51,7 @@ builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<MercadoPagoService>();
+builder.Services.AddScoped<ChangelogService>();
 builder.Services.AddHostedService<BookingCompletionService>();
 builder.Services.AddHttpClient();
 
