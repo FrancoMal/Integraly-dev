@@ -11,6 +11,23 @@
 }
 else
 {
+    <!-- Selector de metodo de pago -->
+    <div class="payment-method-selector">
+        <span class="payment-method-label">Medio de pago:</span>
+        <div class="payment-method-options">
+            <button class="payment-method-btn @(selectedProvider == "mercadopago" ? "payment-method-active" : "")"
+                    @onclick='() => selectedProvider = "mercadopago"'>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                MercadoPago
+            </button>
+            <button class="payment-method-btn @(selectedProvider == "paypal" ? "payment-method-active" : "")"
+                    @onclick='() => selectedProvider = "paypal"'>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 11.5l1.5-9h7c3 0 5 2.5 4 5.5s-4 5.5-7 5.5H10l-1 5H5"/><path d="M9.5 2.5c3 0 5 2.5 4 5.5"/></svg>
+                PayPal
+            </button>
+        </div>
+    </div>
+
     <div class="pricing-grid">
         @foreach (var plan in plans)
         {
@@ -46,7 +63,7 @@ else
                         }
                         else
                         {
-                            <span>Comprar</span>
+                            <span>Pagar con @(selectedProvider == "paypal" ? "PayPal" : "MercadoPago")</span>
                         }
                     </button>
                 </div>
@@ -99,6 +116,7 @@ else
     private bool isLoading = true;
     private int? processingPlanId;
     private decimal basePricePerClass;
+    private string selectedProvider = "mercadopago";
 
     protected override async Task OnInitializedAsync()
     {
@@ -131,7 +149,7 @@ else
 
         try
         {
-            var result = await Api.CreatePaymentAsync(plan.Id);
+            var result = await Api.CreatePaymentAsync(plan.Id, selectedProvider);
             if (result is not null && !string.IsNullOrEmpty(result.CheckoutUrl))
             {
                 await JS.InvokeVoidAsync("eval", $"window.location.href = '{result.CheckoutUrl}'");

@@ -507,6 +507,25 @@ BEGIN
 END
 GO
 
+-- Add PayPal and provider columns to Payments
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PaymentProvider')
+BEGIN
+    ALTER TABLE Payments ADD PaymentProvider NVARCHAR(20) DEFAULT 'mercadopago';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PayPalOrderId')
+BEGIN
+    ALTER TABLE Payments ADD PayPalOrderId NVARCHAR(200) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PayPalCaptureId')
+BEGIN
+    ALTER TABLE Payments ADD PayPalCaptureId NVARCHAR(200) NULL;
+END
+GO
+
 -- Seed payment plans
 IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Clase individual')
 BEGIN

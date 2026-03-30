@@ -409,10 +409,10 @@ public class ApiClient
     public async Task<List<PaymentPlanDto>?> GetPaymentPlansAsync()
         => await GetAsync<List<PaymentPlanDto>>("/api/payments/plans");
 
-    public async Task<CreatePaymentResponse?> CreatePaymentAsync(int planId)
+    public async Task<CreatePaymentResponse?> CreatePaymentAsync(int planId, string provider = "mercadopago")
     {
         await SetAuthHeaderAsync();
-        var response = await _http.PostAsJsonAsync("/api/payments/create", new { planId });
+        var response = await _http.PostAsJsonAsync("/api/payments/create", new { planId, provider });
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
         Console.WriteLine($"CreatePayment response: {json}");

@@ -15,6 +15,7 @@ public class PaymentsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly MercadoPagoService _mercadoPagoService;
+    private readonly PayPalService _payPalService;
     private readonly EmailService _emailService;
     private readonly AuditLogService _auditLogService;
     private readonly ILogger<PaymentsController> _logger;
@@ -22,12 +23,14 @@ public class PaymentsController : ControllerBase
     public PaymentsController(
         AppDbContext db,
         MercadoPagoService mercadoPagoService,
+        PayPalService payPalService,
         EmailService emailService,
         AuditLogService auditLogService,
         ILogger<PaymentsController> logger)
     {
         _db = db;
         _mercadoPagoService = mercadoPagoService;
+        _payPalService = payPalService;
         _emailService = emailService;
         _auditLogService = auditLogService;
         _logger = logger;
@@ -60,7 +63,7 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
-    /// Create a payment and get MercadoPago checkout URL
+    /// Create a payment and get checkout URL (MercadoPago or PayPal)
     /// </summary>
     [HttpPost("create")]
     [Authorize]
@@ -68,6 +71,10 @@ public class PaymentsController : ControllerBase
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
+
+        var provider = (request.Provider ?? "mercadopago").ToLower();
+        if (provider != "mercadopago" && provider != "paypal")
+            return BadRequest(new { message = "Proveedor de pago no soportado. Usa 'mercadopago' o 'paypal'." });
 
         var plan = await _db.PaymentPlans.FirstOrDefaultAsync(p => p.Id == request.PlanId && p.Active);
         if (plan is null) return BadRequest(new { message = "Plan no encontrado o inactivo" });
@@ -83,14 +90,30 @@ public class PaymentsController : ControllerBase
             Amount = plan.Price,
             Currency = plan.Currency,
             Status = "pending",
+            PaymentProvider = provider,
             CreatedAt = DateTime.UtcNow
         };
 
         _db.Payments.Add(payment);
         await _db.SaveChangesAsync();
 
-        // Create MercadoPago preference
-        var checkoutUrl = await _mercadoPagoService.CreatePreference(payment, plan, user.Email);
+        string? checkoutUrl = null;
+
+        if (provider == "mercadopago")
+        {
+            checkoutUrl = await _mercadoPagoService.CreatePreference(payment, plan, user.Email);
+        }
+        else if (provider == "paypal")
+        {
+            var (approvalUrl, orderId) = await _payPalService.CreateOrder(payment, plan, user.Email);
+            if (orderId is not null)
+            {
+                payment.PayPalOrderId = orderId;
+                await _db.SaveChangesAsync();
+            }
+            checkoutUrl = approvalUrl;
+        }
+
         if (checkoutUrl is null)
         {
             payment.Status = "error";
@@ -99,9 +122,180 @@ public class PaymentsController : ControllerBase
         }
 
         await _auditLogService.LogAsync("Payment", payment.Id.ToString(), "create",
-            $"Plan: {plan.Name} - ${plan.Price}", GetUsername());
+            $"Provider: {provider}, Plan: {plan.Name} - ${plan.Price}", GetUsername());
 
         return Ok(new { checkoutUrl, paymentId = payment.Id });
+    }
+
+    /// <summary>
+    /// PayPal capture - called when user returns from PayPal after approval
+    /// </summary>
+    [HttpGet("paypal/capture")]
+    [AllowAnonymous]
+    public async Task<IActionResult> PayPalCapture([FromQuery] int paymentId, [FromQuery] string token)
+    {
+        _logger.LogInformation("PayPal capture callback: paymentId={PaymentId}, token={Token}", paymentId, token);
+
+        var payment = await _db.Payments
+            .Include(p => p.PaymentPlan)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == paymentId && p.PaymentProvider == "paypal");
+
+        if (payment is null)
+        {
+            _logger.LogWarning("PayPal capture: payment {PaymentId} not found", paymentId);
+            return Redirect("/panel/pago-fallido");
+        }
+
+        // The token from PayPal query param is the order ID
+        var orderId = payment.PayPalOrderId ?? token;
+
+        var (status, captureId) = await _payPalService.CaptureOrder(orderId);
+
+        if (status == "COMPLETED" && payment.Status != "approved")
+        {
+            payment.Status = "approved";
+            payment.PayPalCaptureId = captureId;
+            payment.ApprovedAt = DateTime.UtcNow;
+
+            var plan = payment.PaymentPlan;
+            if (plan is not null)
+            {
+                var tokenPack = new TokenPack
+                {
+                    UserId = payment.UserId,
+                    TotalTokens = plan.Classes,
+                    RemainingTokens = plan.Classes,
+                    CreatedBy = payment.UserId,
+                    Description = $"Compra: {plan.Name} (Pago #{payment.Id})",
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _db.TokenPacks.Add(tokenPack);
+                await _db.SaveChangesAsync();
+
+                payment.TokenPackId = tokenPack.Id;
+            }
+
+            await _db.SaveChangesAsync();
+
+            await _auditLogService.LogAsync("Payment", payment.Id.ToString(), "approved",
+                $"PayPal Order: {orderId}, Capture: {captureId}, Plan: {plan?.Name}", "paypal-capture");
+
+            if (payment.User is not null && plan is not null)
+            {
+                await SendPaymentConfirmationEmail(payment.User, plan, payment);
+            }
+
+            _logger.LogInformation("PayPal payment {PaymentId} approved. TokenPack created for user {UserId}",
+                payment.Id, payment.UserId);
+
+            return Redirect("/panel/pago-exitoso");
+        }
+        else if (status == "COMPLETED" && payment.Status == "approved")
+        {
+            // Already processed, just redirect
+            return Redirect("/panel/pago-exitoso");
+        }
+        else
+        {
+            payment.Status = "rejected";
+            await _db.SaveChangesAsync();
+            _logger.LogWarning("PayPal capture failed for payment {PaymentId}: status={Status}", paymentId, status);
+            return Redirect("/panel/pago-fallido");
+        }
+    }
+
+    /// <summary>
+    /// PayPal webhook (optional - capture already handles the main flow)
+    /// </summary>
+    [HttpPost("webhook/paypal")]
+    [AllowAnonymous]
+    public async Task<IActionResult> PayPalWebhook()
+    {
+        string body;
+        using (var reader = new StreamReader(Request.Body))
+        {
+            body = await reader.ReadToEndAsync();
+        }
+
+        _logger.LogInformation("PayPal webhook received: {Body}", body);
+
+        try
+        {
+            using var doc = JsonDocument.Parse(body);
+            var eventType = doc.RootElement.TryGetProperty("event_type", out var et) ? et.GetString() : null;
+
+            if (eventType == "CHECKOUT.ORDER.APPROVED" || eventType == "PAYMENT.CAPTURE.COMPLETED")
+            {
+                var resource = doc.RootElement.GetProperty("resource");
+                var orderId = resource.TryGetProperty("id", out var oid) ? oid.GetString() : null;
+
+                if (eventType == "PAYMENT.CAPTURE.COMPLETED")
+                {
+                    // For capture events, the supplementary_data has the order ID
+                    orderId = resource.TryGetProperty("supplementary_data", out var sd)
+                        && sd.TryGetProperty("related_ids", out var ri)
+                        && ri.TryGetProperty("order_id", out var orderIdProp)
+                        ? orderIdProp.GetString() : orderId;
+                }
+
+                if (orderId is not null)
+                {
+                    var payment = await _db.Payments
+                        .Include(p => p.PaymentPlan)
+                        .Include(p => p.User)
+                        .FirstOrDefaultAsync(p => p.PayPalOrderId == orderId);
+
+                    if (payment is not null && payment.Status != "approved")
+                    {
+                        // Capture if not already captured
+                        var (status, captureId) = await _payPalService.CaptureOrder(orderId);
+                        if (status == "COMPLETED")
+                        {
+                            payment.Status = "approved";
+                            payment.PayPalCaptureId = captureId;
+                            payment.ApprovedAt = DateTime.UtcNow;
+
+                            var plan = payment.PaymentPlan;
+                            if (plan is not null)
+                            {
+                                var tokenPack = new TokenPack
+                                {
+                                    UserId = payment.UserId,
+                                    TotalTokens = plan.Classes,
+                                    RemainingTokens = plan.Classes,
+                                    CreatedBy = payment.UserId,
+                                    Description = $"Compra: {plan.Name} (Pago #{payment.Id})",
+                                    CreatedAt = DateTime.UtcNow
+                                };
+
+                                _db.TokenPacks.Add(tokenPack);
+                                await _db.SaveChangesAsync();
+                                payment.TokenPackId = tokenPack.Id;
+                            }
+
+                            await _db.SaveChangesAsync();
+
+                            await _auditLogService.LogAsync("Payment", payment.Id.ToString(), "approved",
+                                $"PayPal Webhook: {orderId}, Plan: {plan?.Name}", "paypal-webhook");
+
+                            if (payment.User is not null && plan is not null)
+                            {
+                                await SendPaymentConfirmationEmail(payment.User, plan, payment);
+                            }
+                        }
+                    }
+                }
+            }
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing PayPal webhook");
+            return Ok();
+        }
     }
 
     /// <summary>
@@ -207,7 +401,9 @@ public class PaymentsController : ControllerBase
                 p.Amount,
                 p.Currency,
                 p.Status,
+                p.PaymentProvider,
                 p.MercadoPagoPaymentId,
+                p.PayPalOrderId,
                 p.TokenPackId,
                 p.CreatedAt,
                 p.ApprovedAt
@@ -408,4 +604,5 @@ public class PaymentsController : ControllerBase
 public class CreatePaymentRequest
 {
     public int PlanId { get; set; }
+    public string? Provider { get; set; }
 }

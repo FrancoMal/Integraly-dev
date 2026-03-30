@@ -23,11 +23,20 @@ public class Payment
     [MaxLength(50)]
     public string Status { get; set; } = "pending";
 
+    [MaxLength(20)]
+    public string PaymentProvider { get; set; } = "mercadopago";
+
     [MaxLength(200)]
     public string? MercadoPagoOrderId { get; set; }
 
     [MaxLength(200)]
     public string? MercadoPagoPaymentId { get; set; }
+
+    [MaxLength(200)]
+    public string? PayPalOrderId { get; set; }
+
+    [MaxLength(200)]
+    public string? PayPalCaptureId { get; set; }
 
     public int? TokenPackId { get; set; }
 
