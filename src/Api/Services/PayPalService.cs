@@ -117,7 +117,15 @@ public class PayPalService
                     amount = new
                     {
                         currency_code = currencyCode,
-                        value = amountStr
+                        value = amountStr,
+                        breakdown = new
+                        {
+                            item_total = new
+                            {
+                                currency_code = currencyCode,
+                                value = amountStr
+                            }
+                        }
                     },
                     items = new[]
                     {
