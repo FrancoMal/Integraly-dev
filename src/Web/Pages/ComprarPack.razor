@@ -113,17 +113,15 @@ else
     private bool isPayPal;
     private string detectedProvider = "mercadopago";
 
+    [SupplyParameterFromQuery(Name = "U")]
+    public string? CountryOverride { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Check URL param ?U=XX for country override
-            var uri = new Uri(Navigation.Uri);
-            var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
-            var countryOverride = queryParams["U"] ?? queryParams["u"];
-
-            // Detect country
-            var countryResult = await Api.DetectCountryAsync(countryOverride);
+            // Detect country (URL param ?U=MX overrides IP detection)
+            var countryResult = await Api.DetectCountryAsync(CountryOverride);
             if (countryResult is not null)
             {
                 detectedProvider = countryResult.Provider;
