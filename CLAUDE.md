@@ -16,11 +16,18 @@ El usuario es programador. Responde de forma directa y tecnica. No hace falta si
 
 ### 1. Siempre hacer commits
 
-Cada vez que termines un cambio funcional, hace un commit con un mensaje claro en espanol y push automatico:
+Cada vez que termines un cambio funcional, hace un commit con un mensaje claro en espanol y push automatico.
+
+El mensaje del commit debe tener un titulo corto y un listado de lo que se hizo. No agregar "Co-Authored-By" ni firmas. Ejemplo:
 
 ```bash
 git add -A
-git commit -m "Agregar formulario de contacto en el dashboard"
+git commit -m "Agregar formulario de contacto en el dashboard
+
+- Crear componente ContactForm.razor
+- Agregar endpoint POST /api/contact
+- Agregar tabla Contacts en init.sql
+- Agregar navegacion en el sidebar"
 git push
 ```
 
