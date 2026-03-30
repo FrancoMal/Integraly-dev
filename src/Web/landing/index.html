@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <style>
     :root {
       --bg-deep: #1a1d23;
@@ -1002,9 +1003,10 @@
     }
 
     .pricing-includes li::before {
-      content: '✓';
+      font-family: 'Font Awesome 6 Free';
+      font-weight: 900;
+      content: '\f00c';
       color: var(--cyan);
-      font-weight: 700;
       font-size: 0.75rem;
     }
 
@@ -1260,8 +1262,8 @@
               </div>
               <div class="terminal-line"><span class="cmd">$</span> describe tu idea</div>
               <div class="terminal-line"><span class="str">&gt; "Quiero un sistema de stock"</span></div>
-              <div class="terminal-line"><span class="cmd">✓</span> Generando código...</div>
-              <div class="terminal-line"><span class="cmd">✓</span> App lista<span class="terminal-cursor"></span></div>
+              <div class="terminal-line"><span class="cmd"><i class="fas fa-check"></i></span> Generando código...</div>
+              <div class="terminal-line"><span class="cmd"><i class="fas fa-check"></i></span> App lista<span class="terminal-cursor"></span></div>
             </div>
           </div>
         </div>
@@ -1297,23 +1299,23 @@
           <h3>Antes</h3>
           <ul>
             <li>
-              <span class="icon">✕</span>
+              <span class="icon"><i class="fas fa-xmark"></i></span>
               Tenías que contratar un programador para hacer cualquier sistema
             </li>
             <li>
-              <span class="icon">✕</span>
+              <span class="icon"><i class="fas fa-xmark"></i></span>
               Adaptarte a software existente que no encaja del todo
             </li>
             <li>
-              <span class="icon">✕</span>
+              <span class="icon"><i class="fas fa-xmark"></i></span>
               Esperar por mejoras y correcciones sin control
             </li>
             <li>
-              <span class="icon">✕</span>
+              <span class="icon"><i class="fas fa-xmark"></i></span>
               Cada cambio o nuevo requerimiento implicaba seguir pagando
             </li>
             <li>
-              <span class="icon">✕</span>
+              <span class="icon"><i class="fas fa-xmark"></i></span>
               Dependencia total de terceros
             </li>
           </ul>
@@ -1322,23 +1324,23 @@
           <h3>Ahora</h3>
           <ul>
             <li>
-              <span class="icon">✓</span>
+              <span class="icon"><i class="fas fa-check"></i></span>
               Describís lo que querés en lenguaje natural
             </li>
             <li>
-              <span class="icon">✓</span>
+              <span class="icon"><i class="fas fa-check"></i></span>
               La IA planifica, crea, modifica y ejecuta tu sistema
             </li>
             <li>
-              <span class="icon">✓</span>
+              <span class="icon"><i class="fas fa-check"></i></span>
               Podés ajustar y adaptar tu aplicación cuando quieras
             </li>
             <li>
-              <span class="icon">✓</span>
+              <span class="icon"><i class="fas fa-check"></i></span>
               De idea a producto funcional en horas o días
             </li>
             <li>
-              <span class="icon">✓</span>
+              <span class="icon"><i class="fas fa-check"></i></span>
               Infraestructura preconfigurada lista para usar
             </li>
           </ul>
@@ -1362,32 +1364,32 @@
       </div>
       <div class="features-grid">
         <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">☁️</div>
+          <div class="feature-icon"><i class="fas fa-cloud"></i></div>
           <h3>Servidor en la Nube</h3>
           <p>Cloud Server completamente preconfigurado con todo lo que necesitás para empezar a desarrollar.</p>
         </div>
         <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">🗄️</div>
+          <div class="feature-icon"><i class="fas fa-database"></i></div>
           <h3>Base de Datos Lista</h3>
           <p>Entorno de desarrollo con base de datos SQL Server Express configurada y lista para usar.</p>
         </div>
         <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">🤖</div>
+          <div class="feature-icon"><i class="fas fa-robot"></i></div>
           <h3>Claude Code Integrado</h3>
           <p>Tu copiloto de desarrollo con IA ya conectado al servidor, listo para generar código desde el día uno.</p>
         </div>
         <div class="feature-card reveal reveal-delay-1">
-          <div class="feature-icon">🌐</div>
+          <div class="feature-icon"><i class="fas fa-globe"></i></div>
           <h3>App Web Preconfigurada</h3>
           <p>Aplicación web base con funciones esenciales preinstaladas para arrancar con un marco sólido.</p>
         </div>
         <div class="feature-card reveal reveal-delay-2">
-          <div class="feature-icon">🛒</div>
+          <div class="feature-icon"><i class="fas fa-shopping-cart"></i></div>
           <h3>API de MercadoLibre</h3>
           <p>Aplicación preconfigurada con acceso a la API de MercadoLibre para integrar tu negocio.</p>
         </div>
         <div class="feature-card reveal reveal-delay-3">
-          <div class="feature-icon">👤</div>
+          <div class="feature-icon"><i class="fas fa-user-check"></i></div>
           <h3>10hs de Acompañamiento</h3>
           <p>Soporte humano personalizado para que puedas dar tus primeros pasos con confianza.</p>
         </div>
@@ -1453,11 +1455,11 @@
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div style="background: rgba(42,143,191,0.04); border-radius: 8px; padding: 20px; text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 8px;">👨‍💻</div>
+                <div style="font-size: 2rem; margin-bottom: 8px;"><i class="fas fa-laptop-code"></i></div>
                 <div style="font-size: 0.75rem; color: var(--text-dim);">Tu pantalla</div>
               </div>
               <div style="background: rgba(30,111,160,0.04); border-radius: 8px; padding: 20px; text-align: center;">
-                <div style="font-size: 2rem; margin-bottom: 8px;">🧑‍🏫</div>
+                <div style="font-size: 2rem; margin-bottom: 8px;"><i class="fas fa-chalkboard-user"></i></div>
                 <div style="font-size: 0.75rem; color: var(--text-dim);">Nuestro guía</div>
               </div>
             </div>
@@ -1532,7 +1534,7 @@
       </div>
       <div class="pricing-grid">
         <div class="pricing-card featured reveal reveal-delay-1">
-          <div class="icon-wrap">☁️</div>
+          <div class="icon-wrap"><i class="fas fa-cloud"></i></div>
           <h3>Servidor Preconfigurado</h3>
           <div class="price">u$s 1.000</div>
           <div class="price-period">pago único</div>
@@ -1546,14 +1548,14 @@
           </ul>
         </div>
         <div class="pricing-card featured reveal reveal-delay-2">
-          <div class="icon-wrap">👤</div>
+          <div class="icon-wrap"><i class="fas fa-user-check"></i></div>
           <h3>Acompañamiento</h3>
           <div class="price">u$s 1.000</div>
           <div class="price-period">10 horas incluidas</div>
           <p class="price-desc">Clases y soporte para que aprendas a desarrollar tus propias funcionalidades y puedas manejarlo de forma autónoma.</p>
         </div>
         <div class="pricing-card external reveal reveal-delay-3">
-          <div class="icon-wrap">🖥️</div>
+          <div class="icon-wrap"><i class="fas fa-server"></i></div>
           <h3>Hosting</h3>
           <div class="price">u$s 25</div>
           <div class="price-period">por mes</div>
@@ -1564,7 +1566,7 @@
           </ul>
         </div>
         <div class="pricing-card external reveal reveal-delay-4">
-          <div class="icon-wrap">🤖</div>
+          <div class="icon-wrap"><i class="fas fa-robot"></i></div>
           <h3>Claude Code</h3>
           <div class="price">u$s 200</div>
           <div class="price-period">por mes</div>
@@ -1572,7 +1574,7 @@
         </div>
       </div>
       <div class="restriction-banner reveal">
-        <span class="warn-icon">⚠️</span>
+        <span class="warn-icon"><i class="fas fa-triangle-exclamation"></i></span>
         <div>
           <p>
             <strong>Nota sobre MercadoLibre:</strong> Como MercadoLibre no está dando acceso a nuevas aplicaciones y solo da acceso a partners certificados, nosotros incluimos la nuestra bajo ciertas restricciones de acceso a cantidad de usuarios.
