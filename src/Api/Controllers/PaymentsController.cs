@@ -684,6 +684,12 @@ public class PaymentsController : ControllerBase
 
     private async Task SendPaymentConfirmationEmail(User user, PaymentPlan plan, Payment payment)
     {
+        var providerName = payment.PaymentProvider == "paypal" ? "PayPal" : "MercadoPago";
+        var currencySymbol = payment.Currency == "USD" ? "US$" : "$";
+        var amountFormatted = payment.Currency == "USD"
+            ? $"{currencySymbol} {payment.Amount:N2}"
+            : $"{currencySymbol} {payment.Amount:N0}";
+
         var htmlBody = $@"
 <!DOCTYPE html>
 <html>
@@ -729,7 +735,11 @@ public class PaymentsController : ControllerBase
                     </tr>
                     <tr>
                         <td style=""color:#666;font-weight:500;"">Monto abonado</td>
-                        <td style=""color:#1a1a2e;font-weight:600;text-align:right;"">$ {plan.Price:N0} {plan.Currency}</td>
+                        <td style=""color:#1a1a2e;font-weight:600;text-align:right;"">{amountFormatted} {payment.Currency}</td>
+                    </tr>
+                    <tr>
+                        <td style=""color:#666;font-weight:500;"">Medio de pago</td>
+                        <td style=""color:#1a1a2e;font-weight:600;text-align:right;"">{providerName}</td>
                     </tr>
                     <tr>
                         <td style=""color:#666;font-weight:500;"">Fecha</td>
