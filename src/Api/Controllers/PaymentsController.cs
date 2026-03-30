@@ -18,6 +18,7 @@ public class PaymentsController : ControllerBase
     private readonly PayPalService _payPalService;
     private readonly EmailService _emailService;
     private readonly AuditLogService _auditLogService;
+    private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
@@ -26,6 +27,7 @@ public class PaymentsController : ControllerBase
         PayPalService payPalService,
         EmailService emailService,
         AuditLogService auditLogService,
+        IHttpClientFactory httpClientFactory,
         ILogger<PaymentsController> logger)
     {
         _db = db;
@@ -33,6 +35,7 @@ public class PaymentsController : ControllerBase
         _payPalService = payPalService;
         _emailService = emailService;
         _auditLogService = auditLogService;
+        _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
 
@@ -53,6 +56,7 @@ public class PaymentsController : ControllerBase
                 p.Description,
                 p.Classes,
                 p.Price,
+                p.PriceUSD,
                 p.Currency,
                 isActive = p.Active,
                 isPopular = p.Classes == 5
@@ -60,6 +64,175 @@ public class PaymentsController : ControllerBase
             .ToListAsync();
 
         return Ok(plans);
+    }
+
+    /// <summary>
+    /// Detect country by client IP (returns "AR" for Argentina, etc.)
+    /// </summary>
+    [HttpGet("country")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DetectCountry([FromQuery] string? u = null)
+    {
+        // URL param override: ?u=MX
+        if (!string.IsNullOrEmpty(u))
+        {
+            return Ok(new { country = u.ToUpper(), provider = u.ToUpper() == "AR" ? "mercadopago" : "paypal" });
+        }
+
+        // Try to detect by IP
+        var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+        // Check forwarded headers (behind nginx/proxy)
+        if (Request.Headers.ContainsKey("X-Forwarded-For"))
+        {
+            ip = Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim();
+        }
+
+        if (string.IsNullOrEmpty(ip) || ip == "::1" || ip == "127.0.0.1")
+        {
+            // Localhost = default Argentina
+            return Ok(new { country = "AR", provider = "mercadopago" });
+        }
+
+        try
+        {
+            var client = _httpClientFactory.CreateClient();
+            var response = await client.GetAsync($"http://ip-api.com/json/{ip}?fields=countryCode");
+            if (response.IsSuccessStatusCode)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(body);
+                var countryCode = doc.RootElement.TryGetProperty("countryCode", out var cc)
+                    ? cc.GetString() ?? "AR" : "AR";
+                var provider = countryCode == "AR" ? "mercadopago" : "paypal";
+                return Ok(new { country = countryCode, provider });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not detect country by IP {Ip}", ip);
+        }
+
+        // Default to Argentina
+        return Ok(new { country = "AR", provider = "mercadopago" });
+    }
+
+    /// <summary>
+    /// Get all plans (admin - includes inactive)
+    /// </summary>
+    [HttpGet("plans/all")]
+    [Authorize]
+    public async Task<IActionResult> GetAllPlans()
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var plans = await _db.PaymentPlans
+            .OrderBy(p => p.DisplayOrder)
+            .Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Description,
+                p.Classes,
+                p.Price,
+                p.PriceUSD,
+                p.Currency,
+                p.Active,
+                p.DisplayOrder
+            })
+            .ToListAsync();
+
+        return Ok(plans);
+    }
+
+    /// <summary>
+    /// Create a payment plan (admin only)
+    /// </summary>
+    [HttpPost("plans")]
+    [Authorize]
+    public async Task<IActionResult> CreatePlan([FromBody] PlanRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var plan = new PaymentPlan
+        {
+            Name = request.Name,
+            Description = request.Description,
+            Classes = request.Classes,
+            Price = request.Price,
+            PriceUSD = request.PriceUSD,
+            Currency = request.Currency ?? "ARS",
+            Active = request.Active,
+            DisplayOrder = request.DisplayOrder,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.PaymentPlans.Add(plan);
+        await _db.SaveChangesAsync();
+
+        await _auditLogService.LogAsync("PaymentPlan", plan.Id.ToString(), "create",
+            $"{plan.Name}: ${plan.Price} ARS / ${plan.PriceUSD} USD", GetUsername());
+
+        return Ok(plan);
+    }
+
+    /// <summary>
+    /// Update a payment plan (admin only)
+    /// </summary>
+    [HttpPut("plans/{id}")]
+    [Authorize]
+    public async Task<IActionResult> UpdatePlan(int id, [FromBody] PlanRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var plan = await _db.PaymentPlans.FindAsync(id);
+        if (plan is null) return NotFound(new { message = "Plan no encontrado" });
+
+        plan.Name = request.Name;
+        plan.Description = request.Description;
+        plan.Classes = request.Classes;
+        plan.Price = request.Price;
+        plan.PriceUSD = request.PriceUSD;
+        plan.Currency = request.Currency ?? plan.Currency;
+        plan.Active = request.Active;
+        plan.DisplayOrder = request.DisplayOrder;
+
+        await _db.SaveChangesAsync();
+
+        await _auditLogService.LogAsync("PaymentPlan", plan.Id.ToString(), "update",
+            $"{plan.Name}: ${plan.Price} ARS / ${plan.PriceUSD} USD", GetUsername());
+
+        return Ok(plan);
+    }
+
+    /// <summary>
+    /// Delete a payment plan (admin only)
+    /// </summary>
+    [HttpDelete("plans/{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeletePlan(int id)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var plan = await _db.PaymentPlans.FindAsync(id);
+        if (plan is null) return NotFound(new { message = "Plan no encontrado" });
+
+        // Check if any payments reference this plan
+        var hasPayments = await _db.Payments.AnyAsync(p => p.PaymentPlanId == id);
+        if (hasPayments)
+        {
+            // Soft delete - just deactivate
+            plan.Active = false;
+            await _db.SaveChangesAsync();
+            return Ok(new { message = "Plan desactivado (tiene pagos asociados)" });
+        }
+
+        _db.PaymentPlans.Remove(plan);
+        await _db.SaveChangesAsync();
+
+        await _auditLogService.LogAsync("PaymentPlan", id.ToString(), "delete",
+            $"{plan.Name}", GetUsername());
+
+        return Ok(new { message = "Plan eliminado" });
     }
 
     /// <summary>
@@ -82,13 +255,17 @@ public class PaymentsController : ControllerBase
         var user = await _db.Users.FindAsync(userId.Value);
         if (user is null) return Unauthorized();
 
+        // Use USD price for PayPal, ARS for MercadoPago
+        var amount = provider == "paypal" ? plan.PriceUSD : plan.Price;
+        var currency = provider == "paypal" ? "USD" : plan.Currency;
+
         // Create payment record
         var payment = new Payment
         {
             UserId = userId.Value,
             PaymentPlanId = plan.Id,
-            Amount = plan.Price,
-            Currency = plan.Currency,
+            Amount = amount,
+            Currency = currency,
             Status = "pending",
             PaymentProvider = provider,
             CreatedAt = DateTime.UtcNow
@@ -605,4 +782,16 @@ public class CreatePaymentRequest
 {
     public int PlanId { get; set; }
     public string? Provider { get; set; }
+}
+
+public class PlanRequest
+{
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public int Classes { get; set; }
+    public decimal Price { get; set; }
+    public decimal PriceUSD { get; set; }
+    public string? Currency { get; set; }
+    public bool Active { get; set; } = true;
+    public int DisplayOrder { get; set; }
 }

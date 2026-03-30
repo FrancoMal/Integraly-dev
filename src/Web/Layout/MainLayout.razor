@@ -37,7 +37,7 @@
         @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("changelog") || HasPerm("config") || HasPerm("webinar") || role == "admin")
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("changelog") || IsActive("config") || IsActive("webinar-admin"))">
+                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("planes-admin") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("changelog") || IsActive("config") || IsActive("webinar-admin"))">
                 @if (role == "admin")
                 {
                     <NavItem Href="calendario-admin" Label="Calendario" Icon="@SvgIcons.Calendar"
@@ -67,6 +67,11 @@
                 {
                     <NavItem Href="packs" Label="Packs de Clases" Icon="@SvgIcons.Package"
                              IsActive="@IsActive("packs")" OnClick="@(() => NavigateTo("packs"))" />
+                }
+                @if (role == "admin")
+                {
+                    <NavItem Href="planes-admin" Label="Planes de Pago" Icon="@SvgIcons.DollarSign"
+                             IsActive="@IsActive("planes-admin")" OnClick="@(() => NavigateTo("planes-admin"))" />
                 }
                 @if (HasPerm("todas-reservas"))
                 {

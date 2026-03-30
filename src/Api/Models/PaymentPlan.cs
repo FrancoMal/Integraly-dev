@@ -21,6 +21,9 @@ public class PaymentPlan
     [Column(TypeName = "decimal(10,2)")]
     public decimal Price { get; set; }
 
+    [Column(TypeName = "decimal(10,2)")]
+    public decimal PriceUSD { get; set; }
+
     [MaxLength(10)]
     public string Currency { get; set; } = "ARS";
 

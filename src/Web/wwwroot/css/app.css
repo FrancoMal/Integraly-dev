@@ -4325,51 +4325,14 @@ td.calendar-slot-unavailable {
 .payment-method-selector {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.75rem;
     margin-bottom: 1.5rem;
-    padding: 1rem 1.25rem;
-    background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 12px;
-}
-
-.payment-method-label {
-    font-weight: 600;
+    padding: 0.75rem 1.25rem;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 10px;
+    color: #1e40af;
     font-size: 0.9rem;
-    color: var(--text-primary, #1a1a2e);
-    white-space: nowrap;
-}
-
-.payment-method-options {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.payment-method-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: 2px solid var(--border-color, #e5e7eb);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text-secondary, #6b7280);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.payment-method-btn:hover {
-    border-color: var(--primary-color, #10b981);
-    color: var(--primary-color, #10b981);
-}
-
-.payment-method-active {
-    border-color: var(--primary-color, #10b981);
-    background: rgba(16, 185, 129, 0.08);
-    color: var(--primary-color, #10b981);
-    font-weight: 600;
 }
 
 /* ============================================================

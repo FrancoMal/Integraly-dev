@@ -507,6 +507,19 @@ BEGIN
 END
 GO
 
+-- Add PriceUSD column to PaymentPlans
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('PaymentPlans') AND name = 'PriceUSD')
+BEGIN
+    ALTER TABLE PaymentPlans ADD PriceUSD DECIMAL(10,2) DEFAULT 0;
+END
+GO
+
+-- Set USD prices for existing plans
+UPDATE PaymentPlans SET PriceUSD = 15 WHERE Classes = 1 AND PriceUSD = 0;
+UPDATE PaymentPlans SET PriceUSD = 60 WHERE Classes = 5 AND PriceUSD = 0;
+UPDATE PaymentPlans SET PriceUSD = 100 WHERE Classes = 10 AND PriceUSD = 0;
+GO
+
 -- Add PayPal and provider columns to Payments
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PaymentProvider')
 BEGIN

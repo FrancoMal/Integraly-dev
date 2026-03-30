@@ -409,6 +409,16 @@ public class ApiClient
     public async Task<List<PaymentPlanDto>?> GetPaymentPlansAsync()
         => await GetAsync<List<PaymentPlanDto>>("/api/payments/plans");
 
+    public async Task<List<PaymentPlanDto>?> GetAllPaymentPlansAsync()
+        => await GetAsync<List<PaymentPlanDto>>("/api/payments/plans/all");
+
+    public async Task<CountryDetectResult?> DetectCountryAsync(string? countryOverride = null)
+    {
+        var url = "/api/payments/country";
+        if (!string.IsNullOrEmpty(countryOverride)) url += $"?u={countryOverride}";
+        return await GetAsync<CountryDetectResult>(url);
+    }
+
     public async Task<CreatePaymentResponse?> CreatePaymentAsync(int planId, string provider = "mercadopago")
     {
         await SetAuthHeaderAsync();
@@ -422,6 +432,15 @@ public class ApiClient
 
     public async Task<List<PaymentDto>?> GetMyPaymentsAsync()
         => await GetAsync<List<PaymentDto>>("/api/payments/my");
+
+    public async Task<PaymentPlanDto?> CreatePaymentPlanAsync(PlanRequestDto request)
+        => await PostAsync<PaymentPlanDto>("/api/payments/plans", request);
+
+    public async Task<PaymentPlanDto?> UpdatePaymentPlanAsync(int id, PlanRequestDto request)
+        => await PutAsync<PaymentPlanDto>($"/api/payments/plans/{id}", request);
+
+    public async Task<bool> DeletePaymentPlanAsync(int id)
+        => await DeleteAsync($"/api/payments/plans/{id}");
 
     // --- HTTP helpers ---
     private bool IsOnLoginPage()

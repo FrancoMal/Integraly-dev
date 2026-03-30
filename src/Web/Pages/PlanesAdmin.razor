@@ -1,0 +1,237 @@
+@page "/planes-admin"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+
+<h2 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem;">Planes de Pago</h2>
+
+@if (isLoading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando...</p></div></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; margin: 0;">Planes activos e inactivos</h3>
+                <button class="btn btn-primary btn-sm" @onclick="ShowCreateForm">+ Nuevo Plan</button>
+            </div>
+
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th style="text-align:center;">Clases</th>
+                            <th style="text-align:right;">Precio ARS</th>
+                            <th style="text-align:right;">Precio USD</th>
+                            <th style="text-align:center;">Orden</th>
+                            <th style="text-align:center;">Estado</th>
+                            <th style="text-align:center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var plan in plans)
+                        {
+                            <tr>
+                                <td><strong>@plan.Name</strong></td>
+                                <td style="text-align:center;">@plan.Classes</td>
+                                <td style="text-align:right;">$@plan.Price.ToString("N0")</td>
+                                <td style="text-align:right;">US$@plan.PriceUSD.ToString("N2")</td>
+                                <td style="text-align:center;">@plan.DisplayOrder</td>
+                                <td style="text-align:center;">
+                                    <span class="status-badge @(plan.Active ? "status-success" : "status-muted")">
+                                        @(plan.Active ? "Activo" : "Inactivo")
+                                    </span>
+                                </td>
+                                <td style="text-align:center;">
+                                    <button class="btn btn-sm" style="margin-right:0.25rem;" @onclick="() => EditPlan(plan)">Editar</button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => DeletePlan(plan)">Eliminar</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    @if (showForm)
+    {
+        <div class="modal-overlay" @onclick="CloseForm">
+            <div class="modal-content" @onclick:stopPropagation="true" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 style="margin: 0; font-size: 1.1rem;">@(editingPlan is not null ? "Editar Plan" : "Nuevo Plan")</h3>
+                    <button class="modal-close" @onclick="CloseForm">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Nombre</label>
+                        <input class="form-control" @bind="formName" placeholder="Ej: Pack 5 clases" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Descripcion</label>
+                        <input class="form-control" @bind="formDescription" placeholder="Ej: 5 clases particulares" />
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Clases</label>
+                            <input type="number" class="form-control" @bind="formClasses" min="1" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Orden</label>
+                            <input type="number" class="form-control" @bind="formDisplayOrder" min="0" />
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Precio ARS</label>
+                            <input type="number" class="form-control" @bind="formPrice" step="100" min="0" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Precio USD</label>
+                            <input type="number" class="form-control" @bind="formPriceUSD" step="0.01" min="0" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-check-label" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" @bind="formActive" />
+                            Activo
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn" @onclick="CloseForm">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SavePlan" disabled="@saving">
+                        @(saving ? "Guardando..." : "Guardar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<PaymentPlanDto> plans = new();
+    private bool isLoading = true;
+    private bool showForm;
+    private bool saving;
+    private PaymentPlanDto? editingPlan;
+
+    // Form fields
+    private string formName = "";
+    private string? formDescription;
+    private int formClasses = 1;
+    private decimal formPrice;
+    private decimal formPriceUSD;
+    private int formDisplayOrder;
+    private bool formActive = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+    }
+
+    private async Task LoadPlans()
+    {
+        isLoading = true;
+        try
+        {
+            var result = await Api.GetAllPaymentPlansAsync();
+            if (result is not null) plans = result;
+        }
+        catch { }
+        finally { isLoading = false; }
+    }
+
+    private void ShowCreateForm()
+    {
+        editingPlan = null;
+        formName = "";
+        formDescription = null;
+        formClasses = 1;
+        formPrice = 0;
+        formPriceUSD = 0;
+        formDisplayOrder = plans.Count > 0 ? plans.Max(p => p.DisplayOrder) + 1 : 1;
+        formActive = true;
+        showForm = true;
+    }
+
+    private void EditPlan(PaymentPlanDto plan)
+    {
+        editingPlan = plan;
+        formName = plan.Name;
+        formDescription = plan.Description;
+        formClasses = plan.Classes;
+        formPrice = plan.Price;
+        formPriceUSD = plan.PriceUSD;
+        formDisplayOrder = plan.DisplayOrder;
+        formActive = plan.Active;
+        showForm = true;
+    }
+
+    private void CloseForm()
+    {
+        showForm = false;
+        editingPlan = null;
+    }
+
+    private async Task SavePlan()
+    {
+        if (string.IsNullOrWhiteSpace(formName))
+        {
+            ToastService.Error("El nombre es obligatorio");
+            return;
+        }
+
+        saving = true;
+        try
+        {
+            var request = new PlanRequestDto
+            {
+                Name = formName,
+                Description = formDescription,
+                Classes = formClasses,
+                Price = formPrice,
+                PriceUSD = formPriceUSD,
+                Currency = "ARS",
+                Active = formActive,
+                DisplayOrder = formDisplayOrder
+            };
+
+            if (editingPlan is not null)
+            {
+                await Api.UpdatePaymentPlanAsync(editingPlan.Id, request);
+                ToastService.Success("Plan actualizado");
+            }
+            else
+            {
+                await Api.CreatePaymentPlanAsync(request);
+                ToastService.Success("Plan creado");
+            }
+
+            CloseForm();
+            await LoadPlans();
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar el plan");
+        }
+        finally { saving = false; }
+    }
+
+    private async Task DeletePlan(PaymentPlanDto plan)
+    {
+        try
+        {
+            await Api.DeletePaymentPlanAsync(plan.Id);
+            ToastService.Success("Plan eliminado");
+            await LoadPlans();
+        }
+        catch
+        {
+            ToastService.Error("Error al eliminar el plan");
+        }
+    }
+}

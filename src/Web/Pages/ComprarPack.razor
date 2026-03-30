@@ -11,29 +11,24 @@
 }
 else
 {
-    <!-- Selector de metodo de pago -->
-    <div class="payment-method-selector">
-        <span class="payment-method-label">Medio de pago:</span>
-        <div class="payment-method-options">
-            <button class="payment-method-btn @(selectedProvider == "mercadopago" ? "payment-method-active" : "")"
-                    @onclick='() => selectedProvider = "mercadopago"'>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                MercadoPago
-            </button>
-            <button class="payment-method-btn @(selectedProvider == "paypal" ? "payment-method-active" : "")"
-                    @onclick='() => selectedProvider = "paypal"'>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 11.5l1.5-9h7c3 0 5 2.5 4 5.5s-4 5.5-7 5.5H10l-1 5H5"/><path d="M9.5 2.5c3 0 5 2.5 4 5.5"/></svg>
-                PayPal
-            </button>
+    @if (isPayPal)
+    {
+        <div class="payment-method-selector">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            <span>Precios en <strong>USD</strong> - Pago con <strong>PayPal</strong></span>
         </div>
-    </div>
+    }
 
     <div class="pricing-grid">
         @foreach (var plan in plans)
         {
-            var pricePerClass = plan.Classes > 0 ? plan.Price / plan.Classes : 0;
-            var savingsPercent = basePricePerClass > 0 && plan.Classes > 1
-                ? (int)Math.Round((1 - (double)(pricePerClass / basePricePerClass)) * 100)
+            var displayPrice = isPayPal ? plan.PriceUSD : plan.Price;
+            var pricePerClass = plan.Classes > 0 ? displayPrice / plan.Classes : 0;
+            var singlePrice = isPayPal
+                ? (plans.FirstOrDefault(p => p.Classes == 1)?.PriceUSD ?? displayPrice)
+                : (plans.FirstOrDefault(p => p.Classes == 1)?.Price ?? displayPrice);
+            var savingsPercent = singlePrice > 0 && plan.Classes > 1
+                ? (int)Math.Round((1 - (double)(pricePerClass / singlePrice)) * 100)
                 : 0;
 
             <div class="pricing-card @(plan.IsPopular ? "pricing-card-popular" : "")">
@@ -46,8 +41,8 @@ else
                     <div class="pricing-classes">@plan.Classes @(plan.Classes == 1 ? "clase" : "clases")</div>
                 </div>
                 <div class="pricing-body">
-                    <div class="pricing-price">$@FormatPrice(plan.Price)</div>
-                    <div class="pricing-per-class">$@FormatPrice(pricePerClass) por clase</div>
+                    <div class="pricing-price">@(isPayPal ? "US$" : "$")@FormatPrice(displayPrice, isPayPal)</div>
+                    <div class="pricing-per-class">@(isPayPal ? "US$" : "$")@FormatPrice(pricePerClass, isPayPal) por clase</div>
                     @if (savingsPercent > 0)
                     {
                         <div class="pricing-savings">Ahorra @savingsPercent%</div>
@@ -63,7 +58,7 @@ else
                         }
                         else
                         {
-                            <span>Pagar con @(selectedProvider == "paypal" ? "PayPal" : "MercadoPago")</span>
+                            <span>Pagar con @(isPayPal ? "PayPal" : "MercadoPago")</span>
                         }
                     </button>
                 </div>
@@ -93,7 +88,7 @@ else
                                 <tr>
                                     <td><strong>@payment.PlanName</strong></td>
                                     <td style="text-align:center;">@payment.Classes</td>
-                                    <td style="text-align:right;">$@FormatPrice(payment.Amount)</td>
+                                    <td style="text-align:right;">$@FormatPrice(payment.Amount, false)</td>
                                     <td style="text-align:center;">
                                         <span class="status-badge @GetStatusClass(payment.Status)">
                                             @GetStatusLabel(payment.Status)
@@ -115,19 +110,30 @@ else
     private List<PaymentDto>? payments;
     private bool isLoading = true;
     private int? processingPlanId;
-    private decimal basePricePerClass;
-    private string selectedProvider = "mercadopago";
+    private bool isPayPal;
+    private string detectedProvider = "mercadopago";
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
+            // Check URL param ?U=XX for country override
+            var uri = new Uri(Navigation.Uri);
+            var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var countryOverride = queryParams["U"] ?? queryParams["u"];
+
+            // Detect country
+            var countryResult = await Api.DetectCountryAsync(countryOverride);
+            if (countryResult is not null)
+            {
+                detectedProvider = countryResult.Provider;
+                isPayPal = detectedProvider == "paypal";
+            }
+
             var plansResult = await Api.GetPaymentPlansAsync();
             if (plansResult is not null && plansResult.Count > 0)
             {
                 plans = plansResult.Where(p => p.IsActive).OrderBy(p => p.Classes).ToList();
-                var singlePlan = plans.FirstOrDefault(p => p.Classes == 1);
-                basePricePerClass = singlePlan != null ? singlePlan.Price : (plans.First().Price / plans.First().Classes);
             }
 
             payments = await Api.GetMyPaymentsAsync();
@@ -149,7 +155,7 @@ else
 
         try
         {
-            var result = await Api.CreatePaymentAsync(plan.Id, selectedProvider);
+            var result = await Api.CreatePaymentAsync(plan.Id, detectedProvider);
             if (result is not null && !string.IsNullOrEmpty(result.CheckoutUrl))
             {
                 await JS.InvokeVoidAsync("eval", $"window.location.href = '{result.CheckoutUrl}'");
@@ -171,8 +177,10 @@ else
         }
     }
 
-    private string FormatPrice(decimal price)
+    private string FormatPrice(decimal price, bool usd = false)
     {
+        if (usd)
+            return price.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
         return price.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-AR"));
     }
 

@@ -101,8 +101,10 @@ public class PayPalService
         var baseUrl = GetBaseApiUrl();
         var appBaseUrl = GetAppBaseUrl();
 
-        // PayPal uses USD - convert price or use USD amount
-        // For now we pass the amount as-is with the plan currency
+        // Use payment.Amount and payment.Currency (already set to USD by controller)
+        var amountStr = payment.Amount.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+        var currencyCode = payment.Currency == "ARS" ? "USD" : payment.Currency;
+
         var order = new
         {
             intent = "CAPTURE",
@@ -114,8 +116,8 @@ public class PayPalService
                     description = plan.Description ?? $"{plan.Classes} clase(s) particular(es)",
                     amount = new
                     {
-                        currency_code = plan.Currency == "ARS" ? "USD" : plan.Currency,
-                        value = plan.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+                        currency_code = currencyCode,
+                        value = amountStr
                     },
                     items = new[]
                     {
@@ -126,8 +128,8 @@ public class PayPalService
                             quantity = "1",
                             unit_amount = new
                             {
-                                currency_code = plan.Currency == "ARS" ? "USD" : plan.Currency,
-                                value = plan.Price.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+                                currency_code = currencyCode,
+                                value = amountStr
                             }
                         }
                     }
