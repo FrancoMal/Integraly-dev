@@ -90,11 +90,20 @@
 @if (activeTab == "contactos")
 {
     <div class="card">
-        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:0.5rem;">
             <h3>Contactos (@(contacts?.Count ?? 0))</h3>
-            <button class="btn btn-primary" @onclick="ShowContactForm">
-                <i class="fa-solid fa-user-plus" style="margin-right:0.3rem;"></i>Nuevo Contacto
-            </button>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" @onclick="ExportContacts" disabled="@(contacts is null || contacts.Count == 0)">
+                    <i class="fa-solid fa-file-export" style="margin-right:0.3rem;"></i>Exportar Excel
+                </button>
+                <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;">
+                    <i class="fa-solid fa-file-import" style="margin-right:0.3rem;"></i>Importar Excel
+                    <InputFile OnChange="ImportContacts" style="display:none;" accept=".csv,.xlsx,.xls" />
+                </label>
+                <button class="btn btn-primary btn-sm" @onclick="ShowContactForm">
+                    <i class="fa-solid fa-user-plus" style="margin-right:0.3rem;"></i>Nuevo Contacto
+                </button>
+            </div>
         </div>
         <div class="card-body" style="padding: 0;">
             @if (isLoadingContacts)
@@ -599,6 +608,115 @@
         {
             Toast.Error("No se pudo copiar el link");
         }
+    }
+
+    private async Task ExportContacts()
+    {
+        if (contacts is null || contacts.Count == 0) return;
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Nombre y Apellido,Email,Telefono,Empresa,Inscripto,Fecha inscripcion");
+        foreach (var c in contacts.OrderByDescending(x => x.CreatedAt))
+        {
+            var name = c.FullName.Replace("\"", "\"\"");
+            var email = c.Email;
+            var phone = c.Phone ?? "";
+            var company = (c.Company ?? "").Replace("\"", "\"\"");
+            var inscripto = c.HasRegistration ? "Si" : "No";
+            var fecha = c.WebinarDateDisplay ?? "";
+            csv.AppendLine($"\"{name}\",\"{email}\",\"{phone}\",\"{company}\",\"{inscripto}\",\"{fecha}\"");
+        }
+
+        var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("eval", $"{{ var a=document.createElement('a'); a.href='data:text/csv;base64,{base64}'; a.download='contactos_webinar.csv'; a.click(); }}");
+
+        Toast.Success("Contactos exportados");
+    }
+
+    private async Task ImportContacts(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        if (file.Size > 2 * 1024 * 1024)
+        {
+            Toast.Error("El archivo no puede superar 2 MB");
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(2 * 1024 * 1024);
+            using var reader = new System.IO.StreamReader(stream);
+            var content = await reader.ReadToEndAsync();
+
+            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+            var contactsToImport = new List<CreateWebinarContactRequest>();
+
+            // Skip header row
+            for (int i = 1; i < lines.Length; i++)
+            {
+                var fields = ParseCsvLine(lines[i]);
+                if (fields.Count < 2) continue;
+
+                contactsToImport.Add(new CreateWebinarContactRequest
+                {
+                    FullName = fields[0].Trim(),
+                    Email = fields[1].Trim(),
+                    Phone = fields.Count > 2 ? fields[2].Trim() : null,
+                    Company = fields.Count > 3 ? fields[3].Trim() : null
+                });
+            }
+
+            if (contactsToImport.Count == 0)
+            {
+                Toast.Error("No se encontraron contactos en el archivo. Formato esperado: Nombre,Email,Telefono,Empresa");
+                return;
+            }
+
+            var result = await Api.ImportWebinarContactsAsync(contactsToImport);
+            if (result is not null)
+            {
+                Toast.Success(result.Message);
+                await LoadContacts();
+            }
+            else
+            {
+                Toast.Error("Error al importar contactos");
+            }
+        }
+        catch
+        {
+            Toast.Error("Error al leer el archivo. Asegurate de que sea un CSV valido.");
+        }
+    }
+
+    private List<string> ParseCsvLine(string line)
+    {
+        var fields = new List<string>();
+        var current = new System.Text.StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            var ch = line[i];
+            if (ch == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (ch == ',' && !inQuotes)
+            {
+                fields.Add(current.ToString());
+                current.Clear();
+            }
+            else if (ch != '\r')
+            {
+                current.Append(ch);
+            }
+        }
+        fields.Add(current.ToString());
+        return fields;
     }
 
     private void ConfirmDeleteContact(WebinarContactDto c)

@@ -381,6 +381,11 @@ public class ApiClient
         return await DeleteAsync($"/api/webinar/contacts/{id}");
     }
 
+    public async Task<ImportContactsResult?> ImportWebinarContactsAsync(List<CreateWebinarContactRequest> contacts)
+    {
+        return await PostAsync<ImportContactsResult>("/api/webinar/contacts/import", contacts);
+    }
+
     public async Task<WebinarStatsDto?> GetWebinarStatsAsync()
     {
         return await GetAsync<WebinarStatsDto>("/api/webinar/stats");

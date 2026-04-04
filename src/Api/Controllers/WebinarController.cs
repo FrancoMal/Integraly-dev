@@ -126,6 +126,48 @@ public class WebinarController : ControllerBase
             });
     }
 
+    // POST /api/webinar/contacts/import
+    [HttpPost("contacts/import")]
+    public async Task<IActionResult> ImportContacts([FromBody] List<CreateWebinarContactRequest> requests)
+    {
+        if (requests is null || requests.Count == 0)
+            return BadRequest(new { message = "No se recibieron contactos" });
+
+        var imported = 0;
+        var skipped = 0;
+
+        foreach (var req in requests)
+        {
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.FullName))
+            {
+                skipped++;
+                continue;
+            }
+
+            var exists = await _db.WebinarContacts.AnyAsync(c => c.Email == req.Email.Trim());
+            if (exists)
+            {
+                skipped++;
+                continue;
+            }
+
+            _db.WebinarContacts.Add(new WebinarContact
+            {
+                FullName = req.FullName.Trim(),
+                Email = req.Email.Trim(),
+                Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim(),
+                Company = string.IsNullOrWhiteSpace(req.Company) ? null : req.Company.Trim(),
+                UUID = Guid.NewGuid().ToString("N"),
+                CreatedAt = DateTime.UtcNow
+            });
+            imported++;
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { imported, skipped, message = $"{imported} contactos importados, {skipped} omitidos" });
+    }
+
     // DELETE /api/webinar/contacts/{id}
     [HttpDelete("contacts/{id}")]
     public async Task<IActionResult> DeleteContact(int id)

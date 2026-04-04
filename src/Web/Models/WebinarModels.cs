@@ -37,6 +37,13 @@ public class CreateWebinarContactRequest
     public string? Company { get; set; }
 }
 
+public class ImportContactsResult
+{
+    public int Imported { get; set; }
+    public int Skipped { get; set; }
+    public string Message { get; set; } = "";
+}
+
 public class WebinarFormDataDto
 {
     public string FullName { get; set; } = "";
