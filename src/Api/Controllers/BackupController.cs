@@ -59,4 +59,38 @@ public class BackupController : ControllerBase
         await backupService.UpdateScheduleAsync(dto);
         return Ok(new { message = "Programacion actualizada" });
     }
+
+    [HttpPost("upload")]
+    [RequestSizeLimit(524_288_000)] // 500 MB
+    public async Task<IActionResult> Upload(IFormFile file, [FromServices] BackupService backupService)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { error = "No se recibio ningun archivo" });
+
+        if (!file.FileName.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { error = "Solo se aceptan archivos .bak" });
+
+        using var stream = file.OpenReadStream();
+        var result = await backupService.UploadBackupAsync(stream, file.FileName);
+        if (result == null)
+            return StatusCode(500, new { error = "Error al subir el archivo" });
+        return Ok(result);
+    }
+
+    [HttpGet("{id}/info")]
+    public async Task<IActionResult> GetInfo(int id, [FromServices] BackupService backupService)
+    {
+        var info = await backupService.GetBackupInfoAsync(id);
+        if (info == null) return NotFound(new { error = "No se pudo leer la informacion del backup" });
+        return Ok(info);
+    }
+
+    [HttpPost("{id}/restore")]
+    public async Task<IActionResult> Restore(int id, [FromServices] BackupService backupService)
+    {
+        var (success, message) = await backupService.RestoreBackupAsync(id);
+        if (!success)
+            return StatusCode(500, new { error = message });
+        return Ok(new { message });
+    }
 }

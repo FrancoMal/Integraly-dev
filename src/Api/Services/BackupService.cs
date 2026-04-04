@@ -173,6 +173,187 @@ public class BackupService
         await _db.SaveChangesAsync();
     }
 
+    public async Task<BackupDto?> UploadBackupAsync(Stream fileStream, string originalFileName)
+    {
+        // Sanitize filename - keep only alphanumeric, dots, underscores, hyphens
+        var safeName = Path.GetFileNameWithoutExtension(originalFileName);
+        safeName = System.Text.RegularExpressions.Regex.Replace(safeName, @"[^a-zA-Z0-9_\-]", "_");
+        var fileName = $"{safeName}_{DateTime.UtcNow:yyyyMMdd_HHmmss}.bak";
+        var localPath = Path.Combine(_backupPathLocal, fileName);
+
+        try
+        {
+            using (var fs = new FileStream(localPath, FileMode.Create))
+            {
+                await fileStream.CopyToAsync(fs);
+            }
+
+            // Make file readable by SQL Server (mssql user)
+            // File permissions are handled by the shared volume
+
+            var sizeBytes = new FileInfo(localPath).Length;
+
+            var backup = new DatabaseBackup
+            {
+                FileName = fileName,
+                DatabaseName = "AIcoding",
+                Type = "uploaded",
+                Status = "completed",
+                SizeBytes = sizeBytes,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.DatabaseBackups.Add(backup);
+            await _db.SaveChangesAsync();
+
+            _logger.LogInformation("Backup uploaded: {FileName} ({Size} bytes)", fileName, sizeBytes);
+            return ToDto(backup);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to upload backup: {FileName}", originalFileName);
+            // Cleanup file if it was partially written
+            if (File.Exists(localPath))
+            {
+                try { File.Delete(localPath); } catch { }
+            }
+            return null;
+        }
+    }
+
+    public async Task<BackupInfoDto?> GetBackupInfoAsync(int id)
+    {
+        var backup = await _db.DatabaseBackups.FindAsync(id);
+        if (backup == null) return null;
+
+        var localPath = Path.Combine(_backupPathLocal, backup.FileName);
+        if (!File.Exists(localPath)) return null;
+
+        var sqlPath = Path.Combine(_backupPathSql, backup.FileName);
+
+        try
+        {
+            var connStr = _db.Database.GetConnectionString()!;
+            var builder = new SqlConnectionStringBuilder(connStr);
+            builder.InitialCatalog = "master";
+
+            using var conn = new SqlConnection(builder.ConnectionString);
+            await conn.OpenAsync();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "RESTORE HEADERONLY FROM DISK = @path";
+            cmd.Parameters.AddWithValue("@path", sqlPath);
+            cmd.CommandTimeout = 60;
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (await reader.ReadAsync())
+            {
+                var backupSize = reader["BackupSize"] is DBNull ? 0L : Convert.ToInt64(reader["BackupSize"]);
+                return new BackupInfoDto
+                {
+                    Id = backup.Id,
+                    FileName = backup.FileName,
+                    DatabaseName = reader["DatabaseName"]?.ToString() ?? "",
+                    ServerName = reader["ServerName"]?.ToString() ?? "",
+                    MachineName = reader["MachineName"]?.ToString() ?? "",
+                    BackupStartDate = reader["BackupStartDate"] is DBNull ? null : (DateTime?)reader["BackupStartDate"],
+                    BackupFinishDate = reader["BackupFinishDate"] is DBNull ? null : (DateTime?)reader["BackupFinishDate"],
+                    BackupSize = backupSize,
+                    BackupSizeFormatted = FormatSize(backupSize),
+                    BackupType = reader["BackupTypeDescription"]?.ToString() ?? ""
+                };
+            }
+
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to read backup info: {FileName}", backup.FileName);
+            return null;
+        }
+    }
+
+    public async Task<(bool Success, string Message)> RestoreBackupAsync(int id)
+    {
+        var backup = await _db.DatabaseBackups.FindAsync(id);
+        if (backup == null) return (false, "Backup no encontrado");
+
+        var localPath = Path.Combine(_backupPathLocal, backup.FileName);
+        if (!File.Exists(localPath)) return (false, "Archivo de backup no encontrado");
+
+        var sqlPath = Path.Combine(_backupPathSql, backup.FileName);
+
+        try
+        {
+            var connStr = _db.Database.GetConnectionString()!;
+            var builder = new SqlConnectionStringBuilder(connStr);
+            builder.InitialCatalog = "master";
+
+            using var conn = new SqlConnection(builder.ConnectionString);
+            await conn.OpenAsync();
+
+            // Set single user to kill all connections
+            _logger.LogWarning("Starting database restore from {FileName}. Setting SINGLE_USER mode...", backup.FileName);
+            using (var cmd = conn.CreateCommand())
+            {
+                cmd.CommandText = "ALTER DATABASE [AIcoding] SET SINGLE_USER WITH ROLLBACK IMMEDIATE";
+                cmd.CommandTimeout = 120;
+                await cmd.ExecuteNonQueryAsync();
+            }
+
+            try
+            {
+                // Restore
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "RESTORE DATABASE [AIcoding] FROM DISK = @path WITH REPLACE";
+                    cmd.Parameters.AddWithValue("@path", sqlPath);
+                    cmd.CommandTimeout = 600; // 10 minutes for large DBs
+                    await cmd.ExecuteNonQueryAsync();
+                }
+
+                _logger.LogWarning("Database restored successfully from {FileName}", backup.FileName);
+            }
+            finally
+            {
+                // Always set back to multi user
+                try
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "ALTER DATABASE [AIcoding] SET MULTI_USER";
+                    cmd.CommandTimeout = 30;
+                    await cmd.ExecuteNonQueryAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to set MULTI_USER mode after restore");
+                }
+            }
+
+            return (true, "Base de datos restaurada correctamente");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Database restore failed from {FileName}", backup.FileName);
+
+            // Try to set back to multi user in case of failure
+            try
+            {
+                var connStr2 = _db.Database.GetConnectionString()!;
+                var builder2 = new SqlConnectionStringBuilder(connStr2);
+                builder2.InitialCatalog = "master";
+                using var conn2 = new SqlConnection(builder2.ConnectionString);
+                await conn2.OpenAsync();
+                using var cmd2 = conn2.CreateCommand();
+                cmd2.CommandText = "ALTER DATABASE [AIcoding] SET MULTI_USER";
+                await cmd2.ExecuteNonQueryAsync();
+            }
+            catch { }
+
+            return (false, $"Error al restaurar: {ex.Message}");
+        }
+    }
+
     private async Task UpsertSetting(string key, string value)
     {
         var setting = await _db.AppSettings.FindAsync(key);
