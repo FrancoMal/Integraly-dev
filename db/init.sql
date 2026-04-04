@@ -545,6 +545,10 @@ BEGIN
 END
 GO
 
+-- Fix NULL PaymentProvider in old records
+UPDATE Payments SET PaymentProvider = 'mercadopago' WHERE PaymentProvider IS NULL;
+GO
+
 -- Seed payment plans
 IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Clase individual')
 BEGIN

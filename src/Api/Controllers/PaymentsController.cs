@@ -770,31 +770,30 @@ public class PaymentsController : ControllerBase
     {
         if (!IsAdmin()) return Forbid();
 
-        var rawPayments = await _db.Payments
-            .Include(p => p.User)
-            .Include(p => p.PaymentPlan)
-            .OrderByDescending(p => p.CreatedAt)
+        var payments = await _db.Payments
+            .Join(_db.Users, p => p.UserId, u => u.Id, (p, u) => new { p, u })
+            .GroupJoin(_db.PaymentPlans, pu => pu.p.PaymentPlanId, pl => pl.Id, (pu, plans) => new { pu.p, pu.u, plan = plans.FirstOrDefault() })
+            .OrderByDescending(x => x.p.CreatedAt)
+            .Select(x => new
+            {
+                x.p.Id,
+                userId = x.p.UserId,
+                userName = x.u.Username ?? "",
+                userEmail = x.u.Email ?? "",
+                planName = x.plan != null ? x.plan.Name : "",
+                classes = x.plan != null ? x.plan.Classes : 0,
+                x.p.Amount,
+                currency = x.p.Currency ?? "ARS",
+                status = x.p.Status ?? "pending",
+                paymentProvider = x.p.PaymentProvider ?? "mercadopago",
+                x.p.TransferReceiptUrl,
+                x.p.MercadoPagoPaymentId,
+                x.p.PayPalOrderId,
+                x.p.TokenPackId,
+                x.p.CreatedAt,
+                x.p.ApprovedAt
+            })
             .ToListAsync();
-
-        var payments = rawPayments.Select(p => new
-        {
-            p.Id,
-            userId = p.UserId,
-            userName = p.User?.Username ?? "",
-            userEmail = p.User?.Email ?? "",
-            planName = p.PaymentPlan?.Name ?? "",
-            classes = p.PaymentPlan?.Classes ?? 0,
-            p.Amount,
-            p.Currency,
-            p.Status,
-            p.PaymentProvider,
-            p.TransferReceiptUrl,
-            p.MercadoPagoPaymentId,
-            p.PayPalOrderId,
-            p.TokenPackId,
-            p.CreatedAt,
-            p.ApprovedAt
-        });
 
         return Ok(payments);
     }
