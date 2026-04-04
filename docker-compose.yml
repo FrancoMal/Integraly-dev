@@ -3,12 +3,16 @@ services:
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: aicoding-sqlserver
+    depends_on:
+      sqlserver-backup-init:
+        condition: service_completed_successfully
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=YourStrong@Passw0rd
       - MSSQL_PID=Express
     volumes:
       - sqlserver_data:/var/opt/mssql
+      - sqlserver_backups:/backups
     networks:
       - aicoding-net
     healthcheck:
@@ -18,6 +22,16 @@ services:
       retries: 10
       start_period: 30s
     restart: unless-stopped
+
+  # --- Permisos del directorio de backups ---
+  sqlserver-backup-init:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: aicoding-sqlserver-backup-init
+    user: "0"
+    volumes:
+      - sqlserver_backups:/backups
+    entrypoint: ["bash", "-c", "chown -R 10001:0 /backups && chmod 775 /backups"]
+    restart: "no"
 
   # --- Inicializacion de la DB (corre una vez y termina) ---
   sqlserver-init:
@@ -54,6 +68,7 @@ services:
       - APP_BASE_URL=https://integraly.dev:3000
     volumes:
       - api-uploads:/app/uploads
+      - sqlserver_backups:/app/backups
       - /proc:/host_proc:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -87,4 +102,5 @@ networks:
 
 volumes:
   sqlserver_data:
+  sqlserver_backups:
   api-uploads:

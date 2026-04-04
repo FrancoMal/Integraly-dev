@@ -53,7 +53,9 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<MercadoPagoService>();
 builder.Services.AddScoped<PayPalService>();
 builder.Services.AddScoped<ChangelogService>();
+builder.Services.AddScoped<BackupService>();
 builder.Services.AddHostedService<BookingCompletionService>();
+builder.Services.AddHostedService<BackupSchedulerService>();
 builder.Services.AddHttpClient();
 
 // CORS

@@ -539,6 +539,48 @@ public class ApiClient
         return response.IsSuccessStatusCode;
     }
 
+    // --- Backup ---
+    public async Task<List<BackupDto>?> GetBackupsAsync()
+    {
+        return await GetAsync<List<BackupDto>>("/api/backup");
+    }
+
+    public async Task<BackupDto?> CreateBackupAsync()
+    {
+        return await PostAsync<BackupDto>("/api/backup", new { });
+    }
+
+    public async Task<bool> DeleteBackupAsync(int id)
+    {
+        return await DeleteAsync($"/api/backup/{id}");
+    }
+
+    public async Task<BackupScheduleDto?> GetBackupScheduleAsync()
+    {
+        return await GetAsync<BackupScheduleDto>("/api/backup/schedule");
+    }
+
+    public async Task<bool> UpdateBackupScheduleAsync(BackupScheduleDto dto)
+    {
+        var result = await PutAsync<object>("/api/backup/schedule", dto);
+        return result != null;
+    }
+
+    public async Task<byte[]?> DownloadBackupAsync(int id)
+    {
+        await SetAuthHeaderAsync();
+        try
+        {
+            var response = await _http.GetAsync($"/api/backup/{id}/download");
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsByteArrayAsync();
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                await HandleUnauthorizedAsync();
+            return null;
+        }
+        catch { return null; }
+    }
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {

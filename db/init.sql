@@ -634,5 +634,32 @@ BEGIN
     PRINT 'Table CommitGroups created';
 END
 
+-- DatabaseBackups table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DatabaseBackups')
+BEGIN
+    CREATE TABLE DatabaseBackups (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        FileName NVARCHAR(500) NOT NULL,
+        DatabaseName NVARCHAR(100) NOT NULL DEFAULT 'AIcoding',
+        SizeBytes BIGINT NOT NULL DEFAULT 0,
+        Type NVARCHAR(50) NOT NULL DEFAULT 'manual',
+        Status NVARCHAR(50) NOT NULL DEFAULT 'completed',
+        ErrorMessage NVARCHAR(MAX) NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_DatabaseBackups_CreatedAt ON DatabaseBackups(CreatedAt);
+    PRINT 'Table DatabaseBackups created';
+END
+GO
+
+-- Seed backup schedule settings
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupScheduleEnabled')
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupScheduleEnabled', 'false');
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupScheduleHours')
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupScheduleHours', '24');
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupRetentionDays')
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupRetentionDays', '30');
+GO
+
 PRINT 'Database initialized successfully';
 GO

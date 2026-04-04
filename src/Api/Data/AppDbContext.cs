@@ -25,6 +25,7 @@ public class AppDbContext : DbContext
     public DbSet<Payment> Payments => Set<Payment>();
     public DbSet<DailyChangeSummary> DailyChangeSummaries => Set<DailyChangeSummary>();
     public DbSet<CommitGroup> CommitGroups => Set<CommitGroup>();
+    public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -198,6 +199,11 @@ public class AppDbContext : DbContext
                   .WithMany(d => d.CommitGroups)
                   .HasForeignKey(c => c.DailySummaryId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DatabaseBackup>(entity =>
+        {
+            entity.HasIndex(b => b.CreatedAt);
         });
 
     }

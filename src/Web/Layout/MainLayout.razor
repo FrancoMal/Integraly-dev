@@ -37,7 +37,7 @@
         @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("changelog") || HasPerm("config") || HasPerm("webinar") || role == "admin")
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("planes-admin") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("changelog") || IsActive("config") || IsActive("webinar-admin"))">
+                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("planes-admin") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("changelog") || IsActive("config") || IsActive("backups") || IsActive("webinar-admin"))">
                 @if (role == "admin")
                 {
                     <NavItem Href="calendario-admin" Label="Calendario" Icon="@SvgIcons.Calendar"
@@ -92,6 +92,11 @@
                 {
                     <NavItem Href="config" Label="Configuracion" Icon="@SvgIcons.Settings"
                              IsActive="@IsActive("config")" OnClick="@(() => NavigateTo("config"))" />
+                }
+                @if (HasPerm("config"))
+                {
+                    <NavItem Href="backups" Label="Backups" Icon="@SvgIcons.Database"
+                             IsActive="@IsActive("backups")" OnClick="@(() => NavigateTo("backups"))" />
                 }
                 @if (HasPerm("webinar"))
                 {
@@ -187,6 +192,7 @@
         { "todas-reservas", "Reservas" },
         { "auditoria", "Auditoria" },
         { "config", "Configuracion" },
+        { "backups", "Backups" },
         { "perfil", "Mi Perfil" },
         { "webinar-admin", "Webinar" },
         { "comprar", "Comprar Pack" },
@@ -218,6 +224,7 @@
         { "todas-reservas", "todas-reservas" },
         { "auditoria", "auditoria" },
         { "config", "config" },
+        { "backups", "config" },
         { "perfil", "" }, // perfil always allowed
         { "webinar-admin", "webinar" },
         { "comprar", "comprar" },
