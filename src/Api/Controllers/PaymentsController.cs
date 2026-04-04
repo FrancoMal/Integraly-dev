@@ -621,20 +621,18 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
-    /// Serve a receipt file
+    /// Serve a receipt file (AllowAnonymous so it works in new browser tabs)
     /// </summary>
     [HttpGet("{id}/receipt-file/{fileName}")]
-    [Authorize]
+    [AllowAnonymous]
     public async Task<IActionResult> GetReceiptFile(int id, string fileName)
     {
-        var userId = GetUserId();
-        var isAdmin = IsAdmin();
-
         var payment = await _db.Payments.FindAsync(id);
         if (payment is null) return NotFound();
 
-        // Only the owner or admin can see the receipt
-        if (!isAdmin && payment.UserId != userId) return Forbid();
+        // Validate the fileName matches the stored receipt URL
+        if (string.IsNullOrEmpty(payment.TransferReceiptUrl) || !payment.TransferReceiptUrl.EndsWith(fileName))
+            return NotFound();
 
         var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "receipts", fileName);
         if (!System.IO.File.Exists(filePath)) return NotFound();
