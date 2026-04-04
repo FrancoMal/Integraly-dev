@@ -60,7 +60,7 @@ else
     @if (showForm)
     {
         <div class="modal-overlay" @onclick="CloseForm">
-            <div class="modal-content" @onclick:stopPropagation="true" style="max-width: 500px;">
+            <div class="modal-card" @onclick:stopPropagation="true" style="max-width: 500px;">
                 <div class="modal-header">
                     <h3 style="margin: 0; font-size: 1.1rem;">@(editingPlan is not null ? "Editar Plan" : "Nuevo Plan")</h3>
                     <button class="modal-close" @onclick="CloseForm">&times;</button>
