@@ -21,12 +21,13 @@ public class AuditLogsController : ControllerBase
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to,
         [FromQuery] string? entityType,
+        [FromQuery] string? entityId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
         var dateFrom = from ?? DateTime.UtcNow.AddDays(-30);
         var dateTo = to ?? DateTime.UtcNow.AddDays(1);
-        var result = await _service.GetLogsAsync(dateFrom, dateTo, entityType, page, pageSize);
+        var result = await _service.GetLogsAsync(dateFrom, dateTo, entityType, entityId, page, pageSize);
         return Ok(result);
     }
 }

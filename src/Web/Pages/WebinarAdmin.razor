@@ -227,6 +227,9 @@
                                     </td>
                                     <td>
                                         <div style="display:flex;gap:0.4rem;align-items:center;">
+                                            <button class="btn btn-sm btn-secondary" @onclick="() => ShowContactHistory(c)" title="Historial">
+                                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                            </button>
                                             <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditContact(c)" title="Editar">
                                                 <i class="fa-solid fa-pen"></i>
                                             </button>
@@ -627,6 +630,55 @@ Variables disponibles: {{nombre}}, {{email}}, {{link}}, {{webinar}}, {{fecha}}">
     </div>
 }
 
+@* ==================== MODAL: HISTORIAL CONTACTO ==================== *@
+@if (showHistoryModal && historyContact is not null)
+{
+    <div class="modal-overlay" @onclick="() => showHistoryModal = false">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:650px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-clock-rotate-left" style="margin-right:0.5rem;"></i>Historial - @historyContact.FullName</h3>
+                <button class="btn-close" @onclick="() => showHistoryModal = false">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:0;max-height:60vh;overflow-y:auto;">
+                @if (contactHistory is null)
+                {
+                    <p class="text-muted" style="padding:1.5rem;">Cargando...</p>
+                }
+                else if (contactHistory.Count == 0)
+                {
+                    <p class="text-muted" style="padding:1.5rem;">No hay eventos registrados para este contacto</p>
+                }
+                else
+                {
+                    <div style="padding:1rem;">
+                        @foreach (var h in contactHistory)
+                        {
+                            <div style="display:flex;gap:0.75rem;padding:0.6rem 0;border-bottom:1px solid var(--border-color, #e5e7eb);">
+                                <div style="flex-shrink:0;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.8rem;@GetHistoryIconStyle(h.Action)">
+                                    <i class="@GetHistoryIcon(h.Action)"></i>
+                                </div>
+                                <div style="flex:1;min-width:0;">
+                                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.2rem;">
+                                        <span style="font-weight:600;font-size:0.85rem;">@GetHistoryLabel(h.Action)</span>
+                                        <span style="font-size:0.75rem;color:var(--text-secondary);white-space:nowrap;">@h.CreatedAt.ToString("dd/MM/yy HH:mm")</span>
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(h.Changes))
+                                    {
+                                        <p style="margin:0;font-size:0.82rem;color:var(--text-secondary);word-break:break-word;">@h.Changes</p>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showHistoryModal = false">Cerrar</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string activeTab = "fechas";
 
@@ -664,6 +716,11 @@ Variables disponibles: {{nombre}}, {{email}}, {{link}}, {{webinar}}, {{fecha}}">
     private string? contactFormError;
     private WebinarContactDto? contactToDelete;
     private bool showDeleteContactConfirm;
+
+    // History modal
+    private bool showHistoryModal;
+    private WebinarContactDto? historyContact;
+    private List<ContactHistoryDto>? contactHistory;
 
     // Selection & assign
     private HashSet<int> selectedContactIds = new();
@@ -982,6 +1039,62 @@ Variables disponibles: {{nombre}}, {{email}}, {{link}}, {{webinar}}, {{fecha}}">
         }
         isSaving = false;
     }
+
+    // ==================== HISTORY ====================
+
+    private async Task ShowContactHistory(WebinarContactDto c)
+    {
+        historyContact = c;
+        contactHistory = null;
+        showHistoryModal = true;
+        StateHasChanged();
+
+        try
+        {
+            contactHistory = await Api.GetWebinarContactHistoryAsync(c.Id);
+        }
+        catch
+        {
+            Toast.Error("Error al cargar el historial");
+        }
+        StateHasChanged();
+    }
+
+    private string GetHistoryIcon(string action) => action switch
+    {
+        "create" => "fa-solid fa-user-plus",
+        "update" => "fa-solid fa-pen",
+        "delete" => "fa-solid fa-trash",
+        "email_sent" => "fa-solid fa-envelope-circle-check",
+        "email_failed" => "fa-solid fa-envelope-circle-xmark",
+        "whatsapp_pending" => "fa-brands fa-whatsapp",
+        "bulk_invite" => "fa-solid fa-paper-plane",
+        _ => "fa-solid fa-circle-info"
+    };
+
+    private string GetHistoryIconStyle(string action) => action switch
+    {
+        "create" => "background:#dcfce7;color:#16a34a;",
+        "update" => "background:#dbeafe;color:#2563eb;",
+        "delete" => "background:#fee2e2;color:#dc2626;",
+        "email_sent" => "background:#dcfce7;color:#16a34a;",
+        "email_failed" => "background:#fee2e2;color:#dc2626;",
+        "whatsapp_pending" => "background:#d1fae5;color:#25D366;",
+        "bulk_invite" => "background:#eef2ff;color:#4f46e5;",
+        _ => "background:#f3f4f6;color:#6b7280;"
+    };
+
+    private string GetHistoryLabel(string action) => action switch
+    {
+        "create" => "Contacto creado",
+        "update" => "Contacto editado",
+        "delete" => "Contacto eliminado",
+        "email_sent" => "Email enviado",
+        "email_failed" => "Email fallido",
+        "whatsapp_pending" => "WhatsApp pendiente",
+        "bulk_invite" => "Invitacion masiva",
+        _ => action
+    };
 
     // ==================== SELECTION & ASSIGN ====================
 

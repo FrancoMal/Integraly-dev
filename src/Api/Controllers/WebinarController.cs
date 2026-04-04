@@ -187,6 +187,9 @@ public class WebinarController : ControllerBase
         _db.WebinarContacts.Add(contact);
         await _db.SaveChangesAsync();
 
+        await _audit.LogAsync("WebinarContact", contact.Id.ToString(), "create",
+            $"Contacto creado: {contact.FullName} ({contact.Email})" + (contact.Tag != null ? $" [Tag: {contact.Tag}]" : ""), "Sistema");
+
         return Created($"/api/webinar/contacts/{contact.Id}",
             new WebinarContactDto
             {
@@ -214,6 +217,13 @@ public class WebinarController : ControllerBase
                 return BadRequest(new { message = "Ya existe un contacto con ese email" });
         }
 
+        var changes = new List<string>();
+        if (contact.FullName != request.FullName.Trim()) changes.Add($"Nombre: {contact.FullName} -> {request.FullName.Trim()}");
+        if (contact.Email != request.Email.Trim()) changes.Add($"Email: {contact.Email} -> {request.Email.Trim()}");
+        if ((contact.Phone ?? "") != (request.Phone?.Trim() ?? "")) changes.Add($"Telefono: {contact.Phone ?? "-"} -> {request.Phone?.Trim() ?? "-"}");
+        if ((contact.Company ?? "") != (request.Company?.Trim() ?? "")) changes.Add($"Empresa: {contact.Company ?? "-"} -> {request.Company?.Trim() ?? "-"}");
+        if ((contact.Tag ?? "") != (request.Tag?.Trim() ?? "")) changes.Add($"Tag: {contact.Tag ?? "-"} -> {request.Tag?.Trim() ?? "-"}");
+
         contact.FullName = request.FullName.Trim();
         contact.Email = request.Email.Trim();
         contact.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
@@ -221,6 +231,10 @@ public class WebinarController : ControllerBase
         contact.Tag = string.IsNullOrWhiteSpace(request.Tag) ? null : request.Tag.Trim();
 
         await _db.SaveChangesAsync();
+
+        if (changes.Count > 0)
+            await _audit.LogAsync("WebinarContact", contact.Id.ToString(), "update",
+                $"Contacto editado: {contact.FullName}. Cambios: {string.Join(", ", changes)}", "Sistema");
 
         var hasReg = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == contact.Id);
         string? dateDisplay = null;
@@ -464,6 +478,23 @@ public class WebinarController : ControllerBase
         return Ok(new { imported, updated, skipped, message = $"{imported} importados, {updated} actualizados, {skipped} omitidos" });
     }
 
+    // GET /api/webinar/contacts/{id}/history
+    [HttpGet("contacts/{id}/history")]
+    public async Task<IActionResult> GetContactHistory(int id)
+    {
+        var contact = await _db.WebinarContacts.FindAsync(id);
+        if (contact is null) return NotFound();
+
+        var idStr = id.ToString();
+        var logs = await _db.AuditLogs
+            .Where(a => a.EntityId == idStr && (a.EntityType == "WebinarContact" || a.EntityType == "WebinarInvite"))
+            .OrderByDescending(a => a.CreatedAt)
+            .Select(a => new { a.Id, a.EntityType, a.Action, a.Changes, a.UserName, a.CreatedAt })
+            .ToListAsync();
+
+        return Ok(logs);
+    }
+
     // DELETE /api/webinar/contacts/{id}
     [HttpDelete("contacts/{id}")]
     public async Task<IActionResult> DeleteContact(int id)
@@ -475,8 +506,14 @@ public class WebinarController : ControllerBase
         if (registration is not null)
             _db.WebinarRegistrations.Remove(registration);
 
+        var contactName = contact.FullName;
+        var contactEmail = contact.Email;
+
         _db.WebinarContacts.Remove(contact);
         await _db.SaveChangesAsync();
+
+        await _audit.LogAsync("WebinarContact", id.ToString(), "delete",
+            $"Contacto eliminado: {contactName} ({contactEmail})", "Sistema");
 
         return NoContent();
     }

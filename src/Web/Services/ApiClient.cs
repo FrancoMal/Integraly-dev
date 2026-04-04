@@ -386,6 +386,11 @@ public class ApiClient
         return await PostAsync<WebinarContactDto>("/api/webinar/contacts", request);
     }
 
+    public async Task<List<ContactHistoryDto>?> GetWebinarContactHistoryAsync(int id)
+    {
+        return await GetAsync<List<ContactHistoryDto>>($"/api/webinar/contacts/{id}/history");
+    }
+
     public async Task<WebinarContactDto?> UpdateWebinarContactAsync(int id, UpdateWebinarContactRequest request)
     {
         return await PutAsync<WebinarContactDto>($"/api/webinar/contacts/{id}", request);

@@ -80,6 +80,16 @@ public class ImportContactsResult
     public string Message { get; set; } = "";
 }
 
+public class ContactHistoryDto
+{
+    public int Id { get; set; }
+    public string EntityType { get; set; } = "";
+    public string Action { get; set; } = "";
+    public string? Changes { get; set; }
+    public string? UserName { get; set; }
+    public DateTime CreatedAt { get; set; }
+}
+
 public class AssignWebinarResult
 {
     public int Assigned { get; set; }
