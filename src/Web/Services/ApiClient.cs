@@ -641,6 +641,85 @@ public class ApiClient
         catch (Exception ex) { return (false, $"Error: {ex.Message}"); }
     }
 
+    // --- Integrations ---
+    public async Task<List<IntegrationDto>?> GetIntegrationsAsync()
+        => await GetAsync<List<IntegrationDto>>("/api/integrations");
+
+    public async Task<IntegrationDto?> GetIntegrationAsync(string provider)
+        => await GetAsync<IntegrationDto>($"/api/integrations/{provider}");
+
+    public async Task<IntegrationDto?> SaveIntegrationAsync(SaveIntegrationRequest request)
+        => await PostAsync<IntegrationDto>("/api/integrations", request);
+
+    public async Task<bool> DeleteIntegrationAsync(string provider)
+        => await DeleteAsync($"/api/integrations/{provider}");
+
+    public async Task<List<AiModelDto>?> GetOpenAiModelsAsync()
+        => await GetAsync<List<AiModelDto>>("/api/integrations/openai/models");
+
+    public async Task<List<AiModelDto>?> GetClaudeModelsAsync()
+        => await GetAsync<List<AiModelDto>>("/api/integrations/claude/models");
+
+    public async Task<bool> TestEmailIntegrationAsync()
+    {
+        try
+        {
+            await PostAsync<object>("/api/integrations/email-smtp/test", new { });
+            return true;
+        }
+        catch { return false; }
+    }
+
+    // --- MercadoLibre ---
+    public async Task<List<MeliAccountDto>?> GetMeliAccountsAsync()
+        => await GetAsync<List<MeliAccountDto>>("/api/meli/accounts");
+
+    public async Task<MeliAuthUrlDto?> GetMeliAuthUrlAsync()
+        => await GetAsync<MeliAuthUrlDto>("/api/meli/auth-url");
+
+    public async Task<MeliAccountDto?> MeliCallbackAsync(string code)
+        => await PostAsync<MeliAccountDto>("/api/meli/callback", new { code });
+
+    public async Task<bool> DeleteMeliAccountAsync(int id)
+        => await DeleteAsync($"/api/meli/accounts/{id}");
+
+    public async Task<bool> SyncMeliItemsAsync()
+    {
+        try { await PostAsync<object>("/api/meli/items/sync", new { }); return true; }
+        catch { return false; }
+    }
+
+    public async Task<bool> SyncMeliOrdersAsync()
+    {
+        try { await PostAsync<object>("/api/meli/orders/sync", new { }); return true; }
+        catch { return false; }
+    }
+
+    // --- WhatsApp ---
+    public async Task<WhatsAppStatusDto?> GetWhatsAppStatusAsync()
+        => await GetAsync<WhatsAppStatusDto>("/api/whatsapp/status");
+
+    public async Task<bool> StartWhatsAppLinkAsync()
+    {
+        try { await PostAsync<object>("/api/whatsapp/link", new { }); return true; }
+        catch { return false; }
+    }
+
+    public async Task<WhatsAppCheckDto?> CheckWhatsAppLinkedAsync()
+        => await GetAsync<WhatsAppCheckDto>("/api/whatsapp/check-linked");
+
+    public async Task<bool> UnlinkWhatsAppAsync()
+    {
+        try { await PostAsync<object>("/api/whatsapp/unlink", new { }); return true; }
+        catch { return false; }
+    }
+
+    public async Task<bool> CancelWhatsAppLinkAsync()
+    {
+        try { await PostAsync<object>("/api/whatsapp/cancel-link", new { }); return true; }
+        catch { return false; }
+    }
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {

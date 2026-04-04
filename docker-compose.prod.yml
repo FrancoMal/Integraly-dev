@@ -66,6 +66,7 @@ services:
       - TRANSFER_ALIAS=${TRANSFER_ALIAS:-}
       - TRANSFER_TITULAR=${TRANSFER_TITULAR:-}
       - APP_BASE_URL=https://integraly.dev
+      - PLAYWRIGHT_URL=http://playwright-prod:3001
     volumes:
       - api-uploads-prod:/app/uploads
       - sqlserver_prod_backups:/app/backups
@@ -76,6 +77,18 @@ services:
     depends_on:
       sqlserver-prod:
         condition: service_healthy
+    restart: unless-stopped
+
+  # --- Playwright PRODUCCION ---
+  playwright-prod:
+    build:
+      context: ./src/Playwright
+      dockerfile: Dockerfile
+    container_name: aicoding-playwright-prod
+    environment:
+      - NODE_ENV=production
+    networks:
+      - aicoding-prod-net
     restart: unless-stopped
 
   # --- Frontend PRODUCCION ---

@@ -112,6 +112,12 @@
                 }
             </NavGroup>
         }
+
+        @if (HasPerm("config") || role == "admin")
+        {
+            <NavItem Href="integraciones" Label="Integraciones" Icon="@SvgIcons.Puzzle"
+                     IsActive="@IsActive("integraciones")" OnClick="@(() => NavigateTo("integraciones"))" />
+        }
     </nav>
     <div class="sidebar-user">
         <div class="sidebar-user-avatar">@SvgIcons.User</div>
@@ -206,7 +212,9 @@
         { "pago-exitoso", "Pago Exitoso" },
         { "pago-fallido", "Pago Fallido" },
         { "pago-pendiente", "Pago Pendiente" },
-        { "changelog", "Historial de Cambios" }
+        { "changelog", "Historial de Cambios" },
+        { "integraciones", "Integraciones" },
+        { "planes-admin", "Planes de Pago" }
     };
 
     private string GetPageTitle()
@@ -238,7 +246,8 @@
         { "pago-exitoso", "" },
         { "pago-fallido", "" },
         { "pago-pendiente", "" },
-        { "changelog", "changelog" }
+        { "changelog", "changelog" },
+        { "integraciones", "config" }
     };
 
     private bool IsAdminPanel => Navigation.BaseUri.Contains("/panel/");

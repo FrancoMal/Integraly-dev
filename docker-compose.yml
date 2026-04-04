@@ -66,6 +66,7 @@ services:
       - TRANSFER_ALIAS=${TRANSFER_ALIAS:-}
       - TRANSFER_TITULAR=${TRANSFER_TITULAR:-}
       - APP_BASE_URL=https://integraly.dev:3000
+      - PLAYWRIGHT_URL=http://playwright:3001
     volumes:
       - api-uploads:/app/uploads
       - sqlserver_backups:/app/backups
@@ -76,6 +77,18 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+    restart: unless-stopped
+
+  # --- Playwright (Automatizacion web) ---
+  playwright:
+    build:
+      context: ./src/Playwright
+      dockerfile: Dockerfile
+    container_name: aicoding-playwright
+    environment:
+      - NODE_ENV=production
+    networks:
+      - aicoding-net
     restart: unless-stopped
 
   # --- Frontend (Blazor WASM + Nginx) ---

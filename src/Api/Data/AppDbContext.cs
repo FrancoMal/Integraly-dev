@@ -26,6 +26,12 @@ public class AppDbContext : DbContext
     public DbSet<DailyChangeSummary> DailyChangeSummaries => Set<DailyChangeSummary>();
     public DbSet<CommitGroup> CommitGroups => Set<CommitGroup>();
     public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
+    public DbSet<Integration> Integrations => Set<Integration>();
+    public DbSet<MeliAccount> MeliAccounts => Set<MeliAccount>();
+    public DbSet<MeliItem> MeliItems => Set<MeliItem>();
+    public DbSet<MeliOrder> MeliOrders => Set<MeliOrder>();
+    public DbSet<Comprobante> Comprobantes => Set<Comprobante>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -204,6 +210,41 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<DatabaseBackup>(entity =>
         {
             entity.HasIndex(b => b.CreatedAt);
+        });
+
+        modelBuilder.Entity<Integration>(entity =>
+        {
+            entity.HasIndex(i => i.Provider).IsUnique();
+        });
+
+        modelBuilder.Entity<MeliAccount>(entity =>
+        {
+            entity.HasIndex(a => a.MeliUserId).IsUnique();
+        });
+
+        modelBuilder.Entity<MeliItem>(entity =>
+        {
+            entity.HasIndex(i => i.MeliItemId).IsUnique();
+            entity.HasOne(i => i.MeliAccount)
+                  .WithMany()
+                  .HasForeignKey(i => i.MeliAccountId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<MeliOrder>(entity =>
+        {
+            entity.HasIndex(o => new { o.MeliOrderId, o.MeliAccountId });
+            entity.HasOne(o => o.MeliAccount)
+                  .WithMany()
+                  .HasForeignKey(o => o.MeliAccountId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Comprobante>(entity =>
+        {
+            entity.HasIndex(c => c.Categoria);
+            entity.HasIndex(c => c.Fecha);
+            entity.HasIndex(c => c.ContraparteNroDoc);
         });
 
     }

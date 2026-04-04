@@ -50,12 +50,21 @@ builder.Services.AddScoped<TokenPackService>();
 builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<IntegrationService>();
+builder.Services.AddScoped<MeliAccountService>();
+builder.Services.AddScoped<MeliItemService>();
+builder.Services.AddScoped<MeliOrderService>();
+builder.Services.AddScoped<AiService>();
+builder.Services.AddSingleton<WhatsAppService>();
 builder.Services.AddScoped<MercadoPagoService>();
 builder.Services.AddScoped<PayPalService>();
 builder.Services.AddScoped<ChangelogService>();
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddHostedService<BookingCompletionService>();
 builder.Services.AddHostedService<BackupSchedulerService>();
+builder.Services.AddHostedService<Api.BackgroundJobs.SyncMeliOrdersJob>();
+builder.Services.AddHostedService<Api.BackgroundJobs.SyncMeliItemsJob>();
+builder.Services.AddHostedService<Api.BackgroundJobs.SyncArcaComprobantesJob>();
 builder.Services.AddHttpClient();
 
 // CORS

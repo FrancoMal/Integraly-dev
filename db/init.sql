@@ -661,5 +661,148 @@ IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupRetentionDays')
     INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupRetentionDays', '30');
 GO
 
+-- Integrations table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Integrations' AND xtype='U')
+BEGIN
+    CREATE TABLE Integrations (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Provider NVARCHAR(50) NOT NULL UNIQUE,
+        AppId NVARCHAR(255) NULL,
+        AppSecret NVARCHAR(255) NULL,
+        RedirectUrl NVARCHAR(500) NULL,
+        Settings NVARCHAR(MAX) NULL,
+        IsActive BIT DEFAULT 0,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NULL
+    );
+    PRINT 'Table Integrations created';
+END
+GO
+
+-- MeliAccounts table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MeliAccounts' AND xtype='U')
+BEGIN
+    CREATE TABLE MeliAccounts (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        MeliUserId BIGINT NOT NULL UNIQUE,
+        Nickname NVARCHAR(255) NOT NULL,
+        Email NVARCHAR(255) NULL,
+        AccessToken NVARCHAR(MAX) NOT NULL,
+        RefreshToken NVARCHAR(MAX) NULL,
+        TokenExpiresAt DATETIME2 NOT NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NULL
+    );
+    PRINT 'Table MeliAccounts created';
+END
+GO
+
+-- MeliItems table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MeliItems' AND xtype='U')
+BEGIN
+    CREATE TABLE MeliItems (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        MeliItemId NVARCHAR(50) NOT NULL UNIQUE,
+        MeliAccountId INT NOT NULL FOREIGN KEY REFERENCES MeliAccounts(Id) ON DELETE CASCADE,
+        Title NVARCHAR(500) NOT NULL,
+        CategoryId NVARCHAR(50) NULL,
+        CategoryPath NVARCHAR(500) NULL,
+        Price DECIMAL(18,2) NOT NULL DEFAULT 0,
+        OriginalPrice DECIMAL(18,2) NULL,
+        CurrencyId NVARCHAR(10) NOT NULL DEFAULT 'ARS',
+        AvailableQuantity INT NOT NULL DEFAULT 0,
+        SoldQuantity INT NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'active',
+        Condition NVARCHAR(20) NULL,
+        ListingTypeId NVARCHAR(50) NULL,
+        FreeShipping BIT NOT NULL DEFAULT 0,
+        Thumbnail NVARCHAR(500) NULL,
+        Permalink NVARCHAR(1000) NULL,
+        Brand NVARCHAR(255) NULL,
+        Sku NVARCHAR(255) NULL,
+        IsCatalog BIT NOT NULL DEFAULT 0,
+        DateCreated DATETIME2 NULL,
+        LastUpdated DATETIME2 NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NULL
+    );
+    PRINT 'Table MeliItems created';
+END
+GO
+
+-- MeliOrders table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='MeliOrders' AND xtype='U')
+BEGIN
+    CREATE TABLE MeliOrders (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        MeliOrderId BIGINT NOT NULL,
+        MeliAccountId INT NOT NULL FOREIGN KEY REFERENCES MeliAccounts(Id),
+        Status NVARCHAR(50) NOT NULL,
+        DateCreated DATETIME2 NOT NULL,
+        DateClosed DATETIME2 NULL,
+        TotalAmount DECIMAL(18,2) NOT NULL,
+        CurrencyId NVARCHAR(10) NOT NULL,
+        BuyerId BIGINT NOT NULL,
+        BuyerNickname NVARCHAR(255) NOT NULL,
+        ItemId NVARCHAR(50) NOT NULL,
+        ItemTitle NVARCHAR(500) NOT NULL,
+        Quantity INT NOT NULL,
+        UnitPrice DECIMAL(18,2) NOT NULL,
+        ShippingId BIGINT NULL,
+        PackId BIGINT NULL,
+        ShippingStatus NVARCHAR(50) NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NULL
+    );
+    PRINT 'Table MeliOrders created';
+END
+GO
+
+-- Comprobantes table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Comprobantes' AND xtype='U')
+BEGIN
+    CREATE TABLE Comprobantes (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Categoria NVARCHAR(10) NOT NULL,
+        Fecha DATETIME2 NOT NULL,
+        Tipo NVARCHAR(100) NOT NULL,
+        PuntoDeVenta INT NOT NULL DEFAULT 0,
+        NumeroDesde BIGINT NOT NULL DEFAULT 0,
+        NumeroHasta BIGINT NOT NULL DEFAULT 0,
+        CodAutorizacion BIGINT NULL,
+        ContraparteTipoDoc NVARCHAR(20) NULL,
+        ContraparteNroDoc BIGINT NULL,
+        ContraparteDenominacion NVARCHAR(300) NULL,
+        TipoCambio DECIMAL(18,6) NOT NULL DEFAULT 1,
+        Moneda NVARCHAR(10) NOT NULL DEFAULT '$',
+        NetoGravIva0 DECIMAL(18,2) NULL,
+        Iva25 DECIMAL(18,2) NULL,
+        NetoGravIva25 DECIMAL(18,2) NULL,
+        Iva5 DECIMAL(18,2) NULL,
+        NetoGravIva5 DECIMAL(18,2) NULL,
+        Iva105 DECIMAL(18,2) NULL,
+        NetoGravIva105 DECIMAL(18,2) NULL,
+        Iva21 DECIMAL(18,2) NULL,
+        NetoGravIva21 DECIMAL(18,2) NULL,
+        Iva27 DECIMAL(18,2) NULL,
+        NetoGravIva27 DECIMAL(18,2) NULL,
+        PercIva DECIMAL(18,2) NULL,
+        PercOtrosImp DECIMAL(18,2) NULL,
+        PercIIBB DECIMAL(18,2) NULL,
+        PercImpMuni DECIMAL(18,2) NULL,
+        ImpInterno DECIMAL(18,2) NULL,
+        NoGravado DECIMAL(18,2) NULL,
+        OtrosTributos DECIMAL(18,2) NULL,
+        ImporteTotal DECIMAL(18,2) NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        UpdatedAt DATETIME2 NULL
+    );
+    CREATE INDEX IX_Comprobantes_Categoria ON Comprobantes(Categoria);
+    CREATE INDEX IX_Comprobantes_Fecha ON Comprobantes(Fecha DESC);
+    CREATE INDEX IX_Comprobantes_ContraparteNroDoc ON Comprobantes(ContraparteNroDoc);
+    PRINT 'Table Comprobantes created';
+END
+GO
+
 PRINT 'Database initialized successfully';
 GO

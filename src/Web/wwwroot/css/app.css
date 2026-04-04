@@ -4772,3 +4772,121 @@ td.calendar-slot-unavailable {
     visibility: visible;
     opacity: 1;
 }
+
+/* ============================================================
+   Integrations Page
+   ============================================================ */
+.integrations-page {
+    max-width: 1200px;
+}
+
+.integrations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.25rem;
+}
+
+.integration-card {
+    background: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.integration-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.integration-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+}
+
+.integration-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.integration-info h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.integration-info p {
+    margin: 0.15rem 0 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.integration-card-actions {
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.integration-card-extra {
+    padding: 0.75rem 1.25rem 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.integration-accounts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.integration-accounts-header strong {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.input-group .form-input {
+    flex: 1;
+}
+
+.form-range {
+    width: 100%;
+    accent-color: var(--primary);
+}
+
+.spinner-small {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+.text-muted {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+@media (max-width: 480px) {
+    .integrations-grid {
+        grid-template-columns: 1fr;
+    }
+}
