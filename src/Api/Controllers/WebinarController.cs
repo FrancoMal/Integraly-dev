@@ -290,7 +290,7 @@ public class WebinarController : ControllerBase
                     .Replace("{{email}}", contact.Email)
                     .Replace("{{link}}", contactLink)
                     .Replace("{{webinar}}", webinarDate.Name)
-                    .Replace("{{fecha}}", webinarDate.Date.ToString("dddd dd/MM/yyyy HH:mm"));
+                    .Replace("{{fecha}}", webinarDate.Date.ToString("dddd dd/MM/yyyy HH:mm", new System.Globalization.CultureInfo("es-AR")));
 
                 var subject = (webinarDate.InviteSubject ?? "Invitacion a Webinar")
                     .Replace("{{nombre}}", contact.FullName)
