@@ -32,7 +32,7 @@ public class WebinarController : ControllerBase
         foreach (var d in dates)
         {
             var count = await _db.WebinarRegistrations.CountAsync(r => r.WebinarDateId == d.Id);
-            result.Add(new WebinarDateDto { Id = d.Id, Date = d.Date, MeetingLink = d.MeetingLink, RegistrationCount = count, CreatedAt = d.CreatedAt });
+            result.Add(new WebinarDateDto { Id = d.Id, Name = d.Name, Date = d.Date, MeetingLink = d.MeetingLink, RegistrationCount = count, CreatedAt = d.CreatedAt });
         }
 
         return Ok(result);
@@ -44,6 +44,7 @@ public class WebinarController : ControllerBase
     {
         var date = new WebinarDate
         {
+            Name = request.Name?.Trim() ?? "",
             Date = request.Date,
             MeetingLink = request.MeetingLink
         };
@@ -52,7 +53,7 @@ public class WebinarController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Created($"/api/webinar/dates/{date.Id}",
-            new WebinarDateDto { Id = date.Id, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = 0, CreatedAt = date.CreatedAt });
+            new WebinarDateDto { Id = date.Id, Name = date.Name, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = 0, CreatedAt = date.CreatedAt });
     }
 
     // PUT /api/webinar/dates/{id}
@@ -62,12 +63,13 @@ public class WebinarController : ControllerBase
         var date = await _db.WebinarDates.FindAsync(id);
         if (date is null) return NotFound();
 
+        date.Name = request.Name?.Trim() ?? "";
         date.Date = request.Date;
         date.MeetingLink = request.MeetingLink;
         await _db.SaveChangesAsync();
 
         var count = await _db.WebinarRegistrations.CountAsync(r => r.WebinarDateId == id);
-        return Ok(new WebinarDateDto { Id = date.Id, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = count, CreatedAt = date.CreatedAt });
+        return Ok(new WebinarDateDto { Id = date.Id, Name = date.Name, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = count, CreatedAt = date.CreatedAt });
     }
 
     // GET /api/webinar/dates/{id}/registrations
@@ -344,6 +346,7 @@ public class WebinarController : ControllerBase
             perDate.Add(new WebinarDateStatsDto
             {
                 DateId = d.Id,
+                Name = d.Name,
                 Date = d.Date,
                 Registrations = regs.Count,
                 KnowsChatGPT = regs.Count(r => r.KnowsChatGPT),
@@ -379,7 +382,7 @@ public class WebinarController : ControllerBase
         var availableDates = await _db.WebinarDates
             .Where(d => d.Date > DateTime.UtcNow)
             .OrderBy(d => d.Date)
-            .Select(d => new WebinarDateOptionDto { Id = d.Id, Date = d.Date })
+            .Select(d => new WebinarDateOptionDto { Id = d.Id, Name = d.Name, Date = d.Date })
             .ToListAsync();
 
         return Ok(new WebinarFormDataDto

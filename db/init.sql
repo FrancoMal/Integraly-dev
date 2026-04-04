@@ -403,10 +403,18 @@ IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarDates' AND xtype='U')
 BEGIN
     CREATE TABLE WebinarDates (
         Id INT PRIMARY KEY IDENTITY(1,1),
+        Name NVARCHAR(200) NOT NULL DEFAULT '',
         Date DATETIME2 NOT NULL,
         MeetingLink NVARCHAR(500) NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE()
     );
+END
+GO
+
+-- Add Name column to WebinarDates if it doesn't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarDates') AND name = 'Name')
+BEGIN
+    ALTER TABLE WebinarDates ADD Name NVARCHAR(200) NOT NULL DEFAULT '';
 END
 GO
 

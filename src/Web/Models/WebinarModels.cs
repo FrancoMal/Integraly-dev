@@ -3,6 +3,7 @@ namespace Web.Models;
 public class WebinarDateDto
 {
     public int Id { get; set; }
+    public string Name { get; set; } = "";
     public DateTime Date { get; set; }
     public string? MeetingLink { get; set; }
     public int RegistrationCount { get; set; }
@@ -11,6 +12,7 @@ public class WebinarDateDto
 
 public class CreateWebinarDateRequest
 {
+    public string Name { get; set; } = "";
     public DateTime Date { get; set; }
     public string? MeetingLink { get; set; }
 }
@@ -63,6 +65,7 @@ public class WebinarFormDataDto
 public class WebinarDateOptionDto
 {
     public int Id { get; set; }
+    public string Name { get; set; } = "";
     public DateTime Date { get; set; }
 }
 
@@ -89,6 +92,7 @@ public class WebinarStatsDto
 public class WebinarDateStatsDto
 {
     public int DateId { get; set; }
+    public string Name { get; set; } = "";
     public DateTime Date { get; set; }
     public int Registrations { get; set; }
     public int KnowsChatGPT { get; set; }

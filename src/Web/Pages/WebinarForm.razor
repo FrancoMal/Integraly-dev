@@ -98,7 +98,7 @@ else if (formData is not null)
                     <option value="0" disabled>Selecciona una fecha</option>
                     @foreach (var date in formData.AvailableDates)
                     {
-                        <option value="@date.Id">@FormatDate(date.Date)</option>
+                        <option value="@date.Id">@(string.IsNullOrEmpty(date.Name) ? FormatDate(date.Date) : $"{date.Name} - {FormatDate(date.Date)}")</option>
                     }
                 </select>
             </div>
