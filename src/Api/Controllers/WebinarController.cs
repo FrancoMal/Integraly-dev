@@ -299,13 +299,18 @@ public class WebinarController : ControllerBase
             // Send email if configured
             if (webinarDate.SendByEmail && !string.IsNullOrWhiteSpace(webinarDate.InviteMessage))
             {
-                var contactLink = $"{baseUrl}/webinar/{contact.UUID}";
+                var trackClickUrl = $"{baseUrl}/api/webinar/track/click/{contact.Id}/{webinarDate.Id}";
+                var trackOpenUrl = $"{baseUrl}/api/webinar/track/open/{contact.Id}/{webinarDate.Id}";
+
                 var body = webinarDate.InviteMessage
                     .Replace("{{nombre}}", contact.FullName)
                     .Replace("{{email}}", contact.Email)
-                    .Replace("{{link}}", contactLink)
+                    .Replace("{{link}}", trackClickUrl)
                     .Replace("{{webinar}}", webinarDate.Name)
                     .Replace("{{fecha}}", webinarDate.Date.ToString("dddd dd/MM/yyyy HH:mm", new System.Globalization.CultureInfo("es-AR")));
+
+                // Append tracking pixel at the end of the email body
+                body += $"<img src=\"{trackOpenUrl}\" width=\"1\" height=\"1\" style=\"display:none;\" alt=\"\" />";
 
                 var subject = (webinarDate.InviteSubject ?? "Invitacion a Webinar")
                     .Replace("{{nombre}}", contact.FullName)
@@ -653,5 +658,45 @@ public class WebinarController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Inscripcion exitosa" });
+    }
+
+    // GET /api/webinar/track/open/{contactId}/{webinarDateId} - Tracking pixel
+    [AllowAnonymous]
+    [HttpGet("track/open/{contactId}/{webinarDateId}")]
+    [ResponseCache(NoStore = true)]
+    public async Task<IActionResult> TrackOpen(int contactId, int webinarDateId)
+    {
+        var contact = await _db.WebinarContacts.FindAsync(contactId);
+        var webinar = await _db.WebinarDates.FindAsync(webinarDateId);
+
+        if (contact != null && webinar != null)
+        {
+            await _audit.LogAsync("WebinarInvite", contactId.ToString(), "email_opened",
+                $"{contact.FullName} ({contact.Email}) abrio el email de invitacion al webinar '{webinar.Name}'", "Tracking");
+        }
+
+        // 1x1 transparent GIF
+        var pixel = Convert.FromBase64String("R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7");
+        return File(pixel, "image/gif");
+    }
+
+    // GET /api/webinar/track/click/{contactId}/{webinarDateId} - Link click redirect
+    [AllowAnonymous]
+    [HttpGet("track/click/{contactId}/{webinarDateId}")]
+    public async Task<IActionResult> TrackClick(int contactId, int webinarDateId)
+    {
+        var contact = await _db.WebinarContacts.FindAsync(contactId);
+        var webinar = await _db.WebinarDates.FindAsync(webinarDateId);
+
+        if (contact != null && webinar != null)
+        {
+            await _audit.LogAsync("WebinarInvite", contactId.ToString(), "link_clicked",
+                $"{contact.FullName} ({contact.Email}) hizo click en el enlace del webinar '{webinar.Name}'", "Tracking");
+        }
+
+        // Redirect to the actual webinar form
+        var uuid = contact?.UUID ?? "";
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
+        return Redirect($"{baseUrl}/webinar/{uuid}");
     }
 }
