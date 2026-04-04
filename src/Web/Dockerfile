@@ -10,10 +10,9 @@ RUN dotnet publish -c Release -o /app/publish
 FROM nginx:alpine AS final
 # Landing page at root
 COPY landing/index.html /usr/share/nginx/html/index.html
-# Blazor app under /admin/
-COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/admin
-# Same Blazor app under /panel/ (with different index.html for base href)
+# Blazor app under /panel/
 COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/panel
-# Override panel's index.html with the one that has base href="/panel/"
-COPY panel-index.html /usr/share/nginx/html/panel/index.html
+# Blazor app under /webinar/
+COPY --from=build /app/publish/wwwroot /usr/share/nginx/html/webinar
+COPY webinar-index.html /usr/share/nginx/html/webinar/index.html
 EXPOSE 80

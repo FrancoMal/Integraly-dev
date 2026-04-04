@@ -4,15 +4,10 @@
 @inject ToastService ToastService
 @inject NavigationManager Navigation
 
-<div class="view-header">
-    <h2>Invitaciones</h2>
-    <p class="view-subtitle">Administra las invitaciones para nuevos usuarios</p>
-</div>
-
 <div class="card">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h3>Invitaciones (@(invitations?.Count ?? 0))</h3>
-        <button class="btn btn-primary" @onclick="ShowCreateForm">+ Nueva Invitacion</button>
+        <button class="btn btn-primary" @onclick="ShowCreateForm"><i class="fa-solid fa-envelope-open-text" style="margin-right:0.3rem;"></i>Nueva Invitacion</button>
     </div>
     <div class="card-body" style="padding: 0;">
         @if (isLoading)
@@ -63,10 +58,10 @@
                                     @if (!inv.UsedAt.HasValue && !inv.IsExpired)
                                     {
                                         <button class="btn btn-sm btn-secondary" @onclick="() => CopyLink(inv.Token)" title="Copiar link">
-                                            Copiar Link
+                                            <i class="fa-solid fa-copy" style="margin-right:0.3rem;"></i>Copiar Link
                                         </button>
                                         <button class="btn-icon btn-delete" @onclick="() => ConfirmDelete(inv)" title="Eliminar">
-                                            @SvgIcons.AlertCircle
+                                            <i class="fa-solid fa-trash"></i>
                                         </button>
                                     }
                                 </td>
@@ -112,9 +107,9 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                <button class="btn btn-secondary" @onclick="CloseForm"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
                 <button class="btn btn-primary" @onclick="CreateInvitation" disabled="@isSaving">
-                    @(isSaving ? "Creando..." : "Crear Invitacion")
+                    <i class="fa-solid fa-paper-plane" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Invitacion")
                 </button>
             </div>
         </div>
@@ -132,8 +127,8 @@
                 <p>Estas seguro que queres eliminar la invitacion para <strong>@invToDelete?.Email</strong>?</p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showDeleteConfirm = false">Cancelar</button>
-                <button class="btn btn-danger" @onclick="DeleteInvitation">Eliminar</button>
+                <button class="btn btn-secondary" @onclick="() => showDeleteConfirm = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
+                <button class="btn btn-danger" @onclick="DeleteInvitation"><i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar</button>
             </div>
         </div>
     </div>
@@ -152,7 +147,7 @@
                 <input class="form-input" value="@invitationLink" readonly style="font-size: 0.85rem;" />
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" @onclick="() => showLinkModal = false">Cerrar</button>
+                <button class="btn btn-primary" @onclick="() => showLinkModal = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cerrar</button>
             </div>
         </div>
     </div>

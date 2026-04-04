@@ -161,6 +161,8 @@ BEGIN
         StartHour INT NOT NULL,
         Status NVARCHAR(20) NOT NULL DEFAULT 'confirmed',
         MeetLink NVARCHAR(500) NULL,
+        UserNotes NVARCHAR(1000) NULL,
+        AdminNotes NVARCHAR(1000) NULL,
         CancelledAt DATETIME2 NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
         CONSTRAINT FK_Bookings_User FOREIGN KEY (UserId) REFERENCES Users(Id),
@@ -172,6 +174,14 @@ BEGIN
     CREATE INDEX IX_Bookings_UserId ON Bookings (UserId);
     CREATE INDEX IX_Bookings_InstructorId ON Bookings (InstructorId);
     CREATE INDEX IX_Bookings_ScheduledDate ON Bookings (ScheduledDate);
+END
+GO
+
+-- Add UserNotes and AdminNotes columns to existing Bookings tables
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Bookings') AND name = 'UserNotes')
+BEGIN
+    ALTER TABLE Bookings ADD UserNotes NVARCHAR(1000) NULL;
+    ALTER TABLE Bookings ADD AdminNotes NVARCHAR(1000) NULL;
 END
 GO
 
@@ -233,7 +243,7 @@ GO
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
 (1, 'dashboard'), (1, 'calendario'), (1, 'reservar'), (1, 'mis-reservas'),
 (1, 'usuarios'), (1, 'invitaciones'), (1, 'packs'), (1, 'todas-reservas'),
-(1, 'auditoria'), (1, 'config'), (1, 'perfil');
+(1, 'auditoria'), (1, 'config'), (1, 'perfil'), (1, 'webinar'), (1, 'changelog');
 GO
 
 -- Seed instructor permissions
@@ -243,7 +253,7 @@ GO
 
 -- Seed usuario permissions
 INSERT INTO RolePermissions (RoleId, MenuKey) VALUES
-(3, 'dashboard'), (3, 'reservar'), (3, 'mis-reservas'), (3, 'perfil');
+(3, 'dashboard'), (3, 'reservar'), (3, 'mis-reservas'), (3, 'perfil'), (3, 'comprar');
 GO
 
 -- Seed AppSettings
@@ -353,6 +363,302 @@ BEGIN
     CREATE INDEX IX_WeekAvailabilities_InstructorId ON WeekAvailabilities (InstructorId);
     CREATE UNIQUE INDEX IX_WeekAvailabilities_Unique ON WeekAvailabilities (InstructorId, Date, StartHour);
 END
+GO
+
+-- InstructorTasks table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='InstructorTasks' AND xtype='U')
+BEGIN
+    CREATE TABLE InstructorTasks (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        InstructorId INT NOT NULL,
+        Title NVARCHAR(200) NOT NULL,
+        Description NVARCHAR(1000) NULL,
+        TaskType NVARCHAR(50) NOT NULL DEFAULT 'otra',
+        TaskDate DATE NOT NULL,
+        StartHour INT NOT NULL DEFAULT 8,
+        EndHour INT NOT NULL DEFAULT 9,
+        HoursWorked DECIMAL(5,2) NOT NULL DEFAULT 0,
+        Status NVARCHAR(50) NOT NULL DEFAULT 'pendiente',
+        AssignedByUserId INT NULL,
+        CreatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+        CompletedAt DATETIME2 NULL,
+        CONSTRAINT FK_InstructorTasks_Instructor FOREIGN KEY (InstructorId) REFERENCES Users(Id),
+        CONSTRAINT FK_InstructorTasks_AssignedBy FOREIGN KEY (AssignedByUserId) REFERENCES Users(Id)
+    );
+    CREATE INDEX IX_InstructorTasks_InstructorId ON InstructorTasks (InstructorId);
+    CREATE INDEX IX_InstructorTasks_TaskDate ON InstructorTasks (TaskDate);
+END
+GO
+
+-- Add StartHour and EndHour to existing InstructorTasks tables
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('InstructorTasks') AND name = 'StartHour')
+BEGIN
+    ALTER TABLE InstructorTasks ADD StartHour INT NOT NULL DEFAULT 8;
+    ALTER TABLE InstructorTasks ADD EndHour INT NOT NULL DEFAULT 9;
+END
+GO
+
+-- WebinarDates table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarDates' AND xtype='U')
+BEGIN
+    CREATE TABLE WebinarDates (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Name NVARCHAR(200) NOT NULL DEFAULT '',
+        Date DATETIME2 NOT NULL,
+        MeetingLink NVARCHAR(500) NULL,
+        InviteSubject NVARCHAR(500) NULL,
+        InviteMessage NVARCHAR(MAX) NULL,
+        SendByEmail BIT NOT NULL DEFAULT 0,
+        SendByWhatsapp BIT NOT NULL DEFAULT 0,
+        CreatedAt DATETIME2 DEFAULT GETDATE()
+    );
+END
+GO
+
+-- Add Name column to WebinarDates if it doesn't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarDates') AND name = 'Name')
+BEGIN
+    ALTER TABLE WebinarDates ADD Name NVARCHAR(200) NOT NULL DEFAULT '';
+END
+GO
+
+-- Add invite fields to WebinarDates if they don't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarDates') AND name = 'InviteSubject')
+BEGIN
+    ALTER TABLE WebinarDates ADD InviteSubject NVARCHAR(500) NULL;
+    ALTER TABLE WebinarDates ADD InviteMessage NVARCHAR(MAX) NULL;
+    ALTER TABLE WebinarDates ADD SendByEmail BIT NOT NULL DEFAULT 0;
+    ALTER TABLE WebinarDates ADD SendByWhatsapp BIT NOT NULL DEFAULT 0;
+END
+GO
+
+-- WebinarContacts table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarContacts' AND xtype='U')
+BEGIN
+    CREATE TABLE WebinarContacts (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Email NVARCHAR(255) NOT NULL,
+        FullName NVARCHAR(200) NOT NULL,
+        Phone NVARCHAR(50) NULL,
+        Company NVARCHAR(200) NULL,
+        Tag NVARCHAR(100) NULL,
+        UUID NVARCHAR(100) NOT NULL UNIQUE,
+        WebinarDateId INT NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE(),
+        CONSTRAINT FK_WebinarContacts_WebinarDate FOREIGN KEY (WebinarDateId) REFERENCES WebinarDates(Id)
+    );
+    CREATE UNIQUE INDEX IX_WebinarContacts_UUID ON WebinarContacts (UUID);
+END
+GO
+
+-- Migrate WebinarContacts: FirstName+LastName -> FullName, add Company
+IF EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'FirstName')
+BEGIN
+    ALTER TABLE WebinarContacts ADD FullName NVARCHAR(200) NULL;
+    EXEC('UPDATE WebinarContacts SET FullName = FirstName + '' '' + LastName');
+    ALTER TABLE WebinarContacts ALTER COLUMN FullName NVARCHAR(200) NOT NULL;
+    ALTER TABLE WebinarContacts DROP COLUMN FirstName;
+    ALTER TABLE WebinarContacts DROP COLUMN LastName;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'Company')
+BEGIN
+    ALTER TABLE WebinarContacts ADD Company NVARCHAR(200) NULL;
+END
+GO
+
+-- Add Tag column to WebinarContacts if it doesn't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'Tag')
+BEGIN
+    ALTER TABLE WebinarContacts ADD Tag NVARCHAR(100) NULL;
+END
+GO
+
+-- WebinarRegistrations table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WebinarRegistrations' AND xtype='U')
+BEGIN
+    CREATE TABLE WebinarRegistrations (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        ContactId INT NOT NULL,
+        WebinarDateId INT NOT NULL,
+        KnowsChatGPT BIT DEFAULT 0,
+        KnowsClaude BIT DEFAULT 0,
+        KnowsGrok BIT DEFAULT 0,
+        KnowsGemini BIT DEFAULT 0,
+        KnowsCopilot BIT DEFAULT 0,
+        KnowsPerplexity BIT DEFAULT 0,
+        KnowsDeepSeek BIT DEFAULT 0,
+        VibeCodingKnowledge NVARCHAR(50) NOT NULL DEFAULT 'no_idea',
+        RegisteredAt DATETIME2 DEFAULT GETDATE(),
+        CONSTRAINT FK_WebinarRegistrations_Contact FOREIGN KEY (ContactId) REFERENCES WebinarContacts(Id),
+        CONSTRAINT FK_WebinarRegistrations_WebinarDate FOREIGN KEY (WebinarDateId) REFERENCES WebinarDates(Id)
+    );
+    CREATE INDEX IX_WebinarRegistrations_ContactId ON WebinarRegistrations (ContactId);
+    CREATE INDEX IX_WebinarRegistrations_WebinarDateId ON WebinarRegistrations (WebinarDateId);
+END
+GO
+
+-- PaymentPlans table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='PaymentPlans' AND xtype='U')
+BEGIN
+    CREATE TABLE PaymentPlans (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        Name NVARCHAR(100) NOT NULL,
+        Description NVARCHAR(500),
+        Classes INT NOT NULL,
+        Price DECIMAL(10,2) NOT NULL,
+        Currency NVARCHAR(10) DEFAULT 'ARS',
+        Active BIT DEFAULT 1,
+        DisplayOrder INT DEFAULT 0,
+        CreatedAt DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- Payments table
+IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='Payments' AND xtype='U')
+BEGIN
+    CREATE TABLE Payments (
+        Id INT IDENTITY(1,1) PRIMARY KEY,
+        UserId INT NOT NULL FOREIGN KEY REFERENCES Users(Id),
+        PaymentPlanId INT NOT NULL FOREIGN KEY REFERENCES PaymentPlans(Id),
+        Amount DECIMAL(10,2) NOT NULL,
+        Currency NVARCHAR(10) DEFAULT 'ARS',
+        Status NVARCHAR(50) DEFAULT 'pending',
+        MercadoPagoOrderId NVARCHAR(200),
+        MercadoPagoPaymentId NVARCHAR(200),
+        TokenPackId INT NULL FOREIGN KEY REFERENCES TokenPacks(Id),
+        CreatedAt DATETIME DEFAULT GETDATE(),
+        ApprovedAt DATETIME NULL
+    );
+    CREATE INDEX IX_Payments_UserId ON Payments (UserId);
+    CREATE INDEX IX_Payments_Status ON Payments (Status);
+END
+GO
+
+-- Add PriceUSD column to PaymentPlans
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('PaymentPlans') AND name = 'PriceUSD')
+BEGIN
+    ALTER TABLE PaymentPlans ADD PriceUSD DECIMAL(10,2) DEFAULT 0;
+END
+GO
+
+-- Set USD prices for existing plans
+UPDATE PaymentPlans SET PriceUSD = 15 WHERE Classes = 1 AND PriceUSD = 0;
+UPDATE PaymentPlans SET PriceUSD = 60 WHERE Classes = 5 AND PriceUSD = 0;
+UPDATE PaymentPlans SET PriceUSD = 100 WHERE Classes = 10 AND PriceUSD = 0;
+GO
+
+-- Add PayPal and provider columns to Payments
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PaymentProvider')
+BEGIN
+    ALTER TABLE Payments ADD PaymentProvider NVARCHAR(20) DEFAULT 'mercadopago';
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PayPalOrderId')
+BEGIN
+    ALTER TABLE Payments ADD PayPalOrderId NVARCHAR(200) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'PayPalCaptureId')
+BEGIN
+    ALTER TABLE Payments ADD PayPalCaptureId NVARCHAR(200) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'TransferReceiptUrl')
+BEGIN
+    ALTER TABLE Payments ADD TransferReceiptUrl NVARCHAR(500) NULL;
+END
+GO
+
+-- Fix NULL PaymentProvider in old records
+UPDATE Payments SET PaymentProvider = 'mercadopago' WHERE PaymentProvider IS NULL;
+GO
+
+-- Seed payment plans
+IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Clase individual')
+BEGIN
+    INSERT INTO PaymentPlans (Name, Description, Classes, Price, Currency, Active, DisplayOrder) VALUES
+    ('Clase individual', '1 clase particular', 1, 20000, 'ARS', 1, 1);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Pack 5 clases')
+BEGIN
+    INSERT INTO PaymentPlans (Name, Description, Classes, Price, Currency, Active, DisplayOrder) VALUES
+    ('Pack 5 clases', '5 clases particulares', 5, 80000, 'ARS', 1, 2);
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Pack 10 clases')
+BEGIN
+    INSERT INTO PaymentPlans (Name, Description, Classes, Price, Currency, Active, DisplayOrder) VALUES
+    ('Pack 10 clases', '10 clases particulares', 10, 140000, 'ARS', 1, 3);
+END
+GO
+
+-- Changelog tables
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DailyChangeSummaries')
+BEGIN
+    CREATE TABLE DailyChangeSummaries (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        Date DATE NOT NULL,
+        GeneralSummary NVARCHAR(MAX) NOT NULL,
+        TotalCommits INT NOT NULL DEFAULT 0,
+        TotalGroups INT NOT NULL DEFAULT 0,
+        CreatedAt DATETIME2 DEFAULT GETDATE()
+    );
+    CREATE UNIQUE INDEX IX_DailyChangeSummaries_Date ON DailyChangeSummaries(Date);
+    PRINT 'Table DailyChangeSummaries created';
+END
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CommitGroups')
+BEGIN
+    CREATE TABLE CommitGroups (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        DailySummaryId INT NOT NULL,
+        GroupTitle NVARCHAR(200) NOT NULL,
+        GroupSummary NVARCHAR(MAX) NOT NULL,
+        Tags NVARCHAR(500) NOT NULL DEFAULT '',
+        CommitsJson NVARCHAR(MAX) NOT NULL DEFAULT '[]',
+        DisplayOrder INT NOT NULL DEFAULT 0,
+        Author NVARCHAR(100) NULL,
+        CONSTRAINT FK_CommitGroups_DailyChangeSummaries FOREIGN KEY (DailySummaryId)
+            REFERENCES DailyChangeSummaries(Id) ON DELETE CASCADE
+    );
+    CREATE INDEX IX_CommitGroups_DailySummaryId ON CommitGroups(DailySummaryId);
+    PRINT 'Table CommitGroups created';
+END
+
+-- DatabaseBackups table
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'DatabaseBackups')
+BEGIN
+    CREATE TABLE DatabaseBackups (
+        Id INT PRIMARY KEY IDENTITY(1,1),
+        FileName NVARCHAR(500) NOT NULL,
+        DatabaseName NVARCHAR(100) NOT NULL DEFAULT 'AIcoding',
+        SizeBytes BIGINT NOT NULL DEFAULT 0,
+        Type NVARCHAR(50) NOT NULL DEFAULT 'manual',
+        Status NVARCHAR(50) NOT NULL DEFAULT 'completed',
+        ErrorMessage NVARCHAR(MAX) NULL,
+        CreatedAt DATETIME2 DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_DatabaseBackups_CreatedAt ON DatabaseBackups(CreatedAt);
+    PRINT 'Table DatabaseBackups created';
+END
+GO
+
+-- Seed backup schedule settings
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupScheduleEnabled')
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupScheduleEnabled', 'false');
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupScheduleHours')
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupScheduleHours', '24');
+IF NOT EXISTS (SELECT * FROM AppSettings WHERE [Key] = 'BackupRetentionDays')
+    INSERT INTO AppSettings ([Key], [Value]) VALUES ('BackupRetentionDays', '30');
 GO
 
 PRINT 'Database initialized successfully';

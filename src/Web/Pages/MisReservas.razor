@@ -4,37 +4,27 @@
 @inject ToastService ToastService
 @inject TimezoneService TzService
 
-<div class="view-header">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div>
-            <h2>Mis Reservas</h2>
-            <p class="view-subtitle">Visualiza tus clases reservadas</p>
-        </div>
-        <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
-    </div>
-</div>
-
 <div class="card" style="margin-bottom: 1rem;">
     <div class="card-body" style="padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
         <div style="display: flex; gap: 0.5rem;">
-            <button class="btn @(view == "list" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => view = "list"'>Lista</button>
-            <button class="btn @(view == "week" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => { view = "week"; }'>Semanal</button>
-            <button class="btn @(view == "month" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => { view = "month"; }'>Mensual</button>
+            <button class="btn @(view == "list" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => view = "list"'><i class="fa-solid fa-list" style="margin-right:0.3rem;"></i>Lista</button>
+            <button class="btn @(view == "week" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => { view = "week"; }'><i class="fa-solid fa-calendar-week" style="margin-right:0.3rem;"></i>Semanal</button>
+            <button class="btn @(view == "month" ? "btn-primary" : "btn-secondary") btn-sm" @onclick='() => { view = "month"; }'><i class="fa-solid fa-calendar" style="margin-right:0.3rem;"></i>Mensual</button>
         </div>
         @if (view == "week")
         {
             <div class="week-navigator">
-                <button class="btn btn-secondary btn-sm" @onclick="PrevWeek">&lt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="PrevWeek"><i class="fa-solid fa-chevron-left"></i></button>
                 <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="NextWeek">&gt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
         }
         @if (view == "month")
         {
             <div class="week-navigator">
-                <button class="btn btn-secondary btn-sm" @onclick="PrevMonth">&lt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="PrevMonth"><i class="fa-solid fa-chevron-left"></i></button>
                 <span class="week-label">@monthDate.ToString("MMMM yyyy")</span>
-                <button class="btn btn-secondary btn-sm" @onclick="NextMonth">&gt;</button>
+                <button class="btn btn-secondary btn-sm" @onclick="NextMonth"><i class="fa-solid fa-chevron-right"></i></button>
             </div>
         }
     </div>
@@ -78,14 +68,14 @@ else if (view == "list")
                                     <td>
                                         @if (!string.IsNullOrEmpty(b.MeetLink) && b.Status == "confirmed")
                                         {
-                                            <a href="@b.MeetLink" target="_blank" class="btn btn-sm btn-primary">Entrar</a>
+                                            <a href="@b.MeetLink" target="_blank" class="btn btn-sm btn-primary"><i class="fa-solid fa-video" style="margin-right:0.3rem;"></i>Entrar</a>
                                         }
                                         else { <span class="text-muted">-</span> }
                                     </td>
                                     <td>
                                         @if (b.Status == "confirmed" && b.ScheduledDate >= DateTime.Today && !isInstructor)
                                         {
-                                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmCancel(b)">Cancelar</button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmCancel(b)"><i class="fa-solid fa-ban" style="margin-right:0.3rem;"></i>Cancelar</button>
                                         }
                                     </td>
                                 </tr>
@@ -288,7 +278,7 @@ else if (view == "month")
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.ExternalLink</span>
                             <a href="@detailBooking.MeetLink" target="_blank" rel="noopener" class="btn btn-sm" style="background:#10b981;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-                                Unirse a la clase
+                                <i class="fa-solid fa-video" style="margin-right:0.3rem;"></i>Unirse a la clase
                             </a>
                         </div>
                     }
@@ -302,11 +292,11 @@ else if (view == "month")
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showDetailModal = false">Cerrar</button>
+                <button class="btn btn-secondary" @onclick="() => showDetailModal = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cerrar</button>
                 @if (detailBooking.Status == "confirmed" && !isInstructor)
                 {
                     <button class="btn btn-danger" @onclick="CancelFromDetail" disabled="@isCancellingDetail">
-                        @(isCancellingDetail ? "Cancelando..." : "Cancelar Reserva")
+                        <i class="fa-solid fa-calendar-xmark" style="margin-right:0.3rem;"></i>@(isCancellingDetail ? "Cancelando..." : "Cancelar Reserva")
                     </button>
                 }
             </div>

@@ -4,63 +4,98 @@
 @inject ToastService ToastService
 @inject TimezoneService TzService
 
-<div class="view-header">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;">
-        <div>
-            <h2>Reservar Clase</h2>
-            <p class="view-subtitle">Explora los horarios disponibles y reserva tu clase</p>
-        </div>
-        <span style="font-size:0.8rem;color:var(--text-muted);background:var(--bg-secondary,#f5f5f5);padding:4px 12px;border-radius:20px;">🕐 @TzService.GetTimezoneLabel()</span>
-    </div>
-</div>
-
-@if (remainingTokens.HasValue)
+@if (myPacks is not null && myPacks.Count > 0)
 {
-    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
-        <div class="stat-card" style="display: inline-flex;">
-            <div class="stat-card-icon primary">@SvgIcons.Package</div>
-            <div class="stat-card-info">
-                <span class="stat-card-value">@remainingTokens</span>
-                <span class="stat-card-label">Clases disponibles</span>
+    var totalClases = myPacks.Sum(p => p.TotalTokens);
+    var disponibles = myPacks.Sum(p => p.RemainingTokens);
+    var completadas = usedClasses;
+    var reservadas = bookedClasses;
+    var pctCompletadas = totalClases > 0 ? (int)((double)completadas / totalClases * 100) : 0;
+    var pctReservadas = totalClases > 0 ? (int)((double)reservadas / totalClases * 100) : 0;
+    var pctDisponibles = totalClases > 0 ? (int)((double)disponibles / totalClases * 100) : 0;
+
+    <div class="card" style="margin-bottom:1rem;">
+        <div class="card-body" style="padding:1rem 1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                <div>
+                    <span style="font-weight:600;font-size:0.95rem;">Mis Clases</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem;">(@totalClases contratadas)</span>
+                </div>
             </div>
-        </div>
-        <div class="stat-card" style="display: inline-flex;">
-            <div class="stat-card-icon" style="background: rgba(59,130,246,0.12); color: #3b82f6;">@SvgIcons.Calendar</div>
-            <div class="stat-card-info">
-                <span class="stat-card-value">@bookedClasses</span>
-                <span class="stat-card-label">Clases reservadas</span>
+
+            @* Barra de progreso *@
+            <div style="height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden;display:flex;margin-bottom:0.75rem;">
+                @if (pctCompletadas > 0)
+                {
+                    <div style="width:@(pctCompletadas)%;background:#3b82f6;transition:width 0.3s;" title="Completadas: @completadas"></div>
+                }
+                @if (pctReservadas > 0)
+                {
+                    <div style="width:@(pctReservadas)%;background:#f59e0b;transition:width 0.3s;" title="Reservadas: @reservadas"></div>
+                }
+                @if (pctDisponibles > 0)
+                {
+                    <div style="width:@(pctDisponibles)%;background:#10b981;transition:width 0.3s;" title="Disponibles: @disponibles"></div>
+                }
             </div>
-        </div>
-        <div class="stat-card" style="display: inline-flex;">
-            <div class="stat-card-icon" style="background: rgba(16,185,129,0.12); color: #10b981;">@SvgIcons.CheckCircle</div>
-            <div class="stat-card-info">
-                <span class="stat-card-value">@usedClasses</span>
-                <span class="stat-card-label">Clases realizadas</span>
+
+            @* Detalle debajo de la barra *@
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;"></span>
+                    <span style="color:var(--text-secondary);">Completadas</span>
+                    <span style="font-weight:600;">@completadas</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;"></span>
+                    <span style="color:var(--text-secondary);">Reservadas</span>
+                    <span style="font-weight:600;">@reservadas</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#10b981;"></span>
+                    <span style="color:var(--text-secondary);">Disponibles</span>
+                    <span style="font-weight:600;">@disponibles</span>
+                </div>
             </div>
         </div>
     </div>
 }
 
 <div class="card" style="margin-bottom: 1rem;">
-    <div class="card-body">
-        <div class="week-navigator">
-            <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek">&lt; Anterior</button>
-            <span class="week-label">@weekStart.ToString("dd/M") - @weekEnd.ToString("dd/M/yyyy")</span>
-            <button class="btn btn-secondary btn-sm" @onclick="NextWeek">Siguiente &gt;</button>
+    <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+        @* Izquierda: Instructores *@
+        <div>
+            @if (currentView == "calendario" && instructors is not null && instructors.Count > 0)
+            {
+                <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
+                </button>
+            }
+        </div>
+        @* Centro: Selector de semana *@
+        @if (currentView == "calendario")
+        {
+            <div class="week-navigator">
+                <button class="btn btn-secondary btn-sm" @onclick="PreviousWeek"><i class="fa-solid fa-chevron-left"></i></button>
+                <span class="week-label">@weekStart.ToString("dd/M") — @weekEnd.ToString("dd/M/yyyy")</span>
+                <button class="btn btn-secondary btn-sm" @onclick="NextWeek"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+        }
+        @* Derecha: Toggle vista *@
+        <div class="view-toggle">
+            <button class="btn btn-sm @(currentView == "lista" ? "btn-primary" : "btn-ghost")" @onclick='() => currentView = "lista"'>
+                <i class="fa-solid fa-list" style="margin-right:0.35rem;"></i>Lista
+            </button>
+            <button class="btn btn-sm @(currentView == "calendario" ? "btn-primary" : "btn-ghost")" @onclick='() => currentView = "calendario"'>
+                <i class="fa-solid fa-calendar-week" style="margin-right:0.35rem;"></i>Calendario
+            </button>
         </div>
     </div>
 </div>
 
-@if (instructors is not null && instructors.Count > 0)
+@if (currentView == "calendario")
 {
-    <div style="margin-bottom: 1rem;">
-        <button class="btn btn-secondary btn-sm" style="display:flex;align-items:center;gap:0.4rem;" @onclick="() => showInstructorModal = true">
-            @SvgIcons.Users
-            <span>Instructores (@selectedInstructorIds.Count/@(instructors.Count))</span>
-        </button>
-    </div>
-}
-
 <div class="card">
     <div class="card-body" style="padding: 0.5rem;">
         @if (isLoading)
@@ -101,28 +136,37 @@
                                     {
                                         var booking = myBooking;
                                         var isCompleted = booking.Status == "completed";
+                                        var isCancelled = booking.Status == "cancelled";
                                         var instName = booking.InstructorName;
                                         <td style="text-align: center; padding: 4px; cursor: pointer;"
-                                            class="@(isCompleted ? "calendar-slot-completed" : "calendar-slot-booked")"
-                                            title="@(isCompleted ? $"Clase realizada con {instName}" : $"Reservada con {instName}")"
+                                            class="@(isCompleted ? "calendar-slot-completed" : isCancelled ? "calendar-slot-cancelled" : "calendar-slot-booked")"
+                                            title="@(isCompleted ? $"Clase realizada con {instName}" : isCancelled ? $"Clase cancelada con {instName}" : $"Reservada con {instName}")"
                                             @onclick="() => ShowBookingDetail(booking)">
-                                            <div style="display:flex;flex-direction:column;align-items:center;gap:1px;">
+                                            <div style="display:flex;align-items:center;gap:6px;padding:2px 4px;">
                                                 @if (isCompleted)
                                                 {
-                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                                                }
+                                                else if (isCancelled)
+                                                {
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                                                 }
                                                 else
                                                 {
-                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                                                 }
-                                                <span style="font-size: 0.6rem; line-height: 1; max-width: 70px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@instName</span>
+                                                <span style="font-size:0.7rem;font-weight:500;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@instName</span>
+                                                @if (!string.IsNullOrEmpty(booking.UserNotes) || !string.IsNullOrEmpty(booking.AdminNotes))
+                                                {
+                                                    <i class="fa-solid fa-sticky-note" style="font-size:0.6rem;color:#8b5cf6;" title="Tiene notas"></i>
+                                                }
                                             </div>
                                         </td>
                                     }
                                     else
                                     {
                                         <td style="text-align: center; padding: 4px; cursor: @(available.Count > 0 && !isPast ? "pointer" : "default");"
-                                            class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "")"
+                                            class="@(isPast ? "calendar-past" : available.Count > 0 ? "calendar-slot-available" : "calendar-slot-unavailable")"
                                             @onclick="() => OnSlotClick(date, h)">
                                             @if (!isPast && available.Count > 0)
                                             {
@@ -144,21 +188,134 @@
             </div>
             <div style="margin-top: 0.75rem; display: flex; gap: 1.5rem; font-size: 0.8rem; flex-wrap: wrap; padding: 0 0.5rem; align-items: center;">
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;"></span>
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #10b981;background:rgba(16,185,129,0.08);"></span>
                     Disponible
                 </span>
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3b82f6;"></span>
-                    Reservada
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #f59e0b;background:rgba(245,158,11,0.08);"></span>
+                    Confirmada
                 </span>
                 <span style="display:inline-flex;align-items:center;gap:4px;">
-                    <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;border:2px solid #10b981;"></span>
-                    Realizada
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #3b82f6;background:rgba(59,130,246,0.08);"></span>
+                    Completada
+                </span>
+                <span style="display:inline-flex;align-items:center;gap:4px;">
+                    <span style="display:inline-block;width:14px;height:14px;border-radius:3px;border-left:3px solid #ef4444;background:rgba(239,68,68,0.08);"></span>
+                    Cancelada
                 </span>
             </div>
         }
     </div>
 </div>
+}
+
+@if (currentView == "lista")
+{
+    <div class="card" style="margin-bottom:0.75rem;">
+        <div class="card-body" style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;padding:0.6rem 1rem;">
+            <span style="font-size:0.8rem;font-weight:600;color:var(--text-secondary);"><i class="fa-solid fa-filter" style="margin-right:0.3rem;"></i>Filtros:</span>
+            <select class="form-input" style="width:auto;min-width:140px;font-size:0.8rem;padding:0.3rem 0.5rem;" @bind="listFilterStatus">
+                <option value="all">Todos los estados</option>
+                <option value="confirmed">Confirmada</option>
+                <option value="completed">Completada</option>
+                <option value="cancelled">Cancelada</option>
+            </select>
+            @if (instructors is not null && instructors.Count > 0)
+            {
+                <select class="form-input" style="width:auto;min-width:160px;font-size:0.8rem;padding:0.3rem 0.5rem;" @bind="listFilterInstructor">
+                    <option value="all">Todos los instructores</option>
+                    @foreach (var inst in instructors)
+                    {
+                        <option value="@inst.Id">@($"{inst.FirstName} {inst.LastName}".Trim())</option>
+                    }
+                </select>
+            }
+            @if (listFilterStatus != "all" || listFilterInstructor != "all")
+            {
+                <button class="btn btn-sm btn-ghost" style="font-size:0.78rem;color:var(--text-muted);" @onclick="ClearListFilters">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.2rem;"></i>Limpiar
+                </button>
+            }
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
+            @if (allMyBookings is null || !allMyBookings.Any())
+            {
+                <p class="text-muted" style="padding:1.5rem;">No tenes reservas todavia</p>
+            }
+            else
+            {
+                var filtered = GetFilteredBookings().ToList();
+                @if (filtered.Count == 0)
+                {
+                    <p class="text-muted" style="padding:1.5rem;">No hay reservas con los filtros seleccionados</p>
+                }
+                else
+                {
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Horario</th>
+                                <th>Instructor</th>
+                                <th>Estado</th>
+                                <th>Notas</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in filtered)
+                            {
+                                <tr style="@GetListRowStyle(b.Status)">
+                                    <td><strong style="text-transform:uppercase;">@b.ScheduledDate.ToString("ddd")</strong> @b.ScheduledDate.ToString("dd/MM/yyyy")</td>
+                                    <td style="white-space:nowrap;">@($"{b.StartHour}:00 - {b.StartHour + 1}:00")</td>
+                                    <td>@b.InstructorName</td>
+                                    <td><span class="status-badge" style="@GetListStatusStyle(b.Status)">@GetListStatusLabel(b.Status)</span></td>
+                                    <td style="text-align:center;">
+                                        @if (!string.IsNullOrEmpty(b.UserNotes) || !string.IsNullOrEmpty(b.AdminNotes))
+                                        {
+                                            <button class="btn btn-sm" style="background:rgba(139,92,246,0.1);color:#8b5cf6;padding:0.2rem 0.5rem;font-size:0.75rem;border:1px solid rgba(139,92,246,0.25);"
+                                                    title="@(!string.IsNullOrEmpty(b.UserNotes) ? b.UserNotes : "Tiene notas del admin")"
+                                                    @onclick="() => ShowBookingDetail(b)">
+                                                <i class="fa-solid fa-sticky-note" style="margin-right:0.25rem;"></i>Ver
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-ghost" style="padding:0.2rem 0.5rem;font-size:0.75rem;color:var(--text-muted);"
+                                                    title="Agregar notas"
+                                                    @onclick="() => ShowBookingDetail(b)">
+                                                <i class="fa-solid fa-sticky-note" style="margin-right:0.25rem;"></i>Agregar
+                                            </button>
+                                        }
+                                    </td>
+                                    <td style="display:flex;gap:6px;align-items:center;">
+                                        @if (b.Status == "confirmed" && b.ScheduledDate.Date >= DateTime.Today)
+                                        {
+                                            <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                    @onclick="() => ShowBookingDetail(b)">
+                                                <i class="fa-solid fa-ban" style="margin-right:0.3rem;"></i>Cancelar
+                                            </button>
+                                        }
+                                        @if (!string.IsNullOrEmpty(b.MeetLink) && b.Status == "confirmed")
+                                        {
+                                            <a href="@b.MeetLink" target="_blank" class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;">
+                                                <i class="fa-solid fa-video" style="margin-right:0.3rem;"></i>Meet
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            }
+        </div>
+    </div>
+}
 
 @if (showInstructorModal)
 {
@@ -167,8 +324,8 @@
             <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;">
                 <h3 style="margin:0;font-size:1rem;">Seleccionar instructores</h3>
                 <div style="display:flex;gap:0.5rem;">
-                    <button class="btn btn-sm btn-secondary" @onclick="SelectAllInstructors">Todos</button>
-                    <button class="btn btn-sm btn-secondary" @onclick="SelectNoneInstructors">Ninguno</button>
+                    <button class="btn btn-sm btn-secondary" @onclick="SelectAllInstructors"><i class="fa-solid fa-check-double" style="margin-right:0.3rem;"></i>Todos</button>
+                    <button class="btn btn-sm btn-secondary" @onclick="SelectNoneInstructors"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Ninguno</button>
                 </div>
             </div>
             <div class="modal-body" style="max-height:350px;overflow-y:auto;padding:0.75rem 1rem;">
@@ -192,7 +349,7 @@
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary btn-sm" @onclick="() => showInstructorModal = false">Listo</button>
+                <button class="btn btn-primary btn-sm" @onclick="() => showInstructorModal = false"><i class="fa-solid fa-check" style="margin-right:0.3rem;"></i>Listo</button>
             </div>
         </div>
     </div>
@@ -223,11 +380,17 @@
                         </button>
                     }
                 </div>
+                <div class="form-group" style="margin-top:0.5rem;">
+                    <label class="form-label">Notas (opcional)</label>
+                    <textarea class="form-input" style="width:100%;min-height:50px;resize:vertical;font-size:0.85rem;"
+                              placeholder="Temas que queres ver en la clase..."
+                              @bind="bookingUserNotes"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showModal = false">Cancelar</button>
+                <button class="btn btn-secondary" @onclick="() => showModal = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar</button>
                 <button class="btn btn-primary" @onclick="DoBooking" disabled="@(isBooking || modalSelectedInstructorId == 0)">
-                    @(isBooking ? "Reservando..." : "Confirmar Reserva")
+                    <i class="fa-solid fa-calendar-plus" style="margin-right:0.3rem;"></i>@(isBooking ? "Reservando..." : "Confirmar Reserva")
                 </button>
             </div>
         </div>
@@ -276,7 +439,7 @@
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span style="color:var(--text-muted);width:20px;display:flex;justify-content:center;">@SvgIcons.ExternalLink</span>
                             <a href="@detailBooking.MeetLink" target="_blank" rel="noopener" class="btn btn-sm" style="background:#10b981;color:white;text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-                                Unirse a la clase
+                                <i class="fa-solid fa-video" style="margin-right:0.3rem;"></i>Unirse a la clase
                             </a>
                         </div>
                     }
@@ -288,13 +451,27 @@
                         </div>
                     }
                 </div>
+
+                <div style="margin-top:0.75rem;">
+                    <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">
+                        <i class="fa-solid fa-sticky-note" style="margin-right:0.3rem;"></i>Notas para la clase
+                    </label>
+                    <textarea class="form-input" style="width:100%;min-height:70px;resize:vertical;font-size:0.85rem;padding:0.5rem;"
+                              placeholder="Indica los temas que queres ver en esta clase..."
+                              @bind="detailUserNotes"></textarea>
+                    <button class="btn btn-sm btn-primary" style="margin-top:0.5rem;"
+                            disabled="@savingNotes"
+                            @onclick="SaveUserNotes">
+                        <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(savingNotes ? "Guardando..." : "Guardar notas")
+                    </button>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="() => showDetailModal = false">Cerrar</button>
+                <button class="btn btn-secondary" @onclick="() => showDetailModal = false"><i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cerrar</button>
                 @if (detailBooking.Status == "confirmed")
                 {
                     <button class="btn btn-danger" @onclick="CancelBooking" disabled="@isCancelling">
-                        @(isCancelling ? "Cancelando..." : "Cancelar Reserva")
+                        <i class="fa-solid fa-calendar-xmark" style="margin-right:0.3rem;"></i>@(isCancelling ? "Cancelando..." : "Cancelar Reserva")
                     </button>
                 }
             </div>
@@ -308,6 +485,8 @@
     private int? remainingTokens;
     private int bookedClasses;
     private int usedClasses;
+    private string currentView = "calendario";
+    private List<TokenPackDto>? myPacks;
 
     private List<UserManageDto>? instructors;
     private HashSet<int> selectedInstructorIds = new();
@@ -315,6 +494,11 @@
     private Dictionary<int, List<WeekAvailabilityDto>> instructorWeekOverrides = new();
     private List<BookingDto>? weekBookings;
     private List<BookingDto>? myBookings;
+    private List<BookingDto>? allMyBookings;
+
+    // Filtros de lista
+    private string listFilterStatus = "all";
+    private string listFilterInstructor = "all";
 
     private DateTime weekStart;
     private DateTime weekEnd;
@@ -335,6 +519,9 @@
     private bool showDetailModal;
     private BookingDto? detailBooking;
     private bool isCancelling;
+    private string detailUserNotes = "";
+    private bool savingNotes = false;
+    private string bookingUserNotes = "";
 
     // Colors for instructors
     private string[] instructorColors = { "#10b981", "#3b82f6", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316" };
@@ -360,9 +547,11 @@
         {
             var instructorsTask = Api.GetInstructorsAsync();
             var dashTask = Api.GetUserDashboardAsync();
-            await Task.WhenAll(instructorsTask, dashTask);
+            var packsTask = Api.GetMyTokenPacksAsync();
+            await Task.WhenAll(instructorsTask, dashTask, packsTask);
 
             instructors = instructorsTask.Result ?? new();
+            myPacks = packsTask.Result;
 
             var dash = dashTask.Result;
             if (dash is not null)
@@ -404,10 +593,10 @@
             var myTask = Api.GetMyBookingsAsync();
             await Task.WhenAll(weekTask, myTask);
             weekBookings = weekTask.Result;
-            var allMyBookings = myTask.Result ?? new();
+            allMyBookings = myTask.Result ?? new();
             myBookings = allMyBookings.Where(b =>
                 b.ScheduledDate.Date >= weekStart.Date && b.ScheduledDate.Date <= weekEnd.Date
-                && (b.Status == "confirmed" || b.Status == "completed")).ToList();
+                && (b.Status == "confirmed" || b.Status == "completed" || b.Status == "cancelled")).ToList();
 
             // Reload week overrides for all instructors
             if (instructors is not null)
@@ -529,6 +718,7 @@
         modalInstructors = available;
         modalSelectedInstructorId = available.Count == 1 ? available[0].Id : 0;
         modalSelectedInstructorName = available.Count == 1 ? $"{available[0].FirstName} {available[0].LastName}".Trim() : "";
+        bookingUserNotes = "";
         showModal = true;
     }
 
@@ -548,7 +738,8 @@
             {
                 InstructorId = modalSelectedInstructorId,
                 ScheduledDate = modalDate,
-                StartHour = modalHour
+                StartHour = modalHour,
+                UserNotes = string.IsNullOrWhiteSpace(bookingUserNotes) ? null : bookingUserNotes
             };
 
             var result = await Api.CreateBookingAsync(request);
@@ -581,6 +772,7 @@
     private void ShowBookingDetail(BookingDto booking)
     {
         detailBooking = booking;
+        detailUserNotes = booking.UserNotes ?? "";
         showDetailModal = true;
     }
 
@@ -611,4 +803,71 @@
         }
         isCancelling = false;
     }
+
+    private async Task SaveUserNotes()
+    {
+        if (detailBooking is null) return;
+        savingNotes = true;
+        StateHasChanged();
+        try
+        {
+            var result = await Api.UpdateBookingNotesAsync(detailBooking.Id, new { UserNotes = detailUserNotes });
+            if (result is not null)
+            {
+                detailBooking.UserNotes = detailUserNotes;
+                ToastService.Success("Notas guardadas");
+            }
+            else
+            {
+                ToastService.Error("Error al guardar las notas");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar las notas");
+        }
+        savingNotes = false;
+        StateHasChanged();
+    }
+
+    private void ClearListFilters()
+    {
+        listFilterStatus = "all";
+        listFilterInstructor = "all";
+    }
+
+    private IEnumerable<BookingDto> GetFilteredBookings()
+    {
+        if (allMyBookings is null) return Enumerable.Empty<BookingDto>();
+        var query = allMyBookings.AsEnumerable();
+        if (listFilterStatus != "all")
+            query = query.Where(b => b.Status == listFilterStatus);
+        if (listFilterInstructor != "all" && int.TryParse(listFilterInstructor, out var instId))
+            query = query.Where(b => b.InstructorId == instId);
+        return query.OrderBy(b => b.ScheduledDate).ThenBy(b => b.StartHour);
+    }
+
+    private string GetListRowStyle(string s) => s switch
+    {
+        "confirmed" => "background:rgba(245,158,11,0.05);border-left:3px solid #f59e0b;",
+        "completed" => "background:rgba(59,130,246,0.05);border-left:3px solid #3b82f6;",
+        "cancelled" => "background:rgba(239,68,68,0.05);border-left:3px solid #ef4444;",
+        _ => ""
+    };
+
+    private string GetListStatusStyle(string s) => s switch
+    {
+        "confirmed" => "background:rgba(245,158,11,0.1);color:#b45309;",
+        "completed" => "background:rgba(59,130,246,0.1);color:#2563eb;",
+        "cancelled" => "background:rgba(239,68,68,0.1);color:#dc2626;",
+        _ => "background:rgba(100,116,139,0.1);color:#64748b;"
+    };
+
+    private string GetListStatusLabel(string s) => s switch
+    {
+        "confirmed" => "Confirmada",
+        "completed" => "Completada",
+        "cancelled" => "Cancelada",
+        _ => s
+    };
 }

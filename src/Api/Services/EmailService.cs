@@ -16,7 +16,7 @@ public class EmailService
         _logger = logger;
     }
 
-    public async Task<bool> SendEmailAsync(string to, string subject, string htmlBody)
+    public async Task<bool> SendEmailAsync(string to, string subject, string htmlBody, string? bcc = null)
     {
         try
         {
@@ -46,6 +46,9 @@ public class EmailService
             message.Subject = subject;
             message.Body = htmlBody;
             message.IsBodyHtml = true;
+
+            if (!string.IsNullOrEmpty(bcc))
+                message.Bcc.Add(bcc);
 
             await client.SendMailAsync(message);
             _logger.LogInformation("Email sent to {To}: {Subject}", to, subject);

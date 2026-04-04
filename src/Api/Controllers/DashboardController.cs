@@ -84,6 +84,51 @@ public class DashboardController : ControllerBase
         return new UserDashboardDto(remainingTokens, upcomingBookings, bookedClasses, usedClasses);
     }
 
+    [HttpGet("students-summary")]
+    public async Task<IActionResult> GetStudentsSummary()
+    {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (role != "admin") return Forbid();
+
+        // Get all students
+        var students = await _db.Users
+            .Include(u => u.RoleNav)
+            .Where(u => u.RoleNav != null && u.RoleNav.Name == "usuario" && u.IsActive)
+            .ToListAsync();
+
+        var result = new List<StudentSummaryDto>();
+
+        foreach (var s in students)
+        {
+            // Total classes = sum of TotalTokens across all packs
+            var totalClasses = await _db.TokenPacks
+                .Where(tp => tp.UserId == s.Id)
+                .SumAsync(tp => tp.TotalTokens);
+
+            // Completed = bookings with status "completed"
+            var completed = await _db.Bookings
+                .CountAsync(b => b.UserId == s.Id && b.Status == "completed");
+
+            // Reserved = bookings with status "confirmed"
+            var reserved = await _db.Bookings
+                .CountAsync(b => b.UserId == s.Id && b.Status == "confirmed");
+
+            // Pending = total - completed - reserved
+            var pending = totalClasses - completed - reserved;
+            if (pending < 0) pending = 0;
+
+            var name = $"{s.FirstName} {s.LastName}".Trim();
+            if (string.IsNullOrEmpty(name)) name = s.Username;
+
+            result.Add(new StudentSummaryDto(
+                s.Id, name, s.Username,
+                totalClasses, completed, reserved, pending
+            ));
+        }
+
+        return Ok(result.OrderBy(r => r.Name).ToList());
+    }
+
     private int? GetUserId()
     {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

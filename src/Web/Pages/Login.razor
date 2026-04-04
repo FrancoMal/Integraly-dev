@@ -48,7 +48,7 @@
     private LoginRequest loginModel = new();
     private string? errorMessage;
     private bool isLoading;
-    private bool IsAdminPanel => Navigation.BaseUri.Contains("/admin/");
+    private bool IsAdminPanel => Navigation.BaseUri.Contains("/panel/");
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,26 +74,7 @@
         {
             var response = await AuthService.LoginAsync(loginModel.Username, loginModel.Password);
 
-            // Redirect based on role and current panel
-            var role = response?.Role ?? "";
-            var basePath = Navigation.BaseUri;
-            var isOnAdmin = basePath.Contains("/admin/");
-            var isOnPanel = basePath.Contains("/panel/");
-
-            if (role == "admin" && isOnPanel)
-            {
-                // Admin logged in on /panel/ -> redirect to /admin/
-                Navigation.NavigateTo("/admin/", forceLoad: true);
-            }
-            else if (role != "admin" && isOnAdmin)
-            {
-                // Non-admin logged in on /admin/ -> redirect to /panel/
-                Navigation.NavigateTo("/panel/", forceLoad: true);
-            }
-            else
-            {
-                Navigation.NavigateTo("", forceLoad: true);
-            }
+            Navigation.NavigateTo("/panel/", forceLoad: true);
         }
         catch (Exception ex)
         {

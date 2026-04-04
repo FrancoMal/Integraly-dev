@@ -188,7 +188,7 @@ ai-coding-environment/
 |   |   |-- ApiClient.cs      <- Cliente HTTP con Bearer token
 |   |   '-- ToastService.cs   <- Servicio de notificaciones
 |   '-- wwwroot/              <- Archivos estaticos
-|       |-- index.html        <- Pagina host de Blazor (base href="/admin/")
+|       |-- index.html        <- Pagina host de Blazor (base href="/panel/")
 |       '-- css/app.css       <- Estilos visuales
 |
 |-- db/
@@ -216,7 +216,7 @@ Todo se levanta con `docker compose up --build -d` (o con `./setup.sh` que hace 
 ```
 Browser -> localhost:3000 -> Nginx
                               |-- /            -> Landing page (integraly.dev)
-                              |-- /admin/      -> Blazor WASM (panel de admin)
+                              |-- /panel/      -> Blazor WASM (panel de admin)
                               |-- /api/        -> Backend .NET (api:80)
                               '-- /swagger     -> Documentacion de la API
 ```
@@ -317,7 +317,7 @@ docker compose up --build -d
 
 # 4. Abrir en el browser:
 #    Landing: http://localhost:3000
-#    Panel admin: http://localhost:3000/admin
+#    Panel admin: http://localhost:3000/panel
 ```
 
 ---

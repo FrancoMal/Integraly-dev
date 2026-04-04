@@ -11,6 +11,8 @@ public class BookingDto
     public int StartHour { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? MeetLink { get; set; }
+    public string? UserNotes { get; set; }
+    public string? AdminNotes { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 
@@ -19,10 +21,20 @@ public class CreateBookingRequest
     public int InstructorId { get; set; }
     public DateTime ScheduledDate { get; set; }
     public int StartHour { get; set; }
+    public string? UserNotes { get; set; }
 }
 
 public class AvailableSlotDto
 {
     public int StartHour { get; set; }
     public bool IsAvailable { get; set; }
+}
+
+public class AdminCreateBookingRequest
+{
+    public int UserId { get; set; }
+    public int InstructorId { get; set; }
+    public DateTime ScheduledDate { get; set; }
+    public int StartHour { get; set; }
+    public string? UserNotes { get; set; }
 }

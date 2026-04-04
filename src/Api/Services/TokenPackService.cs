@@ -114,6 +114,16 @@ public class TokenPackService
         return pack.Id;
     }
 
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var pack = await _db.TokenPacks.FindAsync(id);
+        if (pack is null) return false;
+
+        _db.TokenPacks.Remove(pack);
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<bool> RefundTokenAsync(int tokenPackId)
     {
         var pack = await _db.TokenPacks.FindAsync(tokenPackId);

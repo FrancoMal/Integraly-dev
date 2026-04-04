@@ -28,7 +28,7 @@ public class AuditLogService
         await _db.SaveChangesAsync();
     }
 
-    public async Task<AuditLogListResponse> GetLogsAsync(DateTime from, DateTime to, string? entityType = null, int page = 1, int pageSize = 50)
+    public async Task<AuditLogListResponse> GetLogsAsync(DateTime from, DateTime to, string? entityType = null, string? entityId = null, int page = 1, int pageSize = 50)
     {
         var query = _db.AuditLogs.AsQueryable();
 
@@ -36,6 +36,9 @@ public class AuditLogService
 
         if (!string.IsNullOrEmpty(entityType))
             query = query.Where(a => a.EntityType == entityType);
+
+        if (!string.IsNullOrEmpty(entityId))
+            query = query.Where(a => a.EntityId == entityId);
 
         var total = await query.CountAsync();
 

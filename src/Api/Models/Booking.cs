@@ -27,6 +27,12 @@ public class Booking
     [MaxLength(500)]
     public string? MeetLink { get; set; }
 
+    [MaxLength(1000)]
+    public string? UserNotes { get; set; }
+
+    [MaxLength(1000)]
+    public string? AdminNotes { get; set; }
+
     public DateTime? CancelledAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

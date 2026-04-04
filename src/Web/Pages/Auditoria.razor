@@ -3,11 +3,6 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 
-<div class="view-header">
-    <h2>Auditoria</h2>
-    <p class="view-subtitle">Registro de actividad del sistema</p>
-</div>
-
 <div class="card">
     <div class="card-header">
         <h3>Filtros</h3>
@@ -33,7 +28,7 @@
                 </select>
             </div>
             <button class="btn btn-primary" @onclick="Search" style="height: fit-content;">
-                Buscar
+                <i class="fa-solid fa-magnifying-glass" style="margin-right:0.3rem;"></i>Buscar
             </button>
         </div>
     </div>
@@ -90,10 +85,10 @@
                 <span class="text-muted">Pagina @currentPage de @totalPages</span>
                 <div style="display: flex; gap: 0.5rem;">
                     <button class="btn btn-sm btn-secondary" @onclick="PrevPage" disabled="@(currentPage <= 1)">
-                        Anterior
+                        <i class="fa-solid fa-chevron-left" style="margin-right:0.3rem;"></i>Anterior
                     </button>
                     <button class="btn btn-sm btn-secondary" @onclick="NextPage" disabled="@(currentPage >= totalPages)">
-                        Siguiente
+                        Siguiente<i class="fa-solid fa-chevron-right" style="margin-left:0.3rem;"></i>
                     </button>
                 </div>
             </div>

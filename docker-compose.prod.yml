@@ -1,14 +1,28 @@
 services:
   # --- Base de datos PRODUCCION ---
+  # --- Permisos del directorio de backups PRODUCCION ---
+  sqlserver-backup-init-prod:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: aicoding-sqlserver-backup-init-prod
+    user: "0"
+    volumes:
+      - sqlserver_prod_backups:/backups
+    entrypoint: ["bash", "-c", "chown -R 10001:0 /backups && chmod 775 /backups"]
+    restart: "no"
+
   sqlserver-prod:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: aicoding-sqlserver-prod
+    depends_on:
+      sqlserver-backup-init-prod:
+        condition: service_completed_successfully
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=YourStrong@Passw0rd
       - MSSQL_PID=Express
     volumes:
       - sqlserver_prod_data:/var/opt/mssql
+      - sqlserver_prod_backups:/backups
     networks:
       - aicoding-prod-net
     healthcheck:
@@ -43,7 +57,18 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:80
       - ConnectionStrings__DefaultConnection=Server=sqlserver-prod;Database=AIcoding;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;
+      - MP_ACCESS_TOKEN=${MP_ACCESS_TOKEN:-}
+      - MP_PUBLIC_KEY=${MP_PUBLIC_KEY:-}
+      - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-}
+      - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET:-}
+      - PAYPAL_MODE=${PAYPAL_MODE:-live}
+      - TRANSFER_CVU=${TRANSFER_CVU:-}
+      - TRANSFER_ALIAS=${TRANSFER_ALIAS:-}
+      - TRANSFER_TITULAR=${TRANSFER_TITULAR:-}
+      - APP_BASE_URL=https://integraly.dev
     volumes:
+      - api-uploads-prod:/app/uploads
+      - sqlserver_prod_backups:/app/backups
       - /proc:/host_proc:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -77,3 +102,5 @@ networks:
 
 volumes:
   sqlserver_prod_data:
+  sqlserver_prod_backups:
+  api-uploads-prod:

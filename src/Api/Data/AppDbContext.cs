@@ -17,6 +17,15 @@ public class AppDbContext : DbContext
     public DbSet<Availability> Availabilities => Set<Availability>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<WeekAvailability> WeekAvailabilities => Set<WeekAvailability>();
+    public DbSet<InstructorTask> InstructorTasks => Set<InstructorTask>();
+    public DbSet<WebinarDate> WebinarDates => Set<WebinarDate>();
+    public DbSet<WebinarContact> WebinarContacts => Set<WebinarContact>();
+    public DbSet<WebinarRegistration> WebinarRegistrations => Set<WebinarRegistration>();
+    public DbSet<PaymentPlan> PaymentPlans => Set<PaymentPlan>();
+    public DbSet<Payment> Payments => Set<Payment>();
+    public DbSet<DailyChangeSummary> DailyChangeSummaries => Set<DailyChangeSummary>();
+    public DbSet<CommitGroup> CommitGroups => Set<CommitGroup>();
+    public DbSet<DatabaseBackup> DatabaseBackups => Set<DatabaseBackup>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -116,6 +125,85 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(b => b.TokenPackId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<InstructorTask>(entity =>
+        {
+            entity.HasIndex(t => t.InstructorId);
+            entity.HasIndex(t => t.TaskDate);
+            entity.HasOne(t => t.Instructor)
+                  .WithMany()
+                  .HasForeignKey(t => t.InstructorId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(t => t.AssignedByUser)
+                  .WithMany()
+                  .HasForeignKey(t => t.AssignedByUserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WebinarContact>(entity =>
+        {
+            entity.HasIndex(c => c.UUID).IsUnique();
+            entity.HasOne(c => c.WebinarDate)
+                  .WithMany()
+                  .HasForeignKey(c => c.WebinarDateId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WebinarRegistration>(entity =>
+        {
+            entity.HasIndex(r => r.ContactId);
+            entity.HasIndex(r => r.WebinarDateId);
+            entity.HasOne(r => r.Contact)
+                  .WithMany()
+                  .HasForeignKey(r => r.ContactId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(r => r.WebinarDate)
+                  .WithMany()
+                  .HasForeignKey(r => r.WebinarDateId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PaymentPlan>(entity =>
+        {
+            entity.HasIndex(p => p.Active);
+        });
+
+        modelBuilder.Entity<Payment>(entity =>
+        {
+            entity.HasIndex(p => p.UserId);
+            entity.HasIndex(p => p.Status);
+            entity.HasOne(p => p.User)
+                  .WithMany()
+                  .HasForeignKey(p => p.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.PaymentPlan)
+                  .WithMany()
+                  .HasForeignKey(p => p.PaymentPlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(p => p.TokenPack)
+                  .WithMany()
+                  .HasForeignKey(p => p.TokenPackId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DailyChangeSummary>(entity =>
+        {
+            entity.HasIndex(d => d.Date).IsUnique();
+        });
+
+        modelBuilder.Entity<CommitGroup>(entity =>
+        {
+            entity.HasIndex(c => c.DailySummaryId);
+            entity.HasOne(c => c.DailySummary)
+                  .WithMany(d => d.CommitGroups)
+                  .HasForeignKey(c => c.DailySummaryId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DatabaseBackup>(entity =>
+        {
+            entity.HasIndex(b => b.CreatedAt);
         });
 
     }

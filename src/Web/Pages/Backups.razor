@@ -1,0 +1,607 @@
+@page "/backups"
+@attribute [Authorize]
+@inject ApiClient Api
+@inject ToastService ToastService
+@inject IJSRuntime JS
+
+<div class="card">
+    <div class="card-header">
+        <h3>Backup de Base de Datos</h3>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap; margin-bottom:1.5rem;">
+                <button class="btn btn-primary" @onclick="CreateBackup" disabled="@isCreating">
+                    <i class="fa-solid fa-database" style="margin-right:0.3rem;"></i>@(isCreating ? "Creando backup..." : "Crear Backup Manual")
+                </button>
+            </div>
+
+            @* --- Drop zone para subir .bak --- *@
+            <div style="border:2px dashed rgba(255,255,255,0.2); border-radius:12px; padding:2rem; text-align:center; margin-bottom:1.5rem; position:relative; transition:border-color 0.2s; @(isDragging ? "border-color:#6366f1; background:rgba(99,102,241,0.05);" : "")"
+                 @ondragenter="HandleDragEnter" @ondragenter:preventDefault
+                 @ondragleave="HandleDragLeave" @ondragleave:preventDefault
+                 @ondragover:preventDefault
+                 @ondrop:preventDefault>
+                @if (isUploading)
+                {
+                    <p style="color:rgba(255,255,255,0.7); margin:0;">
+                        <i class="fa-solid fa-spinner fa-spin" style="margin-right:0.3rem;"></i>Subiendo archivo...
+                    </p>
+                }
+                else
+                {
+                    <p style="color:rgba(255,255,255,0.5); margin:0 0 0.5rem 0;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="margin-right:0.3rem; font-size:1.2rem;"></i>
+                        Arrastra un archivo <strong>.bak</strong> aqui o
+                    </p>
+                    <label class="btn btn-secondary" style="cursor:pointer; display:inline-block;">
+                        <i class="fa-solid fa-folder-open" style="margin-right:0.3rem;"></i>Seleccionar archivo
+                        <InputFile OnChange="HandleFileUpload" accept=".bak" style="display:none;" />
+                    </label>
+                }
+            </div>
+
+            @if (backups == null || backups.Count == 0)
+            {
+                <p class="text-muted">No hay backups</p>
+            }
+            else
+            {
+                <table style="width:100%; border-collapse:collapse; margin-top:1rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <th style="text-align:left; padding:0.75rem 0.5rem; color:rgba(255,255,255,0.5); font-weight:500; font-size:0.85rem;">Fecha</th>
+                            <th style="text-align:left; padding:0.75rem 0.5rem; color:rgba(255,255,255,0.5); font-weight:500; font-size:0.85rem;">Archivo</th>
+                            <th style="text-align:left; padding:0.75rem 0.5rem; color:rgba(255,255,255,0.5); font-weight:500; font-size:0.85rem;">Tamano</th>
+                            <th style="text-align:left; padding:0.75rem 0.5rem; color:rgba(255,255,255,0.5); font-weight:500; font-size:0.85rem;">Tipo</th>
+                            <th style="text-align:left; padding:0.75rem 0.5rem; color:rgba(255,255,255,0.5); font-weight:500; font-size:0.85rem;">Estado</th>
+                            <th style="text-align:left; padding:0.75rem 0.5rem; color:rgba(255,255,255,0.5); font-weight:500; font-size:0.85rem;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var backup in backups)
+                        {
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                <td style="padding:0.75rem 0.5rem;">@backup.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td style="padding:0.75rem 0.5rem; font-size:0.9rem; word-break:break-all;">@backup.FileName</td>
+                                <td style="padding:0.75rem 0.5rem;">@backup.SizeFormatted</td>
+                                <td style="padding:0.75rem 0.5rem;">
+                                    @(backup.Type switch { "manual" => "Manual", "scheduled" => "Programado", "uploaded" => "Subido", _ => backup.Type })
+                                </td>
+                                <td style="padding:0.75rem 0.5rem;">
+                                    @switch (backup.Status)
+                                    {
+                                        case "completed":
+                                            <span style="padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; background:#22c55e20; color:#22c55e;">Completado</span>
+                                            break;
+                                        case "failed":
+                                            <span style="padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; background:#ef444420; color:#ef4444;" title="@backup.ErrorMessage">Fallido</span>
+                                            break;
+                                        case "in_progress":
+                                            <span style="padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; background:#f59e0b20; color:#f59e0b;">En progreso</span>
+                                            break;
+                                        case "file_missing":
+                                            <span style="padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; background:#6b728020; color:#6b7280;">Archivo no encontrado</span>
+                                            break;
+                                        default:
+                                            <span style="padding:0.2rem 0.6rem; border-radius:12px; font-size:0.8rem; background:#6b728020; color:#6b7280;">@backup.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td style="padding:0.75rem 0.5rem;">
+                                    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                        @if (backup.Status == "completed")
+                                        {
+                                            <button class="btn btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.8rem;"
+                                                    @onclick="() => DownloadBackup(backup.Id, backup.FileName)"
+                                                    disabled="@(downloadingId == backup.Id)">
+                                                <i class="fa-solid fa-file-arrow-down" style="margin-right:0.2rem;"></i>@(downloadingId == backup.Id ? "..." : "Descargar")
+                                            </button>
+                                            <button class="btn btn-primary" style="padding:0.3rem 0.6rem; font-size:0.8rem;"
+                                                    @onclick="() => StartRestore(backup)">
+                                                <i class="fa-solid fa-clock-rotate-left" style="margin-right:0.2rem;"></i>Restaurar
+                                            </button>
+                                        }
+                                        <button class="btn btn-danger" style="padding:0.3rem 0.6rem; font-size:0.8rem;"
+                                                @onclick="() => ConfirmDelete(backup)"
+                                                disabled="@(deletingId == backup.Id)">
+                                            <i class="fa-solid fa-trash" style="margin-right:0.2rem;"></i>@(deletingId == backup.Id ? "..." : "Eliminar")
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+    </div>
+</div>
+
+@* --- Modal de eliminacion --- *@
+@if (showDeleteConfirm)
+{
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;" @onclick="CancelDelete">
+        <div style="background:#1e293b; border-radius:12px; padding:1.5rem; max-width:400px; width:90%;" @onclick:stopPropagation="true">
+            <h4 style="margin-bottom:1rem;">Confirmar eliminacion</h4>
+            <p style="margin-bottom:1rem; color:rgba(255,255,255,0.7);">Estas seguro que deseas eliminar el backup <strong>@backupToDelete?.FileName</strong>?</p>
+            <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                <button class="btn btn-secondary" @onclick="CancelDelete">Cancelar</button>
+                <button class="btn btn-danger" @onclick="DeleteBackup">Eliminar</button>
+            </div>
+        </div>
+    </div>
+}
+
+@* --- Modal de restauracion (multi-paso) --- *@
+@if (restoreStep > 0)
+{
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,0.6); display:flex; align-items:center; justify-content:center; z-index:1000;" @onclick="CancelRestore">
+        <div style="background:#1e293b; border-radius:12px; padding:1.5rem 2rem; max-width:550px; width:95%;" @onclick:stopPropagation="true">
+
+            @* Paso 1: Info del backup *@
+            @if (restoreStep == 1)
+            {
+                <h4 style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">
+                    <i class="fa-solid fa-circle-info" style="color:#6366f1;"></i> Informacion del backup
+                </h4>
+
+                @if (isLoadingInfo)
+                {
+                    <p class="text-muted"><i class="fa-solid fa-spinner fa-spin"></i> Leyendo informacion del archivo...</p>
+                }
+                else if (restoreInfo != null)
+                {
+                    <div style="background:rgba(0,0,0,0.2); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+                        <div style="display:grid; grid-template-columns:auto 1fr; gap:0.4rem 1rem; font-size:0.9rem;">
+                            <span style="color:rgba(255,255,255,0.5);">Archivo:</span>
+                            <span style="word-break:break-all;">@restoreBackup?.FileName</span>
+                            <span style="color:rgba(255,255,255,0.5);">Base de datos:</span>
+                            <span>@restoreInfo.DatabaseName</span>
+                            <span style="color:rgba(255,255,255,0.5);">Servidor origen:</span>
+                            <span>@restoreInfo.ServerName</span>
+                            <span style="color:rgba(255,255,255,0.5);">Maquina:</span>
+                            <span>@restoreInfo.MachineName</span>
+                            <span style="color:rgba(255,255,255,0.5);">Fecha del backup:</span>
+                            <span>@(restoreInfo.BackupStartDate?.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss") ?? "N/A")</span>
+                            <span style="color:rgba(255,255,255,0.5);">Tamano:</span>
+                            <span>@restoreInfo.BackupSizeFormatted</span>
+                            <span style="color:rgba(255,255,255,0.5);">Tipo:</span>
+                            <span>@restoreInfo.BackupType</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                        <button class="btn btn-secondary" @onclick="CancelRestore">Cancelar</button>
+                        <button class="btn btn-primary" @onclick="() => restoreStep = 2">Continuar</button>
+                    </div>
+                }
+                else
+                {
+                    <p style="color:#ef4444;">No se pudo leer la informacion del backup.</p>
+                    <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
+                        <button class="btn btn-secondary" @onclick="CancelRestore">Cerrar</button>
+                    </div>
+                }
+            }
+
+            @* Paso 2: Advertencias *@
+            @if (restoreStep == 2)
+            {
+                <h4 style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; color:#ef4444;">
+                    <i class="fa-solid fa-triangle-exclamation"></i> Advertencia importante
+                </h4>
+
+                <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:1rem; margin-bottom:1rem;">
+                    <p style="margin:0 0 0.75rem 0; font-weight:600; color:#ef4444;">Al restaurar este backup:</p>
+                    <ul style="margin:0; padding-left:1.5rem; color:rgba(255,255,255,0.8); line-height:1.8;">
+                        <li><strong>Todos los datos actuales se perderan</strong> y seran reemplazados por los del backup</li>
+                        <li>Usuarios, reservas, configuracion, pagos: <strong>todo vuelve al estado del backup</strong></li>
+                        <li>Los usuarios conectados seran <strong>desconectados temporalmente</strong></li>
+                        <li style="color:#ef4444; font-weight:600;">Esta operacion NO se puede deshacer</li>
+                    </ul>
+                </div>
+
+                <p style="color:rgba(255,255,255,0.6); font-size:0.85rem; margin-bottom:1rem;">
+                    <i class="fa-solid fa-lightbulb" style="color:#f59e0b; margin-right:0.3rem;"></i>
+                    Recomendacion: crea un backup manual del estado actual antes de restaurar, por si necesitas volver.
+                </p>
+
+                <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                    <button class="btn btn-secondary" @onclick="() => restoreStep = 1">Volver</button>
+                    <button class="btn btn-danger" @onclick="() => restoreStep = 3">Entiendo, continuar</button>
+                </div>
+            }
+
+            @* Paso 3: Confirmacion escribiendo RESTAURAR *@
+            @if (restoreStep == 3)
+            {
+                <h4 style="margin-bottom:1rem;">Confirmar restauracion</h4>
+
+                <p style="color:rgba(255,255,255,0.7); margin-bottom:1rem;">
+                    Para confirmar, escribi <strong style="color:#ef4444; font-family:monospace; font-size:1.1rem;">RESTAURAR</strong> en el campo de abajo:
+                </p>
+
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <input class="form-input" @bind="restoreConfirmText" @bind:event="oninput"
+                           placeholder="Escribi RESTAURAR" autocomplete="off"
+                           style="@(restoreConfirmText == "RESTAURAR" ? "border-color:#ef4444;" : "")" />
+                </div>
+
+                @if (isRestoring)
+                {
+                    <div style="background:rgba(99,102,241,0.1); border-radius:8px; padding:1rem; text-align:center; margin-bottom:1rem;">
+                        <p style="margin:0; color:#6366f1;">
+                            <i class="fa-solid fa-spinner fa-spin" style="margin-right:0.3rem;"></i>
+                            Restaurando base de datos... Esto puede tardar unos minutos. No cierres esta ventana.
+                        </p>
+                    </div>
+                }
+
+                <div style="display:flex; gap:0.75rem; justify-content:flex-end;">
+                    <button class="btn btn-secondary" @onclick="() => restoreStep = 2" disabled="@isRestoring">Volver</button>
+                    <button class="btn btn-danger" @onclick="ExecuteRestore"
+                            disabled="@(restoreConfirmText != "RESTAURAR" || isRestoring)">
+                        <i class="fa-solid fa-clock-rotate-left" style="margin-right:0.3rem;"></i>@(isRestoring ? "Restaurando..." : "Restaurar base de datos")
+                    </button>
+                </div>
+            }
+
+            @* Paso 4: Resultado *@
+            @if (restoreStep == 4)
+            {
+                @if (restoreSuccess)
+                {
+                    <h4 style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; color:#22c55e;">
+                        <i class="fa-solid fa-circle-check"></i> Restauracion exitosa
+                    </h4>
+                    <p style="color:rgba(255,255,255,0.7); margin-bottom:1rem;">
+                        La base de datos fue restaurada correctamente al estado del backup <strong>@restoreBackup?.FileName</strong>.
+                    </p>
+                    <p style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin-bottom:1rem;">
+                        Es posible que necesites volver a iniciar sesion.
+                    </p>
+                }
+                else
+                {
+                    <h4 style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem; color:#ef4444;">
+                        <i class="fa-solid fa-circle-xmark"></i> Error en la restauracion
+                    </h4>
+                    <p style="color:rgba(255,255,255,0.7); margin-bottom:0.5rem;">@restoreResultMessage</p>
+                }
+                <div style="display:flex; gap:0.75rem; justify-content:flex-end; margin-top:1rem;">
+                    <button class="btn btn-primary" @onclick="CloseRestoreAndReload">Cerrar</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* --- Card de programacion automatica --- *@
+<div class="card" style="margin-top: 1.5rem;">
+    <div class="card-header">
+        <h3>Programacion Automatica</h3>
+    </div>
+    <div class="card-body">
+        @if (isLoading)
+        {
+            <p class="text-muted">Cargando...</p>
+        }
+        else
+        {
+            <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                <input type="checkbox" id="scheduleEnabled" @bind="scheduleEnabled" />
+                <label for="scheduleEnabled" class="form-label" style="margin: 0;">Activar backups automaticos</label>
+            </div>
+
+            @if (scheduleEnabled)
+            {
+                <div class="form-group">
+                    <label class="form-label">Intervalo entre backups</label>
+                    <select class="form-input" @bind="scheduleIntervalHours">
+                        <option value="6">Cada 6 horas</option>
+                        <option value="12">Cada 12 horas</option>
+                        <option value="24">Cada 24 horas</option>
+                        <option value="48">Cada 48 horas</option>
+                        <option value="168">Cada 7 dias (168 horas)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Dias de retencion</label>
+                    <input class="form-input" type="number" @bind="scheduleRetentionDays" min="1" max="365" />
+                    <small class="text-muted">Los backups mas antiguos que esta cantidad de dias se eliminan automaticamente</small>
+                </div>
+            }
+
+            <div class="form-actions">
+                <button class="btn btn-primary" @onclick="SaveSchedule" disabled="@isSavingSchedule">
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSavingSchedule ? "Guardando..." : "Guardar Programacion")
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private bool isLoading = true;
+    private bool isCreating;
+    private bool isUploading;
+    private bool isDragging;
+    private bool isSavingSchedule;
+    private int? downloadingId;
+    private int? deletingId;
+
+    private List<BackupDto>? backups;
+
+    // Schedule
+    private bool scheduleEnabled;
+    private int scheduleIntervalHours = 24;
+    private int scheduleRetentionDays = 30;
+
+    // Delete confirmation
+    private bool showDeleteConfirm;
+    private BackupDto? backupToDelete;
+
+    // Restore flow
+    private int restoreStep; // 0=hidden, 1=info, 2=warnings, 3=confirm, 4=result
+    private BackupDto? restoreBackup;
+    private BackupInfoDto? restoreInfo;
+    private bool isLoadingInfo;
+    private bool isRestoring;
+    private string restoreConfirmText = "";
+    private bool restoreSuccess;
+    private string restoreResultMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            backups = await Api.GetBackupsAsync();
+            var schedule = await Api.GetBackupScheduleAsync();
+            if (schedule != null)
+            {
+                scheduleEnabled = schedule.Enabled;
+                scheduleIntervalHours = schedule.IntervalHours;
+                scheduleRetentionDays = schedule.RetentionDays;
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al cargar los backups");
+        }
+        isLoading = false;
+    }
+
+    // --- Create backup ---
+    private async Task CreateBackup()
+    {
+        isCreating = true;
+        try
+        {
+            var result = await Api.CreateBackupAsync();
+            if (result != null && result.Status == "completed")
+            {
+                ToastService.Success("Backup creado correctamente");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.Error(result?.ErrorMessage ?? "Error al crear el backup");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al crear el backup");
+        }
+        isCreating = false;
+    }
+
+    // --- Upload ---
+    private void HandleDragEnter() => isDragging = true;
+    private void HandleDragLeave() => isDragging = false;
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        isDragging = false;
+        var file = e.File;
+
+        if (!file.Name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
+        {
+            ToastService.Error("Solo se aceptan archivos .bak");
+            return;
+        }
+
+        isUploading = true;
+        StateHasChanged();
+
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: 500 * 1024 * 1024); // 500 MB
+            var result = await Api.UploadBackupAsync(stream, file.Name);
+            if (result != null)
+            {
+                ToastService.Success($"Archivo subido: {result.FileName}");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.Error("Error al subir el archivo");
+            }
+        }
+        catch (Exception ex)
+        {
+            ToastService.Error($"Error al subir: {(ex.Message.Contains("maximum") ? "El archivo excede el limite de 500 MB" : ex.Message)}");
+        }
+
+        isUploading = false;
+    }
+
+    // --- Download ---
+    private async Task DownloadBackup(int id, string fileName)
+    {
+        downloadingId = id;
+        StateHasChanged();
+        try
+        {
+            var bytes = await Api.DownloadBackupAsync(id);
+            if (bytes != null && bytes.Length > 0)
+            {
+                var base64 = Convert.ToBase64String(bytes);
+                await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, base64);
+            }
+            else
+            {
+                ToastService.Error("No se pudo descargar el backup");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al descargar el backup");
+        }
+        downloadingId = null;
+    }
+
+    // --- Delete ---
+    private void ConfirmDelete(BackupDto backup)
+    {
+        backupToDelete = backup;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelDelete()
+    {
+        showDeleteConfirm = false;
+        backupToDelete = null;
+    }
+
+    private async Task DeleteBackup()
+    {
+        if (backupToDelete == null) return;
+
+        showDeleteConfirm = false;
+        deletingId = backupToDelete.Id;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Api.DeleteBackupAsync(backupToDelete.Id);
+            if (result)
+            {
+                ToastService.Success("Backup eliminado");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.Error("Error al eliminar el backup");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al eliminar el backup");
+        }
+
+        deletingId = null;
+        backupToDelete = null;
+    }
+
+    // --- Restore flow ---
+    private async Task StartRestore(BackupDto backup)
+    {
+        restoreBackup = backup;
+        restoreInfo = null;
+        restoreConfirmText = "";
+        restoreSuccess = false;
+        restoreResultMessage = "";
+        restoreStep = 1;
+        isLoadingInfo = true;
+        StateHasChanged();
+
+        try
+        {
+            restoreInfo = await Api.GetBackupInfoAsync(backup.Id);
+        }
+        catch
+        {
+            restoreInfo = null;
+        }
+
+        isLoadingInfo = false;
+    }
+
+    private void CancelRestore()
+    {
+        if (isRestoring) return; // Don't allow cancel during restore
+        restoreStep = 0;
+        restoreBackup = null;
+        restoreInfo = null;
+        restoreConfirmText = "";
+    }
+
+    private async Task ExecuteRestore()
+    {
+        if (restoreBackup == null || restoreConfirmText != "RESTAURAR") return;
+
+        isRestoring = true;
+        StateHasChanged();
+
+        try
+        {
+            var (success, message) = await Api.RestoreBackupAsync(restoreBackup.Id);
+            restoreSuccess = success;
+            restoreResultMessage = message;
+        }
+        catch (Exception ex)
+        {
+            restoreSuccess = false;
+            restoreResultMessage = $"Error: {ex.Message}";
+        }
+
+        isRestoring = false;
+        restoreStep = 4;
+    }
+
+    private async Task CloseRestoreAndReload()
+    {
+        restoreStep = 0;
+        restoreConfirmText = "";
+        await LoadData();
+    }
+
+    // --- Schedule ---
+    private async Task SaveSchedule()
+    {
+        isSavingSchedule = true;
+        try
+        {
+            var dto = new BackupScheduleDto
+            {
+                Enabled = scheduleEnabled,
+                IntervalHours = scheduleIntervalHours,
+                RetentionDays = scheduleRetentionDays
+            };
+
+            var result = await Api.UpdateBackupScheduleAsync(dto);
+            if (result)
+                ToastService.Success("Programacion guardada");
+            else
+                ToastService.Error("Error al guardar la programacion");
+        }
+        catch
+        {
+            ToastService.Error("Error al guardar la programacion");
+        }
+        isSavingSchedule = false;
+    }
+}

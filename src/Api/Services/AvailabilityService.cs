@@ -153,4 +153,147 @@ public class AvailabilityService
 
         return general?.IsActive ?? false;
     }
+
+    // Bulk toggle multiple week availability slots for admin
+    public async Task<int> BulkToggleSlotsAsync(int instructorId, List<AdminBulkToggleSlot> slots, bool isActive)
+    {
+        var count = 0;
+        foreach (var slot in slots)
+        {
+            var existing = await _db.WeekAvailabilities
+                .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.Date == slot.Date.Date && w.StartHour == slot.StartHour);
+
+            if (existing is not null)
+            {
+                existing.IsActive = isActive;
+            }
+            else
+            {
+                _db.WeekAvailabilities.Add(new WeekAvailability
+                {
+                    InstructorId = instructorId,
+                    Date = slot.Date.Date,
+                    StartHour = slot.StartHour,
+                    IsActive = isActive,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            count++;
+        }
+        await _db.SaveChangesAsync();
+        return count;
+    }
+
+    // Toggle a single week availability slot for admin
+    public async Task<WeekAvailabilityDto> ToggleSingleSlotAsync(int instructorId, DateTime date, int startHour, bool isActive)
+    {
+        var existing = await _db.WeekAvailabilities
+            .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.Date == date.Date && w.StartHour == startHour);
+
+        if (existing is not null)
+        {
+            existing.IsActive = isActive;
+            await _db.SaveChangesAsync();
+            return new WeekAvailabilityDto(existing.Id, existing.InstructorId, existing.Date, existing.StartHour, existing.IsActive);
+        }
+
+        var slot = new WeekAvailability
+        {
+            InstructorId = instructorId,
+            Date = date.Date,
+            StartHour = startHour,
+            IsActive = isActive,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.WeekAvailabilities.Add(slot);
+        await _db.SaveChangesAsync();
+
+        return new WeekAvailabilityDto(slot.Id, slot.InstructorId, slot.Date, slot.StartHour, slot.IsActive);
+    }
+
+    // Copy effective availability from previous week to target week
+    // Considers both base availability (Availabilities table) and week overrides (WeekAvailabilities table)
+    public async Task<int> CopyWeekAvailabilityAsync(DateTime targetWeekStart)
+    {
+        var previousWeekStart = targetWeekStart.AddDays(-7);
+
+        // Get all instructors that have any availability configured
+        var instructorIds = await _db.Availabilities
+            .Select(a => a.InstructorId)
+            .Union(_db.WeekAvailabilities.Select(w => w.InstructorId))
+            .Distinct()
+            .ToListAsync();
+
+        if (instructorIds.Count == 0) return 0;
+
+        // Get base availability for all instructors
+        var baseAvailability = await _db.Availabilities
+            .Where(a => a.IsActive)
+            .ToListAsync();
+
+        // Get previous week overrides
+        var prevWeekOverrides = await _db.WeekAvailabilities
+            .Where(w => w.Date >= previousWeekStart.Date && w.Date < previousWeekStart.AddDays(7).Date)
+            .ToListAsync();
+
+        var count = 0;
+
+        foreach (var instructorId in instructorIds)
+        {
+            // For each day of the previous week, determine effective availability
+            for (int d = 0; d < 7; d++)
+            {
+                var prevDate = previousWeekStart.AddDays(d).Date;
+                var newDate = targetWeekStart.AddDays(d).Date;
+                var dayOfWeek = (int)prevDate.DayOfWeek;
+
+                // Get base hours for this day of week
+                var baseHours = baseAvailability
+                    .Where(a => a.InstructorId == instructorId && a.DayOfWeek == dayOfWeek)
+                    .Select(a => a.StartHour)
+                    .ToHashSet();
+
+                // Apply overrides from previous week
+                var dayOverrides = prevWeekOverrides
+                    .Where(w => w.InstructorId == instructorId && w.Date == prevDate)
+                    .ToList();
+
+                foreach (var ovr in dayOverrides)
+                {
+                    if (ovr.IsActive)
+                        baseHours.Add(ovr.StartHour);
+                    else
+                        baseHours.Remove(ovr.StartHour);
+                }
+
+                // Create overrides for target week
+                foreach (var hour in baseHours)
+                {
+                    var existing = await _db.WeekAvailabilities
+                        .FirstOrDefaultAsync(w => w.InstructorId == instructorId && w.Date == newDate && w.StartHour == hour);
+
+                    if (existing is not null)
+                    {
+                        existing.IsActive = true;
+                    }
+                    else
+                    {
+                        _db.WeekAvailabilities.Add(new WeekAvailability
+                        {
+                            InstructorId = instructorId,
+                            Date = newDate,
+                            StartHour = hour,
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow
+                        });
+                    }
+                    count++;
+                }
+            }
+        }
+
+        await _db.SaveChangesAsync();
+        return count;
+    }
 }

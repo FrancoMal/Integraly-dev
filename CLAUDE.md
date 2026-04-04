@@ -8,20 +8,7 @@ Lee este archivo completo antes de hacer cualquier cosa.
 
 ## Quien es el usuario
 
-El usuario NO es programador ni tiene conocimientos de IT. Habla en lenguaje cotidiano, no tecnico. Tu trabajo es:
-
-1. Escuchar lo que dice, aunque sea vago o impreciso
-2. Interpretar que es lo que realmente necesita
-3. Transformar su pedido en tareas concretas y ejecutarlas
-4. Explicarle lo que hiciste en palabras simples, sin jerga tecnica
-
-Cuando el usuario diga algo como "quiero que se vea mas lindo" o "hace que funcione eso", no le pidas que sea mas especifico con terminos tecnicos. Vos tenes que deducir que quiere y proponer opciones claras.
-
-### Ejemplos
-
-- Usuario dice: "quiero guardar cosas" -> Vos entendes: necesita una tabla en la base de datos + formulario + listado
-- Usuario dice: "que se pueda entrar con clave" -> Vos entendes: necesita autenticacion/login
-- Usuario dice: "no me anda" -> Vos entendes: hay que revisar los logs, el estado de los containers, y debuggear
+El usuario es programador. Responde de forma directa y tecnica. No hace falta simplificar explicaciones ni evitar jerga IT. Si tenes una opinion tecnica o arquitectural, compartila.
 
 ---
 
@@ -29,11 +16,18 @@ Cuando el usuario diga algo como "quiero que se vea mas lindo" o "hace que funci
 
 ### 1. Siempre hacer commits
 
-Cada vez que termines un cambio funcional, hace un commit con un mensaje claro en espanol y push automatico:
+Cada vez que termines un cambio funcional, hace un commit con un mensaje claro en espanol y push automatico.
+
+El mensaje del commit debe tener un titulo corto y un listado de lo que se hizo. No agregar "Co-Authored-By" ni firmas. Ejemplo:
 
 ```bash
 git add -A
-git commit -m "Agregar formulario de contacto en el dashboard"
+git commit -m "Agregar formulario de contacto en el dashboard
+
+- Crear componente ContactForm.razor
+- Agregar endpoint POST /api/contact
+- Agregar tabla Contacts en init.sql
+- Agregar navegacion en el sidebar"
 git push
 ```
 
@@ -161,12 +155,14 @@ Cuando el usuario diga **"PUBLICAR EN PRODUCCION"**, ejecutar estos pasos en ord
    ```
 6. Informar al usuario que la publicacion fue exitosa y que puede verificar en puerto 80
 
-### 5. Usar subagentes para tareas grandes
+### 5. Usar subagentes y teams agents para tareas grandes
 
 Si el usuario pide algo complejo (mas de 3 archivos o mas de una funcionalidad), dividilo en partes y usa subagentes en paralelo:
 - Un agente para el backend (API, base de datos)
 - Un agente para el frontend (paginas, estilos)
 - Un agente para infraestructura (Docker, nginx) si hace falta
+
+Si tenes disponible **teams agents** (agentes remotos que corren en paralelo), usalos para maximizar la velocidad de ejecucion. Preferir teams agents sobre subagentes locales cuando la tarea lo permita.
 
 Esto es mas rapido y reduce errores.
 
@@ -229,7 +225,7 @@ ai-coding-environment/
 |   |   |-- ApiClient.cs      <- Cliente HTTP con Bearer token
 |   |   '-- ToastService.cs   <- Servicio de notificaciones
 |   '-- wwwroot/              <- Archivos estaticos
-|       |-- index.html        <- Pagina host de Blazor (base href="/admin/")
+|       |-- index.html        <- Pagina host de Blazor (base href="/panel/")
 |       '-- css/app.css       <- Estilos visuales
 |
 |-- db/
@@ -268,14 +264,14 @@ ai-coding-environment/
 DESARROLLO:
 Browser -> localhost:3000 -> Nginx (dev)
                               |-- /            -> Landing page (integraly.dev)
-                              |-- /admin/      -> Blazor WASM (panel de admin)
+                              |-- /panel/      -> Blazor WASM (panel de admin)
                               |-- /api/        -> Backend .NET (api:80)
                               '-- /swagger     -> Documentacion de la API
 
 PRODUCCION:
 Browser -> localhost:80 -> Nginx (prod)
                             |-- /            -> Landing page (integraly.dev)
-                            |-- /admin/      -> Blazor WASM (panel de admin)
+                            |-- /panel/      -> Blazor WASM (panel de admin)
                             '-- /api/        -> Backend .NET (api-prod:80)
 ```
 
@@ -377,8 +373,8 @@ docker compose up --build -d
 docker compose -f docker-compose.prod.yml up --build -d
 
 # 5. Abrir en el browser:
-#    Desarrollo: http://localhost:3000 (landing) / http://localhost:3000/admin (panel)
-#    Produccion: http://localhost:80 (landing) / http://localhost:80/admin (panel)
+#    Desarrollo: http://localhost:3000 (landing) / http://localhost:3000/panel (panel)
+#    Produccion: http://localhost:80 (landing) / http://localhost:80/panel (panel)
 ```
 
 ---

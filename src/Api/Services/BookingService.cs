@@ -36,6 +36,8 @@ public class BookingService
                 b.StartHour,
                 b.Status,
                 b.MeetLink,
+                b.UserNotes,
+                b.AdminNotes,
                 b.CreatedAt
             ))
             .ToListAsync();
@@ -59,6 +61,8 @@ public class BookingService
                 b.StartHour,
                 b.Status,
                 b.MeetLink,
+                b.UserNotes,
+                b.AdminNotes,
                 b.CreatedAt
             ))
             .ToListAsync();
@@ -81,12 +85,14 @@ public class BookingService
                 b.StartHour,
                 b.Status,
                 b.MeetLink,
+                b.UserNotes,
+                b.AdminNotes,
                 b.CreatedAt
             ))
             .ToListAsync();
     }
 
-    public async Task<(BookingDto? Booking, string? Error)> CreateAsync(int userId, int instructorId, DateTime scheduledDate, int startHour)
+    public async Task<(BookingDto? Booking, string? Error)> CreateAsync(int userId, int instructorId, DateTime scheduledDate, int startHour, string? userNotes = null)
     {
         // Validate instructor has availability for that day/hour (considering week overrides)
         var isAvailable = await _availabilityService.IsAvailableAtAsync(instructorId, scheduledDate, startHour);
@@ -121,6 +127,7 @@ public class BookingService
             StartHour = startHour,
             Status = "confirmed",
             MeetLink = meetLink,
+            UserNotes = userNotes,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -140,6 +147,8 @@ public class BookingService
             booking.StartHour,
             booking.Status,
             booking.MeetLink,
+            booking.UserNotes,
+            booking.AdminNotes,
             booking.CreatedAt
         );
 
@@ -188,7 +197,8 @@ public class BookingService
             .Select(b => new BookingDto(
                 b.Id, b.UserId, b.User != null ? b.User.Username : "",
                 b.InstructorId, b.Instructor != null ? b.Instructor.Username : "",
-                b.ScheduledDate, b.StartHour, b.Status, b.MeetLink, b.CreatedAt
+                b.ScheduledDate, b.StartHour, b.Status, b.MeetLink,
+                b.UserNotes, b.AdminNotes, b.CreatedAt
             ))
             .ToListAsync();
     }
@@ -230,5 +240,39 @@ public class BookingService
         return effectiveHours.OrderBy(h => h)
             .Select(h => new AvailableSlotDto(h, !bookedHours.Contains(h)))
             .ToList();
+    }
+
+    public async Task<(bool Success, string? Error)> AdminCancelAsync(int bookingId)
+    {
+        var booking = await _db.Bookings.FindAsync(bookingId);
+        if (booking is null)
+            return (false, "Reserva no encontrada");
+
+        if (booking.Status != "confirmed")
+            return (false, "La reserva ya fue cancelada o completada");
+
+        // Refund token
+        await _tokenPackService.RefundTokenAsync(booking.TokenPackId);
+
+        booking.Status = "cancelled";
+        booking.CancelledAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        return (true, null);
+    }
+
+    public async Task<(bool Success, string? Error)> AdminCompleteAsync(int bookingId)
+    {
+        var booking = await _db.Bookings.FindAsync(bookingId);
+        if (booking is null)
+            return (false, "Reserva no encontrada");
+
+        if (booking.Status != "confirmed")
+            return (false, "Solo se pueden completar reservas confirmadas");
+
+        booking.Status = "completed";
+        await _db.SaveChangesAsync();
+
+        return (true, null);
     }
 }

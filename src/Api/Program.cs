@@ -50,6 +50,12 @@ builder.Services.AddScoped<TokenPackService>();
 builder.Services.AddScoped<AvailabilityService>();
 builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<MercadoPagoService>();
+builder.Services.AddScoped<PayPalService>();
+builder.Services.AddScoped<ChangelogService>();
+builder.Services.AddScoped<BackupService>();
+builder.Services.AddHostedService<BookingCompletionService>();
+builder.Services.AddHostedService<BackupSchedulerService>();
 builder.Services.AddHttpClient();
 
 // CORS
@@ -70,6 +76,11 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
     });
+
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 500 * 1024 * 1024;
+});
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -108,7 +119,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // Increase request body size for file uploads
-builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
+builder.WebHost.ConfigureKestrel(o => o.Limits.MaxRequestBodySize = 500 * 1024 * 1024);
 
 var app = builder.Build();
 

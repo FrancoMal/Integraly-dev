@@ -22,36 +22,31 @@
                      IsActive="@IsActive("")" OnClick="@(() => NavigateTo(""))" />
         }
 
-        @if (role != "admin" && (HasPerm("calendario") || HasPerm("reservar") || HasPerm("mis-reservas")))
+        @if (role != "admin" && HasPerm("reservar"))
         {
-            <NavGroup Label="Tutorias" Icon="@SvgIcons.Calendar"
-                      HasActiveChild="@(IsActive("calendario") || IsActive("reservar") || IsActive("mis-reservas"))">
-                @if (HasPerm("calendario"))
-                {
-                    <NavItem Href="calendario" Label="Calendario" Icon="@SvgIcons.Calendar"
-                             IsActive="@IsActive("calendario")" OnClick="@(() => NavigateTo("calendario"))" />
-                }
-                @if (HasPerm("reservar"))
-                {
-                    <NavItem Href="reservar" Label="Reservar" Icon="@SvgIcons.Clock"
-                             IsActive="@IsActive("reservar")" OnClick="@(() => NavigateTo("reservar"))" />
-                }
-                @if (HasPerm("mis-reservas"))
-                {
-                    <NavItem Href="mis-reservas" Label="Mis Reservas" Icon="@SvgIcons.CheckCircle"
-                             IsActive="@IsActive("mis-reservas")" OnClick="@(() => NavigateTo("mis-reservas"))" />
-                }
-            </NavGroup>
+            <NavItem Href="reservar" Label="Reservar" Icon="@SvgIcons.Clock"
+                     IsActive="@IsActive("reservar")" OnClick="@(() => NavigateTo("reservar"))" />
         }
 
-        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("config") || role == "admin")
+        @if (role != "admin" && HasPerm("comprar"))
+        {
+            <NavItem Href="comprar" Label="Comprar Pack" Icon="@SvgIcons.ShoppingCart"
+                     IsActive="@IsActive("comprar")" OnClick="@(() => NavigateTo("comprar"))" />
+        }
+
+        @if (HasPerm("usuarios") || HasPerm("roles") || HasPerm("invitaciones") || HasPerm("packs") || HasPerm("todas-reservas") || HasPerm("auditoria") || HasPerm("changelog") || HasPerm("config") || HasPerm("webinar") || role == "admin")
         {
             <NavGroup Label="Administracion" Icon="@SvgIcons.Admin"
-                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("config"))">
+                      HasActiveChild="@(IsActive("calendario-admin") || IsActive("tareas-admin") || IsActive("usuarios") || IsActive("roles") || IsActive("invitaciones") || IsActive("packs") || IsActive("planes-admin") || IsActive("todas-reservas") || IsActive("auditoria") || IsActive("changelog") || IsActive("config") || IsActive("backups") || IsActive("webinar-admin"))">
                 @if (role == "admin")
                 {
                     <NavItem Href="calendario-admin" Label="Calendario" Icon="@SvgIcons.Calendar"
                              IsActive="@IsActive("calendario-admin")" OnClick="@(() => NavigateTo("calendario-admin"))" />
+                }
+                @if (role == "admin")
+                {
+                    <NavItem Href="tareas-admin" Label="Tareas" Icon="@SvgIcons.ClipboardList"
+                             IsActive="@IsActive("tareas-admin")" OnClick="@(() => NavigateTo("tareas-admin"))" />
                 }
                 @if (HasPerm("usuarios"))
                 {
@@ -73,6 +68,11 @@
                     <NavItem Href="packs" Label="Packs de Clases" Icon="@SvgIcons.Package"
                              IsActive="@IsActive("packs")" OnClick="@(() => NavigateTo("packs"))" />
                 }
+                @if (role == "admin")
+                {
+                    <NavItem Href="planes-admin" Label="Planes de Pago" Icon="@SvgIcons.DollarSign"
+                             IsActive="@IsActive("planes-admin")" OnClick="@(() => NavigateTo("planes-admin"))" />
+                }
                 @if (HasPerm("todas-reservas"))
                 {
                     <NavItem Href="todas-reservas" Label="Todas las Reservas" Icon="@SvgIcons.List"
@@ -83,10 +83,25 @@
                     <NavItem Href="auditoria" Label="Auditoria" Icon="@SvgIcons.History"
                              IsActive="@IsActive("auditoria")" OnClick="@(() => NavigateTo("auditoria"))" />
                 }
+                @if (HasPerm("changelog"))
+                {
+                    <NavItem Href="changelog" Label="Changelog" Icon="@SvgIcons.Code"
+                             IsActive="@IsActive("changelog")" OnClick="@(() => NavigateTo("changelog"))" />
+                }
                 @if (HasPerm("config"))
                 {
                     <NavItem Href="config" Label="Configuracion" Icon="@SvgIcons.Settings"
                              IsActive="@IsActive("config")" OnClick="@(() => NavigateTo("config"))" />
+                }
+                @if (HasPerm("config"))
+                {
+                    <NavItem Href="backups" Label="Backups" Icon="@SvgIcons.Database"
+                             IsActive="@IsActive("backups")" OnClick="@(() => NavigateTo("backups"))" />
+                }
+                @if (HasPerm("webinar"))
+                {
+                    <NavItem Href="webinar-admin" Label="Webinar" Icon="@SvgIcons.Video"
+                             IsActive="@IsActive("webinar-admin")" OnClick="@(() => NavigateTo("webinar-admin"))" />
                 }
             </NavGroup>
         }
@@ -125,7 +140,7 @@
             <button class="topbar-menu-btn" @onclick="ToggleSidebar" aria-label="Abrir menu">
                 @SvgIcons.Menu
             </button>
-            <h1 class="topbar-title">integraly<span class="brand-dot">.dev</span></h1>
+            <h1 class="topbar-title">@GetPageTitle()</h1>
         </div>
         <div class="topbar-actions">
             <button class="topbar-btn" @onclick="Refresh" title="Actualizar">
@@ -162,11 +177,44 @@
     private string role = "user";
     private List<string> permissions = new();
 
+    private static readonly Dictionary<string, string> RouteToPageTitle = new()
+    {
+        { "", "Dashboard" },
+        { "calendario", "Disponibilidad" },
+        { "calendario-admin", "Calendario" },
+        { "tareas-admin", "Tareas" },
+        { "reservar", "Reservar" },
+        { "mis-reservas", "Mis Reservas" },
+        { "usuarios", "Usuarios" },
+        { "roles", "Roles" },
+        { "invitaciones", "Invitaciones" },
+        { "packs", "Packs" },
+        { "todas-reservas", "Reservas" },
+        { "auditoria", "Auditoria" },
+        { "config", "Configuracion" },
+        { "backups", "Backups" },
+        { "perfil", "Mi Perfil" },
+        { "webinar-admin", "Webinar" },
+        { "comprar", "Comprar Pack" },
+        { "pago-exitoso", "Pago Exitoso" },
+        { "pago-fallido", "Pago Fallido" },
+        { "pago-pendiente", "Pago Pendiente" },
+        { "changelog", "Historial de Cambios" }
+    };
+
+    private string GetPageTitle()
+    {
+        var uri = Navigation.ToBaseRelativePath(Navigation.Uri);
+        var path = uri.Split('?')[0].TrimEnd('/');
+        return RouteToPageTitle.TryGetValue(path, out var title) ? title : "Dashboard";
+    }
+
     private static readonly Dictionary<string, string> RouteToMenuKey = new()
     {
         { "", "dashboard" },
         { "calendario", "calendario" },
         { "calendario-admin", "calendario-admin" },
+        { "tareas-admin", "tareas-admin" },
         { "reservar", "reservar" },
         { "mis-reservas", "mis-reservas" },
         { "usuarios", "usuarios" },
@@ -176,10 +224,17 @@
         { "todas-reservas", "todas-reservas" },
         { "auditoria", "auditoria" },
         { "config", "config" },
-        { "perfil", "" } // perfil always allowed
+        { "backups", "config" },
+        { "perfil", "" }, // perfil always allowed
+        { "webinar-admin", "webinar" },
+        { "comprar", "comprar" },
+        { "pago-exitoso", "" },
+        { "pago-fallido", "" },
+        { "pago-pendiente", "" },
+        { "changelog", "changelog" }
     };
 
-    private bool IsAdminPanel => Navigation.BaseUri.Contains("/admin/");
+    private bool IsAdminPanel => Navigation.BaseUri.Contains("/panel/");
 
     protected override async Task OnInitializedAsync()
     {
@@ -195,18 +250,6 @@
 
             // Don't redirect if impersonating
             if (isImpersonating) return;
-
-            // Redirect to correct panel based on role
-            if (role == "admin" && !IsAdminPanel)
-            {
-                Navigation.NavigateTo("/admin/", forceLoad: true);
-                return;
-            }
-            else if (role != "admin" && IsAdminPanel)
-            {
-                Navigation.NavigateTo("/panel/", forceLoad: true);
-                return;
-            }
         }
     }
 
@@ -284,7 +327,7 @@
     private async Task StopImpersonating()
     {
         await AuthService.StopImpersonatingAsync();
-        Navigation.NavigateTo("/admin/", forceLoad: true);
+        Navigation.NavigateTo("/panel/", forceLoad: true);
     }
 
     private async Task Logout()

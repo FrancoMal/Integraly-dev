@@ -59,7 +59,8 @@
       "Bash(curl -s ifconfig.me)",
       "Bash(curl -s icanhazip.com)",
       "Bash(curl -4 -s ifconfig.me)",
-      "Bash(curl -4 -s icanhazip.com)"
+      "Bash(curl -4 -s icanhazip.com)",
+      "Bash(curl:*)"
     ]
   }
 }

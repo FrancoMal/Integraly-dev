@@ -1,0 +1,21 @@
+@page "/pago-fallido"
+@attribute [Authorize]
+@inject NavigationManager Navigation
+
+<div class="pago-result-container">
+    <div class="pago-result-card pago-error">
+        <div class="pago-result-icon">
+            @SvgIcons.AlertCircle
+        </div>
+        <h2 class="pago-result-title">Pago no procesado</h2>
+        <p class="pago-result-message">El pago no pudo ser procesado. Intenta de nuevo.</p>
+        <div class="pago-result-actions">
+            <button class="btn btn-primary" @onclick='() => Navigation.NavigateTo("comprar")'>
+                Volver a intentar
+            </button>
+            <button class="btn btn-outline" @onclick='() => Navigation.NavigateTo("")'>
+                Ir al Dashboard
+            </button>
+        </div>
+    </div>
+</div>

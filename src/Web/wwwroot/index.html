@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>integraly.dev - Admin</title>
-    <base href="/admin/" />
+    <title>integraly.dev - Panel</title>
+    <base href="/panel/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
@@ -37,6 +38,83 @@
         window.getBasePath = function() {
             return document.querySelector('base').getAttribute('href');
         };
+
+        window.downloadFileFromBase64 = function(fileName, base64) {
+            var link = document.createElement('a');
+            link.href = 'data:application/octet-stream;base64,' + base64;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        // Calendar multi-select with Ctrl+click and Shift+drag
+        window.calendarSelect = {
+            _dotnetRef: null,
+            _dragging: false,
+            _dragCells: [],
+
+            init: function(dotnetRef) {
+                this._dotnetRef = dotnetRef;
+                this._dragging = false;
+                this._dragCells = [];
+            },
+
+            dispose: function() {
+                this._dotnetRef = null;
+            },
+
+            handleMouseDown: function(e, date, hour) {
+                if (e.shiftKey) {
+                    e.preventDefault();
+                    this._dragging = true;
+                    this._dragCells = [{ date: date, hour: hour }];
+                    this._addCellHighlight(date, hour);
+                } else if (e.ctrlKey || e.metaKey) {
+                    e.preventDefault();
+                    if (this._dotnetRef) {
+                        this._dotnetRef.invokeMethodAsync('JsToggleCell', date, hour);
+                    }
+                }
+            },
+
+            handleMouseEnter: function(e, date, hour) {
+                if (this._dragging && e.shiftKey) {
+                    // Check if already in drag list
+                    var key = date + '_' + hour;
+                    var exists = this._dragCells.some(function(c) { return c.date + '_' + c.hour === key; });
+                    if (!exists) {
+                        this._dragCells.push({ date: date, hour: hour });
+                        this._addCellHighlight(date, hour);
+                    }
+                }
+            },
+
+            handleMouseUp: function(e) {
+                if (this._dragging) {
+                    this._dragging = false;
+                    if (this._dotnetRef && this._dragCells.length > 0) {
+                        this._dotnetRef.invokeMethodAsync('JsAddCells', JSON.stringify(this._dragCells));
+                    }
+                    // Remove temporary highlights
+                    document.querySelectorAll('.cell-drag-highlight').forEach(function(el) {
+                        el.classList.remove('cell-drag-highlight');
+                    });
+                    this._dragCells = [];
+                }
+            },
+
+            _addCellHighlight: function(date, hour) {
+                var cell = document.querySelector('[data-cell="' + date + '_' + hour + '"]');
+                if (cell) cell.classList.add('cell-drag-highlight');
+            }
+        };
+
+        document.addEventListener('mouseup', function(e) {
+            if (window.calendarSelect._dragging) {
+                window.calendarSelect.handleMouseUp(e);
+            }
+        });
     </script>
 </body>
 </html>

@@ -79,6 +79,43 @@ public class AvailabilityController : ControllerBase
         return Ok(results);
     }
 
+    // Admin: toggle availability for a specific instructor at a specific date+hour
+    [HttpPut("admin-toggle")]
+    public async Task<IActionResult> AdminToggleAvailability([FromBody] AdminToggleAvailabilityRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var result = await _availabilityService.ToggleSingleSlotAsync(
+            request.InstructorId, request.Date, request.StartHour, request.IsActive);
+        return Ok(result);
+    }
+
+    // Admin: bulk toggle availability for multiple date+hour slots
+    [HttpPut("admin-bulk-toggle")]
+    public async Task<IActionResult> AdminBulkToggleAvailability([FromBody] AdminBulkToggleRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var count = await _availabilityService.BulkToggleSlotsAsync(
+            request.InstructorId, request.Slots, request.IsActive);
+        return Ok(new { updated = count });
+    }
+
+    // Admin: copy availability from previous week to target week
+    [HttpPost("copy-previous-week")]
+    public async Task<IActionResult> CopyPreviousWeek([FromBody] CopyWeekRequest request)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var count = await _availabilityService.CopyWeekAvailabilityAsync(request.TargetWeekStart);
+        return Ok(new { copied = count });
+    }
+
+    private bool IsAdmin()
+    {
+        return User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value == "admin";
+    }
+
     private bool IsInstructor()
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;

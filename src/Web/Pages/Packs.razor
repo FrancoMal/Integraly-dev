@@ -3,149 +3,279 @@
 @inject ApiClient Api
 @inject ToastService ToastService
 
-<div class="view-header">
-    <h2>Packs de Clases</h2>
-    <p class="view-subtitle">Administra los packs de clases asignados a los usuarios</p>
+@* Filtros *@
+<div class="card" style="margin-bottom: 1rem;">
+    <div class="card-body" style="padding: 0.75rem 1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:0.5rem;">
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;align-items:center;">
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="font-size:0.8rem;font-weight:600;">Usuario:</label>
+                    <select class="form-input" style="width:auto;min-width:200px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterUserId" @onchange="OnUserFilterChanged">
+                        <option value="0">Todos</option>
+                        @foreach (var u in uniqueUsers)
+                        {
+                            <option value="@u.Key">@u.Value</option>
+                        }
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    <label style="font-size:0.8rem;font-weight:600;">Estado:</label>
+                    <select class="form-input" style="width:auto;min-width:180px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterState" @onchange="OnStateFilterChanged">
+                        <option value="">Todos</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="pending_review">Comprobante adjunto</option>
+                        <option value="approved">Aprobado</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary btn-sm" @onclick="OpenCreateModal">
+                <i class="fa-solid fa-plus" style="margin-right:0.3rem;"></i>Nuevo Pack
+            </button>
+        </div>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-        <h3>Packs (@(packs?.Count ?? 0))</h3>
-        <button class="btn btn-primary" @onclick="ShowCreateForm">+ Nuevo Pack</button>
+@* Resumen *@
+<div class="dashboard-cards-row" style="margin-bottom:1rem;">
+    <div class="stat-card">
+        <div class="stat-card-icon warning"><i class="fa-solid fa-clock" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@(allPayments?.Count(p => p.Status is "pending" or "pending_review") ?? 0)</span>
+            <span class="stat-card-label">Pagos pendientes</span>
+        </div>
     </div>
-    <div class="card-body" style="padding: 0;">
-        @if (isLoading)
-        {
-            <p class="text-muted" style="padding: 1.5rem;">Cargando...</p>
-        }
-        else if (packs is null || !packs.Any())
-        {
-            <p class="text-muted" style="padding: 1.5rem;">No hay packs creados</p>
-        }
-        else
-        {
+    <div class="stat-card">
+        <div class="stat-card-icon primary"><i class="fa-solid fa-box" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@(packs?.Count ?? 0)</span>
+            <span class="stat-card-label">Packs activos</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon success"><i class="fa-solid fa-graduation-cap" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@(packs?.Sum(p => p.TotalTokens) ?? 0)</span>
+            <span class="stat-card-label">Clases totales</span>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card-icon info"><i class="fa-solid fa-ticket" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@(packs?.Sum(p => p.RemainingTokens) ?? 0)</span>
+            <span class="stat-card-label">Clases restantes</span>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="card"><div class="card-body"><p class="text-muted">Cargando...</p></div></div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body" style="padding: 0.5rem;">
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Usuario</th>
-                            <th>Clases totales</th>
-                            <th>Restantes</th>
-                            <th>Descripcion</th>
-                            <th>Creado por</th>
+                            <th>Plan / Descripcion</th>
+                            <th style="text-align:center;">Clases</th>
+                            <th style="text-align:right;">Monto</th>
+                            <th>Medio de pago</th>
+                            <th style="text-align:center;">Estado</th>
                             <th>Fecha</th>
-                            <th>Acciones</th>
+                            <th style="min-width:200px;text-align:center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var pack in packs.OrderByDescending(p => p.CreatedAt))
+                        @if (filteredRows.Count == 0)
                         {
                             <tr>
-                                <td><strong>@pack.UserName</strong></td>
-                                <td>@pack.TotalTokens</td>
-                                <td>
-                                    <span class="@(pack.RemainingTokens > 0 ? "text-success" : "text-muted")">
-                                        @pack.RemainingTokens
-                                    </span>
-                                </td>
-                                <td>@(string.IsNullOrEmpty(pack.Description) ? "-" : pack.Description)</td>
-                                <td>@pack.CreatedByName</td>
-                                <td>@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
-                                <td class="actions-cell">
-                                    <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditForm(pack)" title="Editar">
-                                        Editar
-                                    </button>
-                                </td>
+                                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay registros para mostrar</td>
                             </tr>
+                        }
+                        else
+                        {
+                            @foreach (var row in filteredRows)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600;">@row.UserName</div>
+                                        @if (!string.IsNullOrEmpty(row.UserEmail) && row.UserEmail != row.UserName)
+                                        {
+                                            <div style="font-size:0.72rem;color:var(--text-secondary);">@row.UserEmail</div>
+                                        }
+                                    </td>
+                                    <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@row.Description</td>
+                                    <td style="text-align:center;">
+                                        @if (row.Status == "approved" && row.Pack is not null)
+                                        {
+                                            var pack = row.Pack;
+                                            var used = pack.TotalTokens - pack.RemainingTokens;
+                                            var pct = pack.TotalTokens > 0 ? (int)((double)pack.RemainingTokens / pack.TotalTokens * 100) : 0;
+                                            <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center;">
+                                                <span style="font-weight:600;color:@(pack.RemainingTokens > 0 ? "#10b981" : "#ef4444");">@pack.RemainingTokens</span>
+                                                <span style="color:var(--text-muted);font-size:0.78rem;">/ @pack.TotalTokens</span>
+                                                <div style="width:40px;height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                                                    <div style="width:@(100-pct)%;height:100%;background:@(pct > 30 ? "#10b981" : pct > 0 ? "#f59e0b" : "#ef4444");border-radius:3px;"></div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span>@row.Classes</span>
+                                        }
+                                    </td>
+                                    <td style="text-align:right;font-weight:600;">
+                                        @if (row.Amount > 0)
+                                        {
+                                            var curr = row.Currency == "USD" ? "US$" : "$";
+                                            @($"{curr}{FormatPrice(row.Amount, row.Currency == "USD")}")
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--text-muted);">Manual</span>
+                                        }
+                                    </td>
+                                    <td style="font-size:0.82rem;">@row.ProviderLabel</td>
+                                    <td style="text-align:center;">
+                                        <span class="status-badge @row.StatusClass">@row.StatusLabel</span>
+                                    </td>
+                                    <td style="font-size:0.82rem;">@row.Date.ToString("dd/MM/yy HH:mm")</td>
+                                    <td style="text-align:center;">
+                                        <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
+                                            @if (row.Status is "pending" or "pending_review")
+                                            {
+                                                @if (!string.IsNullOrEmpty(row.ReceiptUrl))
+                                                {
+                                                    <a href="@row.ReceiptUrl" target="_blank" class="btn btn-sm btn-secondary" title="Ver comprobante">
+                                                        <i class="fa-solid fa-file-arrow-down"></i>
+                                                    </a>
+                                                }
+                                                <button class="btn btn-sm btn-primary" title="Aprobar pago"
+                                                        disabled="@approvingPaymentId.HasValue"
+                                                        @onclick="() => ApprovePayment(row.Payment!)">
+                                                    <i class="fa-solid fa-check"></i> Aprobar
+                                                </button>
+                                            }
+                                            @if (row.Pack is not null)
+                                            {
+                                                <button class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                        disabled="@saving"
+                                                        @onclick="() => OpenEditModal(row.Pack)">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </button>
+                                                <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                        disabled="@saving"
+                                                        @onclick="() => OpenDeleteConfirm(row.Pack)">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            }
+                                            @if (row.Status is "approved" && row.Pack is null)
+                                            {
+                                                <span style="color:var(--text-muted);font-size:0.78rem;">—</span>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
                         }
                     </tbody>
                 </table>
             </div>
-        }
+        </div>
     </div>
-</div>
+}
 
-@if (showForm)
+@* Modal crear/editar *@
+@if (showModal)
 {
-    <div class="modal-overlay" @onclick="CloseForm">
-        <div class="modal-card" @onclick:stopPropagation="true">
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:480px;">
             <div class="modal-header">
-                <h3>Nuevo Pack de Clases</h3>
-                <button class="btn-close" @onclick="CloseForm">&times;</button>
+                <h3 style="margin:0;font-size:1rem;">@(editingPack is not null ? "Editar Pack" : "Nuevo Pack")</h3>
             </div>
             <div class="modal-body">
-                @if (!string.IsNullOrEmpty(formError))
-                {
-                    <div class="form-error">@formError</div>
-                }
-
-                <div class="form-group">
-                    <label class="form-label">Usuario</label>
-                    <select class="form-input" @bind="formUserId">
-                        <option value="0">-- Seleccionar usuario --</option>
-                        @if (users is not null)
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    @if (editingPack is null)
+                    {
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Usuario</label>
+                            <select class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" @bind="formUserId">
+                                <option value="0">-- Seleccionar usuario --</option>
+                                @if (users is not null)
+                                {
+                                    @foreach (var user in users.Where(u => u.IsActive))
+                                    {
+                                        <option value="@user.Id">@($"{user.FirstName} {user.LastName}".Trim()) (@user.Username)</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Usuario</label>
+                            <input class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;background:#f8fafc;" value="@editingPack.UserName" disabled />
+                        </div>
+                    }
+                    <div style="display:flex;gap:0.75rem;">
+                        <div style="flex:1;">
+                            <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">
+                                @(editingPack is null ? "Cantidad de clases" : "Clases totales")
+                            </label>
+                            <input type="number" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" min="1" max="1000"
+                                   @bind="formTotalTokens" disabled="@(editingPack is not null)" />
+                        </div>
+                        @if (editingPack is not null)
                         {
-                            @foreach (var user in users.Where(u => u.IsActive))
-                            {
-                                <option value="@user.Id">@user.Username - @($"{user.FirstName} {user.LastName}".Trim()) (@user.Role)</option>
-                            }
+                            <div style="flex:1;">
+                                <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Clases restantes</label>
+                                <input type="number" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;" min="0" max="10000"
+                                       @bind="formRemainingTokens" />
+                            </div>
                         }
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Cantidad de clases</label>
-                    <input class="form-input" type="number" @bind="formTokens" min="1" max="100" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Descripcion (opcional)</label>
-                    <input class="form-input" @bind="formDescription" placeholder="Ej: Pack mensual marzo 2026" />
+                    </div>
+                    <div>
+                        <label style="font-size:0.8rem;font-weight:600;display:block;margin-bottom:0.25rem;">Descripcion</label>
+                        <input type="text" class="form-input" style="width:100%;padding:0.4rem 0.5rem;font-size:0.85rem;"
+                               placeholder="Ej: Pack mensual marzo 2026" @bind="formDescription" />
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
-                <button class="btn btn-primary" @onclick="CreatePack" disabled="@isSaving">
-                    @(isSaving ? "Creando..." : "Crear Pack")
+                <button class="btn btn-secondary btn-sm" @onclick="CloseModal" disabled="@saving">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-primary btn-sm" @onclick="SavePack" disabled="@saving">
+                    @if (saving) { @("Guardando...") } else { <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@("Guardar") }
                 </button>
             </div>
         </div>
     </div>
 }
 
-@if (showEditForm)
+@* Modal confirmar eliminacion *@
+@if (showDeleteConfirm)
 {
-    <div class="modal-overlay" @onclick="CloseEditForm">
-        <div class="modal-card" @onclick:stopPropagation="true">
+    <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:420px;">
             <div class="modal-header">
-                <h3>Editar Pack</h3>
-                <button class="btn-close" @onclick="CloseEditForm">&times;</button>
+                <h3 style="margin:0;font-size:1rem;color:var(--danger);">Eliminar Pack</h3>
             </div>
             <div class="modal-body">
-                @if (!string.IsNullOrEmpty(editFormError))
-                {
-                    <div class="form-error">@editFormError</div>
-                }
-
-                <div class="form-group">
-                    <label class="form-label">Usuario</label>
-                    <input class="form-input" value="@editPackUserName" disabled />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Clases restantes</label>
-                    <input class="form-input" type="number" @bind="editRemainingTokens" min="0" max="10000" />
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Descripcion</label>
-                    <input class="form-input" @bind="editDescription" placeholder="Descripcion del pack" />
-                </div>
+                <p style="font-size:0.9rem;">Estas seguro de eliminar el pack de <strong>@deletingPack?.UserName</strong>?</p>
+                <p style="font-size:0.8rem;color:var(--text-muted);">Este pack tiene @deletingPack?.RemainingTokens clases restantes de @deletingPack?.TotalTokens totales. Esta accion no se puede deshacer.</p>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" @onclick="CloseEditForm">Cancelar</button>
-                <button class="btn btn-primary" @onclick="SaveEdit" disabled="@isEditSaving">
-                    @(isEditSaving ? "Guardando..." : "Guardar")
+                <button class="btn btn-secondary btn-sm" @onclick="() => showDeleteConfirm = false" disabled="@saving">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-sm" style="background:var(--danger);color:white;" @onclick="DeletePack" disabled="@saving">
+                    <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>@(saving ? "Eliminando..." : "Eliminar")
                 </button>
             </div>
         </div>
@@ -155,23 +285,125 @@
 @code {
     private List<TokenPackDto>? packs;
     private List<UserManageDto>? users;
+    private List<AdminPaymentDto>? allPayments;
+    private int? approvingPaymentId;
     private bool isLoading = true;
-    private bool showForm;
-    private bool isSaving;
-    private string? formError;
+    private bool saving = false;
 
-    private int formUserId;
-    private int formTokens = 4;
+    // Filters
+    private int filterUserId = 0;
+    private string filterState = "";
+    private Dictionary<int, string> uniqueUsers = new();
+
+    // Modal
+    private bool showModal = false;
+    private TokenPackDto? editingPack;
+    private int formUserId = 0;
+    private int formTotalTokens = 4;
+    private int formRemainingTokens = 0;
     private string formDescription = "";
 
-    // Edit form
-    private bool showEditForm;
-    private bool isEditSaving;
-    private string? editFormError;
-    private int editPackId;
-    private string editPackUserName = "";
-    private int editRemainingTokens;
-    private string editDescription = "";
+    // Delete
+    private bool showDeleteConfirm = false;
+    private TokenPackDto? deletingPack;
+
+    // Unified row model
+    private class GridRow
+    {
+        public string UserName { get; set; } = "";
+        public string UserEmail { get; set; } = "";
+        public int UserId { get; set; }
+        public string Description { get; set; } = "";
+        public int Classes { get; set; }
+        public decimal Amount { get; set; }
+        public string? Currency { get; set; }
+        public string Status { get; set; } = "";
+        public string StatusLabel { get; set; } = "";
+        public string StatusClass { get; set; } = "";
+        public string ProviderLabel { get; set; } = "";
+        public string? ReceiptUrl { get; set; }
+        public DateTime Date { get; set; }
+        public AdminPaymentDto? Payment { get; set; }
+        public TokenPackDto? Pack { get; set; }
+    }
+
+    private List<GridRow> filteredRows
+    {
+        get
+        {
+            var rows = new List<GridRow>();
+
+            // Build a set of pack IDs that are linked to payments
+            var linkedPackIds = new HashSet<int>();
+            if (allPayments is not null)
+            {
+                foreach (var p in allPayments)
+                {
+                    if (p.TokenPackId.HasValue) linkedPackIds.Add(p.TokenPackId.Value);
+
+                    var pack = p.TokenPackId.HasValue
+                        ? packs?.FirstOrDefault(pk => pk.Id == p.TokenPackId.Value)
+                        : null;
+
+                    rows.Add(new GridRow
+                    {
+                        UserName = p.UserName,
+                        UserEmail = p.UserEmail,
+                        UserId = p.UserId,
+                        Description = p.PlanName + (p.Classes > 0 ? $" ({p.Classes} cl.)" : ""),
+                        Classes = pack?.TotalTokens ?? p.Classes,
+                        Amount = p.Amount,
+                        Currency = p.Currency,
+                        Status = p.Status,
+                        StatusLabel = GetStatusLabel(p.Status),
+                        StatusClass = GetStatusClass(p.Status),
+                        ProviderLabel = GetProviderLabel(p.PaymentProvider),
+                        ReceiptUrl = p.TransferReceiptUrl,
+                        Date = p.CreatedAt,
+                        Payment = p,
+                        Pack = pack
+                    });
+                }
+            }
+
+            // Add manually created packs (not linked to any payment)
+            if (packs is not null)
+            {
+                foreach (var pk in packs.Where(pk => !linkedPackIds.Contains(pk.Id)))
+                {
+                    rows.Add(new GridRow
+                    {
+                        UserName = pk.UserName,
+                        UserEmail = "",
+                        UserId = pk.UserId,
+                        Description = string.IsNullOrEmpty(pk.Description) ? "Pack manual" : pk.Description,
+                        Classes = pk.TotalTokens,
+                        Amount = 0,
+                        Currency = null,
+                        Status = "approved",
+                        StatusLabel = "Aprobado",
+                        StatusClass = "status-success",
+                        ProviderLabel = "Manual",
+                        Date = pk.CreatedAt,
+                        Pack = pk
+                    });
+                }
+            }
+
+            // Apply filters
+            var result = rows.AsEnumerable();
+            if (filterUserId > 0)
+                result = result.Where(r => r.UserId == filterUserId);
+            if (!string.IsNullOrEmpty(filterState))
+                result = result.Where(r => r.Status == filterState);
+
+            // Sort: pending_review first, then pending, then by date desc
+            return result
+                .OrderBy(r => r.Status switch { "pending_review" => 0, "pending" => 1, _ => 2 })
+                .ThenByDescending(r => r.Date)
+                .ToList();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -185,9 +417,29 @@
         {
             var packsTask = Api.GetAllTokenPacksAsync();
             var usersTask = Api.GetUsersAsync();
-            await Task.WhenAll(packsTask, usersTask);
+            var paymentsTask = Api.GetAllPaymentsAsync();
+            await Task.WhenAll(packsTask, usersTask, paymentsTask);
             packs = packsTask.Result;
             users = usersTask.Result;
+            allPayments = paymentsTask.Result;
+
+            uniqueUsers = new();
+            if (allPayments is not null)
+            {
+                foreach (var p in allPayments)
+                {
+                    if (!uniqueUsers.ContainsKey(p.UserId))
+                        uniqueUsers[p.UserId] = p.UserName;
+                }
+            }
+            if (packs is not null)
+            {
+                foreach (var p in packs)
+                {
+                    if (!uniqueUsers.ContainsKey(p.UserId))
+                        uniqueUsers[p.UserId] = p.UserName;
+                }
+            }
         }
         catch
         {
@@ -196,109 +448,195 @@
         isLoading = false;
     }
 
-    private void ShowCreateForm()
+    private string GetStatusLabel(string status) => status switch
     {
+        "pending" => "Pendiente",
+        "pending_review" => "Comprobante adjunto",
+        "approved" => "Aprobado",
+        "rejected" => "Rechazado",
+        "error" => "Error",
+        _ => status
+    };
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "pending" => "status-warning",
+        "pending_review" => "status-info",
+        "approved" => "status-success",
+        "rejected" or "error" => "status-danger",
+        _ => "status-muted"
+    };
+
+    private string GetProviderLabel(string? provider) => provider switch
+    {
+        "mercadopago" => "MercadoPago",
+        "paypal" => "PayPal",
+        "transferencia" => "Transferencia",
+        _ => provider ?? "—"
+    };
+
+    private void OnUserFilterChanged(ChangeEventArgs e)
+    {
+        filterUserId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+    }
+
+    private void OnStateFilterChanged(ChangeEventArgs e)
+    {
+        filterState = e.Value?.ToString() ?? "";
+    }
+
+    // Modal
+    private void OpenCreateModal()
+    {
+        editingPack = null;
         formUserId = 0;
-        formTokens = 4;
+        formTotalTokens = 4;
+        formRemainingTokens = 0;
         formDescription = "";
-        formError = null;
-        showForm = true;
+        showModal = true;
     }
 
-    private void CloseForm()
+    private void OpenEditModal(TokenPackDto pack)
     {
-        showForm = false;
-        formError = null;
+        editingPack = pack;
+        formUserId = pack.UserId;
+        formTotalTokens = pack.TotalTokens;
+        formRemainingTokens = pack.RemainingTokens;
+        formDescription = pack.Description ?? "";
+        showModal = true;
     }
 
-    private async Task CreatePack()
+    private void CloseModal() => showModal = false;
+
+    private async Task SavePack()
     {
-        formError = null;
-
-        if (formUserId == 0)
-        {
-            formError = "Selecciona un usuario";
-            return;
-        }
-
-        if (formTokens < 1)
-        {
-            formError = "La cantidad de clases debe ser al menos 1";
-            return;
-        }
-
-        isSaving = true;
+        saving = true;
+        StateHasChanged();
         try
         {
-            var request = new CreateTokenPackRequest
+            if (editingPack is not null)
             {
-                UserId = formUserId,
-                TotalTokens = formTokens,
-                Description = formDescription
-            };
-
-            var result = await Api.CreateTokenPackAsync(request);
-            if (result is not null)
-            {
-                ToastService.Success("Pack creado correctamente");
-                showForm = false;
-                await LoadData();
+                var result = await Api.UpdateTokenPackAsync(editingPack.Id, new
+                {
+                    RemainingTokens = formRemainingTokens,
+                    Description = formDescription
+                });
+                if (result is not null)
+                {
+                    await LoadData();
+                    showModal = false;
+                    ToastService.Success("Pack actualizado");
+                }
+                else
+                {
+                    ToastService.Error("Error al actualizar el pack");
+                }
             }
             else
             {
-                formError = "Error al crear el pack";
+                if (formUserId == 0)
+                {
+                    ToastService.Error("Selecciona un usuario");
+                    saving = false;
+                    return;
+                }
+                if (formTotalTokens < 1)
+                {
+                    ToastService.Error("La cantidad de clases debe ser al menos 1");
+                    saving = false;
+                    return;
+                }
+
+                var request = new CreateTokenPackRequest
+                {
+                    UserId = formUserId,
+                    TotalTokens = formTotalTokens,
+                    Description = formDescription
+                };
+                var result = await Api.CreateTokenPackAsync(request);
+                if (result is not null)
+                {
+                    await LoadData();
+                    showModal = false;
+                    ToastService.Success("Pack creado");
+                }
+                else
+                {
+                    ToastService.Error("Error al crear el pack");
+                }
             }
         }
         catch
         {
-            formError = "Error al crear el pack";
+            ToastService.Error("Error al guardar el pack");
         }
-        isSaving = false;
+        saving = false;
+        StateHasChanged();
     }
 
-    private void ShowEditForm(TokenPackDto pack)
+    // Delete
+    private void OpenDeleteConfirm(TokenPackDto pack)
     {
-        editPackId = pack.Id;
-        editPackUserName = pack.UserName;
-        editRemainingTokens = pack.RemainingTokens;
-        editDescription = pack.Description ?? "";
-        editFormError = null;
-        showEditForm = true;
+        deletingPack = pack;
+        showDeleteConfirm = true;
     }
 
-    private void CloseEditForm()
+    private async Task DeletePack()
     {
-        showEditForm = false;
-        editFormError = null;
-    }
-
-    private async Task SaveEdit()
-    {
-        editFormError = null;
-        isEditSaving = true;
+        if (deletingPack is null) return;
+        saving = true;
+        StateHasChanged();
         try
         {
-            var result = await Api.UpdateTokenPackAsync(editPackId, new
+            var success = await Api.DeleteTokenPackAsync(deletingPack.Id);
+            if (success)
             {
-                RemainingTokens = editRemainingTokens,
-                Description = editDescription
-            });
-
-            if (result is not null)
-            {
-                ToastService.Success("Pack actualizado correctamente");
-                showEditForm = false;
                 await LoadData();
+                showDeleteConfirm = false;
+                ToastService.Success("Pack eliminado");
             }
             else
             {
-                editFormError = "Error al actualizar el pack";
+                ToastService.Error("Error al eliminar el pack");
             }
         }
         catch
         {
-            editFormError = "Error al actualizar el pack";
+            ToastService.Error("Error al eliminar el pack");
         }
-        isEditSaving = false;
+        saving = false;
+        StateHasChanged();
+    }
+
+    // Payments
+    private async Task ApprovePayment(AdminPaymentDto payment)
+    {
+        approvingPaymentId = payment.Id;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.ApprovePaymentAsync(payment.Id);
+            if (success)
+            {
+                ToastService.Success($"Pago aprobado. Clases acreditadas a {payment.UserName}");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.Error("Error al aprobar el pago");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al aprobar el pago");
+        }
+        approvingPaymentId = null;
+        StateHasChanged();
+    }
+
+    private string FormatPrice(decimal price, bool usd = false)
+    {
+        if (usd) return price.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
+        return price.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-AR"));
     }
 }
