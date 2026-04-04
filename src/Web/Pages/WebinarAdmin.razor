@@ -114,7 +114,7 @@
                 </button>
                 <label class="btn btn-secondary btn-sm" style="cursor:pointer;margin:0;">
                     <i class="fa-solid fa-file-import" style="margin-right:0.3rem;"></i>Importar Excel
-                    <InputFile OnChange="ImportContacts" style="display:none;" accept=".csv,.xlsx,.xls" />
+                    <InputFile OnChange="ImportContacts" style="display:none;" accept=".xlsx" />
                 </label>
                 <button class="btn btn-primary btn-sm" @onclick="ShowContactForm">
                     <i class="fa-solid fa-user-plus" style="margin-right:0.3rem;"></i>Nuevo Contacto
@@ -737,24 +737,24 @@
     {
         if (contacts is null || contacts.Count == 0) return;
 
-        var csv = new System.Text.StringBuilder();
-        csv.AppendLine("Nombre y Apellido,Email,Telefono,Empresa,Inscripto,Fecha inscripcion");
-        foreach (var c in contacts.OrderByDescending(x => x.CreatedAt))
+        try
         {
-            var name = c.FullName.Replace("\"", "\"\"");
-            var email = c.Email;
-            var phone = c.Phone ?? "";
-            var company = (c.Company ?? "").Replace("\"", "\"\"");
-            var inscripto = c.HasRegistration ? "Si" : "No";
-            var fecha = c.WebinarDateDisplay ?? "";
-            csv.AppendLine($"\"{name}\",\"{email}\",\"{phone}\",\"{company}\",\"{inscripto}\",\"{fecha}\"");
+            var bytes = await Api.ExportWebinarContactsAsync();
+            if (bytes is null || bytes.Length == 0)
+            {
+                Toast.Error("Error al exportar contactos");
+                return;
+            }
+
+            var base64 = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("eval", $"{{ var a=document.createElement('a'); a.href='data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{base64}'; a.download='contactos_webinar.xlsx'; a.click(); }}");
+
+            Toast.Success("Contactos exportados");
         }
-
-        var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv.ToString())).ToArray();
-        var base64 = Convert.ToBase64String(bytes);
-        await JS.InvokeVoidAsync("eval", $"{{ var a=document.createElement('a'); a.href='data:text/csv;base64,{base64}'; a.download='contactos_webinar.csv'; a.click(); }}");
-
-        Toast.Success("Contactos exportados");
+        catch
+        {
+            Toast.Error("Error al exportar contactos");
+        }
     }
 
     private async Task ImportContacts(InputFileChangeEventArgs e)
@@ -771,34 +771,11 @@
         try
         {
             using var stream = file.OpenReadStream(2 * 1024 * 1024);
-            using var reader = new System.IO.StreamReader(stream);
-            var content = await reader.ReadToEndAsync();
+            using var ms = new System.IO.MemoryStream();
+            await stream.CopyToAsync(ms);
+            var fileBytes = ms.ToArray();
 
-            var lines = content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            var contactsToImport = new List<CreateWebinarContactRequest>();
-
-            // Skip header row
-            for (int i = 1; i < lines.Length; i++)
-            {
-                var fields = ParseCsvLine(lines[i]);
-                if (fields.Count < 2) continue;
-
-                contactsToImport.Add(new CreateWebinarContactRequest
-                {
-                    FullName = fields[0].Trim(),
-                    Email = fields[1].Trim(),
-                    Phone = fields.Count > 2 ? fields[2].Trim() : null,
-                    Company = fields.Count > 3 ? fields[3].Trim() : null
-                });
-            }
-
-            if (contactsToImport.Count == 0)
-            {
-                Toast.Error("No se encontraron contactos en el archivo. Formato esperado: Nombre,Email,Telefono,Empresa");
-                return;
-            }
-
-            var result = await Api.ImportWebinarContactsAsync(contactsToImport);
+            var result = await Api.ImportWebinarContactsFileAsync(fileBytes, file.Name);
             if (result is not null)
             {
                 Toast.Success(result.Message);
@@ -811,35 +788,8 @@
         }
         catch
         {
-            Toast.Error("Error al leer el archivo. Asegurate de que sea un CSV valido.");
+            Toast.Error("Error al leer el archivo. Asegurate de que sea un Excel valido (.xlsx)");
         }
-    }
-
-    private List<string> ParseCsvLine(string line)
-    {
-        var fields = new List<string>();
-        var current = new System.Text.StringBuilder();
-        bool inQuotes = false;
-
-        for (int i = 0; i < line.Length; i++)
-        {
-            var ch = line[i];
-            if (ch == '"')
-            {
-                inQuotes = !inQuotes;
-            }
-            else if (ch == ',' && !inQuotes)
-            {
-                fields.Add(current.ToString());
-                current.Clear();
-            }
-            else if (ch != '\r')
-            {
-                current.Append(ch);
-            }
-        }
-        fields.Add(current.ToString());
-        return fields;
     }
 
     private void ConfirmDeleteContact(WebinarContactDto c)

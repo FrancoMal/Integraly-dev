@@ -1,6 +1,7 @@
 using Api.Data;
 using Api.DTOs;
 using Api.Models;
+using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -161,44 +162,118 @@ public class WebinarController : ControllerBase
             });
     }
 
+    // GET /api/webinar/contacts/export
+    [HttpGet("contacts/export")]
+    public async Task<IActionResult> ExportContacts()
+    {
+        var contacts = await _db.WebinarContacts
+            .OrderByDescending(c => c.CreatedAt)
+            .ToListAsync();
+
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("Contactos");
+
+        // Headers
+        ws.Cell(1, 1).Value = "Nombre y Apellido";
+        ws.Cell(1, 2).Value = "Email";
+        ws.Cell(1, 3).Value = "Telefono";
+        ws.Cell(1, 4).Value = "Empresa";
+        ws.Cell(1, 5).Value = "Inscripto";
+        ws.Cell(1, 6).Value = "Fecha inscripcion";
+
+        var headerRange = ws.Range(1, 1, 1, 6);
+        headerRange.Style.Font.Bold = true;
+        headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+
+        var row = 2;
+        foreach (var c in contacts)
+        {
+            var hasReg = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == c.Id);
+            string? dateDisplay = null;
+            if (c.WebinarDateId != null)
+            {
+                var wd = await _db.WebinarDates.FindAsync(c.WebinarDateId);
+                if (wd != null) dateDisplay = wd.Date.ToString("dd/MM/yyyy HH:mm");
+            }
+
+            ws.Cell(row, 1).Value = c.FullName;
+            ws.Cell(row, 2).Value = c.Email;
+            ws.Cell(row, 3).Value = c.Phone ?? "";
+            ws.Cell(row, 4).Value = c.Company ?? "";
+            ws.Cell(row, 5).Value = hasReg ? "Si" : "No";
+            ws.Cell(row, 6).Value = dateDisplay ?? "";
+            row++;
+        }
+
+        ws.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        stream.Position = 0;
+
+        return File(stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "contactos_webinar.xlsx");
+    }
+
     // POST /api/webinar/contacts/import
     [HttpPost("contacts/import")]
-    public async Task<IActionResult> ImportContacts([FromBody] List<CreateWebinarContactRequest> requests)
+    [RequestSizeLimit(2 * 1024 * 1024)]
+    public async Task<IActionResult> ImportContacts(IFormFile file)
     {
-        if (requests is null || requests.Count == 0)
-            return BadRequest(new { message = "No se recibieron contactos" });
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "No se recibio un archivo" });
 
         var imported = 0;
         var skipped = 0;
 
-        foreach (var req in requests)
+        try
         {
-            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrWhiteSpace(req.FullName))
+            using var stream = file.OpenReadStream();
+            using var workbook = new XLWorkbook(stream);
+            var ws = workbook.Worksheet(1);
+
+            var lastRow = ws.LastRowUsed()?.RowNumber() ?? 0;
+
+            // Skip header row (row 1)
+            for (int r = 2; r <= lastRow; r++)
             {
-                skipped++;
-                continue;
+                var fullName = ws.Cell(r, 1).GetString().Trim();
+                var email = ws.Cell(r, 2).GetString().Trim();
+                var phone = ws.Cell(r, 3).GetString().Trim();
+                var company = ws.Cell(r, 4).GetString().Trim();
+
+                if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(fullName))
+                {
+                    skipped++;
+                    continue;
+                }
+
+                var exists = await _db.WebinarContacts.AnyAsync(c => c.Email == email);
+                if (exists)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                _db.WebinarContacts.Add(new WebinarContact
+                {
+                    FullName = fullName,
+                    Email = email,
+                    Phone = string.IsNullOrWhiteSpace(phone) ? null : phone,
+                    Company = string.IsNullOrWhiteSpace(company) ? null : company,
+                    UUID = Guid.NewGuid().ToString("N"),
+                    CreatedAt = DateTime.UtcNow
+                });
+                imported++;
             }
 
-            var exists = await _db.WebinarContacts.AnyAsync(c => c.Email == req.Email.Trim());
-            if (exists)
-            {
-                skipped++;
-                continue;
-            }
-
-            _db.WebinarContacts.Add(new WebinarContact
-            {
-                FullName = req.FullName.Trim(),
-                Email = req.Email.Trim(),
-                Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim(),
-                Company = string.IsNullOrWhiteSpace(req.Company) ? null : req.Company.Trim(),
-                UUID = Guid.NewGuid().ToString("N"),
-                CreatedAt = DateTime.UtcNow
-            });
-            imported++;
+            await _db.SaveChangesAsync();
         }
-
-        await _db.SaveChangesAsync();
+        catch
+        {
+            return BadRequest(new { message = "Error al leer el archivo. Asegurate de que sea un Excel valido (.xlsx)" });
+        }
 
         return Ok(new { imported, skipped, message = $"{imported} contactos importados, {skipped} omitidos" });
     }

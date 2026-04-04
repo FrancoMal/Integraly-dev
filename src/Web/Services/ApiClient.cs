@@ -391,9 +391,40 @@ public class ApiClient
         return await DeleteAsync($"/api/webinar/contacts/{id}");
     }
 
-    public async Task<ImportContactsResult?> ImportWebinarContactsAsync(List<CreateWebinarContactRequest> contacts)
+    public async Task<byte[]?> ExportWebinarContactsAsync()
     {
-        return await PostAsync<ImportContactsResult>("/api/webinar/contacts/import", contacts);
+        await SetAuthHeaderAsync();
+        var response = await _http.GetAsync("/api/webinar/contacts/export");
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await HandleUnauthorizedAsync();
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadAsByteArrayAsync();
+    }
+
+    public async Task<ImportContactsResult?> ImportWebinarContactsFileAsync(byte[] fileBytes, string fileName)
+    {
+        await SetAuthHeaderAsync();
+        using var content = new MultipartFormDataContent();
+        var fileContent = new ByteArrayContent(fileBytes);
+        fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        content.Add(fileContent, "file", fileName);
+
+        var response = await _http.PostAsync("/api/webinar/contacts/import", content);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await HandleUnauthorizedAsync();
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ImportContactsResult>();
     }
 
     public async Task<WebinarStatsDto?> GetWebinarStatsAsync()
