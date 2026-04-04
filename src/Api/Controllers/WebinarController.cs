@@ -16,11 +16,13 @@ public class WebinarController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly EmailService _email;
+    private readonly AuditLogService _audit;
 
-    public WebinarController(AppDbContext db, EmailService email)
+    public WebinarController(AppDbContext db, EmailService email, AuditLogService audit)
     {
         _db = db;
         _email = email;
+        _audit = audit;
     }
 
     // GET /api/webinar/dates
@@ -281,12 +283,33 @@ public class WebinarController : ControllerBase
                     .Replace("{{webinar}}", webinarDate.Name);
 
                 var sent = await _email.SendEmailAsync(contact.Email, subject, body);
-                if (sent) emailsSent++;
-                else emailsFailed++;
+                if (sent)
+                {
+                    emailsSent++;
+                    await _audit.LogAsync("WebinarInvite", contact.Id.ToString(), "email_sent",
+                        $"Email enviado a {contact.Email} para webinar '{webinarDate.Name}' ({webinarDate.Date:dd/MM/yyyy HH:mm}). Asunto: {subject}", "Sistema");
+                }
+                else
+                {
+                    emailsFailed++;
+                    await _audit.LogAsync("WebinarInvite", contact.Id.ToString(), "email_failed",
+                        $"Fallo envio de email a {contact.Email} para webinar '{webinarDate.Name}' ({webinarDate.Date:dd/MM/yyyy HH:mm}). Asunto: {subject}", "Sistema");
+                }
+            }
+
+            // Log WhatsApp pending
+            if (webinarDate.SendByWhatsapp)
+            {
+                await _audit.LogAsync("WebinarInvite", contact.Id.ToString(), "whatsapp_pending",
+                    $"WhatsApp pendiente para {contact.FullName} ({contact.Phone ?? "sin telefono"}) - webinar '{webinarDate.Name}'", "Sistema");
             }
         }
 
         await _db.SaveChangesAsync();
+
+        // Log general de la operacion
+        await _audit.LogAsync("WebinarInvite", webinarDate.Id.ToString(), "bulk_invite",
+            $"Invitacion masiva a webinar '{webinarDate.Name}': {assigned} asignados, {skipped} omitidos, {emailsSent} emails enviados, {emailsFailed} emails fallidos", "Sistema");
 
         var msg = $"{assigned} contactos asignados, {skipped} omitidos";
         if (webinarDate.SendByEmail)
