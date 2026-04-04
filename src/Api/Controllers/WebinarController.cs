@@ -148,21 +148,45 @@ public class WebinarController : ControllerBase
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
 
+        var allDates = await _db.WebinarDates.ToDictionaryAsync(d => d.Id, d => d.Name);
+
         var result = new List<WebinarContactDto>();
         foreach (var c in contacts)
         {
-            var hasReg = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == c.Id);
-            string? dateDisplay = null;
-            if (c.WebinarDateId != null)
-            {
-                var wd = await _db.WebinarDates.FindAsync(c.WebinarDateId);
-                if (wd != null) dateDisplay = wd.Date.ToString("dd/MM/yyyy HH:mm");
-            }
+            // Webinars donde se inscribio (WebinarRegistrations)
+            var registeredDateIds = await _db.WebinarRegistrations
+                .Where(r => r.ContactId == c.Id)
+                .Select(r => r.WebinarDateId)
+                .ToListAsync();
+            var registeredNames = registeredDateIds
+                .Where(id => allDates.ContainsKey(id))
+                .Select(id => allDates[id])
+                .Distinct().ToList();
+
+            // Webinars a los que fue invitado (audit logs)
+            var idStr = c.Id.ToString();
+            var inviteLogs = await _db.AuditLogs
+                .Where(a => a.EntityId == idStr && a.EntityType == "WebinarInvite" && a.Action == "email_sent" && a.Changes != null)
+                .Select(a => a.Changes!)
+                .ToListAsync();
+            var invitedNames = inviteLogs
+                .Select(ch =>
+                {
+                    var start = ch.IndexOf("para webinar '");
+                    if (start < 0) return null;
+                    start += 14;
+                    var end = ch.IndexOf("' (", start);
+                    return end > start ? ch.Substring(start, end - start) : null;
+                })
+                .Where(n => n != null)
+                .Distinct().ToList()!;
+
             result.Add(new WebinarContactDto
             {
                 Id = c.Id, Email = c.Email, FullName = c.FullName,
-                Phone = c.Phone, Company = c.Company, Tag = c.Tag, UUID = c.UUID, WebinarDateId = c.WebinarDateId,
-                WebinarDateDisplay = dateDisplay, HasRegistration = hasReg, CreatedAt = c.CreatedAt
+                Phone = c.Phone, Company = c.Company, Tag = c.Tag, UUID = c.UUID,
+                InvitedWebinarNames = invitedNames!, RegisteredWebinarNames = registeredNames,
+                CreatedAt = c.CreatedAt
             });
         }
 
@@ -195,7 +219,7 @@ public class WebinarController : ControllerBase
             {
                 Id = contact.Id, Email = contact.Email, FullName = contact.FullName,
                 Phone = contact.Phone, Company = contact.Company, Tag = contact.Tag, UUID = contact.UUID,
-                HasRegistration = false, CreatedAt = contact.CreatedAt
+                CreatedAt = contact.CreatedAt
             });
     }
 
@@ -236,20 +260,11 @@ public class WebinarController : ControllerBase
             await _audit.LogAsync("WebinarContact", contact.Id.ToString(), "update",
                 $"Contacto editado: {contact.FullName}. Cambios: {string.Join(", ", changes)}", "Sistema");
 
-        var hasReg = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == contact.Id);
-        string? dateDisplay = null;
-        if (contact.WebinarDateId != null)
-        {
-            var wd = await _db.WebinarDates.FindAsync(contact.WebinarDateId);
-            if (wd != null) dateDisplay = wd.Date.ToString("dd/MM/yyyy HH:mm");
-        }
-
         return Ok(new WebinarContactDto
         {
             Id = contact.Id, Email = contact.Email, FullName = contact.FullName,
             Phone = contact.Phone, Company = contact.Company, Tag = contact.Tag, UUID = contact.UUID,
-            WebinarDateId = contact.WebinarDateId, WebinarDateDisplay = dateDisplay,
-            HasRegistration = hasReg, CreatedAt = contact.CreatedAt
+            CreatedAt = contact.CreatedAt
         });
     }
 
@@ -346,6 +361,8 @@ public class WebinarController : ControllerBase
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add("Contactos");
 
+        var allDates = await _db.WebinarDates.ToDictionaryAsync(d => d.Id, d => d.Name);
+
         // Headers
         ws.Cell(1, 1).Value = "ID";
         ws.Cell(1, 2).Value = "Nombre y Apellido";
@@ -354,8 +371,8 @@ public class WebinarController : ControllerBase
         ws.Cell(1, 5).Value = "Empresa";
         ws.Cell(1, 6).Value = "Tag";
         ws.Cell(1, 7).Value = "Link";
-        ws.Cell(1, 8).Value = "Inscripto";
-        ws.Cell(1, 9).Value = "Fecha inscripcion";
+        ws.Cell(1, 8).Value = "Invitado a";
+        ws.Cell(1, 9).Value = "Inscripto en";
 
         var headerRange = ws.Range(1, 1, 1, 9);
         headerRange.Style.Font.Bold = true;
@@ -364,13 +381,21 @@ public class WebinarController : ControllerBase
         var row = 2;
         foreach (var c in contacts)
         {
-            var hasReg = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == c.Id);
-            string? dateDisplay = null;
-            if (c.WebinarDateId != null)
+            // Registered webinars
+            var regDateIds = await _db.WebinarRegistrations
+                .Where(r => r.ContactId == c.Id).Select(r => r.WebinarDateId).ToListAsync();
+            var regNames = regDateIds.Where(id => allDates.ContainsKey(id)).Select(id => allDates[id]).Distinct().ToList();
+
+            // Invited webinars (from audit)
+            var idStr = c.Id.ToString();
+            var invLogs = await _db.AuditLogs
+                .Where(a => a.EntityId == idStr && a.EntityType == "WebinarInvite" && a.Action == "email_sent" && a.Changes != null)
+                .Select(a => a.Changes!).ToListAsync();
+            var invNames = invLogs.Select(ch =>
             {
-                var wd = await _db.WebinarDates.FindAsync(c.WebinarDateId);
-                if (wd != null) dateDisplay = wd.Date.ToString("dd/MM/yyyy HH:mm");
-            }
+                var s = ch.IndexOf("para webinar '"); if (s < 0) return null; s += 14;
+                var e = ch.IndexOf("' (", s); return e > s ? ch.Substring(s, e - s) : null;
+            }).Where(n => n != null).Distinct().ToList();
 
             ws.Cell(row, 1).Value = c.Id;
             ws.Cell(row, 2).Value = c.FullName;
@@ -379,8 +404,8 @@ public class WebinarController : ControllerBase
             ws.Cell(row, 5).Value = c.Company ?? "";
             ws.Cell(row, 6).Value = c.Tag ?? "";
             ws.Cell(row, 7).Value = $"{baseUrl}/webinar/{c.UUID}";
-            ws.Cell(row, 8).Value = hasReg ? "Si" : "No";
-            ws.Cell(row, 9).Value = dateDisplay ?? "";
+            ws.Cell(row, 8).Value = invNames.Count > 0 ? string.Join(", ", invNames) : "";
+            ws.Cell(row, 9).Value = regNames.Count > 0 ? string.Join(", ", regNames) : "";
             row++;
         }
 

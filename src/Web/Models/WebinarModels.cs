@@ -34,9 +34,8 @@ public class WebinarContactDto
     public string? Company { get; set; }
     public string? Tag { get; set; }
     public string UUID { get; set; } = "";
-    public int? WebinarDateId { get; set; }
-    public string? WebinarDateDisplay { get; set; }
-    public bool HasRegistration { get; set; }
+    public List<string> InvitedWebinarNames { get; set; } = new();
+    public List<string> RegisteredWebinarNames { get; set; } = new();
     public DateTime CreatedAt { get; set; }
 }
 

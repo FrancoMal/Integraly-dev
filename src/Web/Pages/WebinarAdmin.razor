@@ -179,8 +179,8 @@
                                 <th>Telefono</th>
                                 <th>Empresa</th>
                                 <th>Tag</th>
+                                <th style="text-align:center;">Invitado</th>
                                 <th style="text-align:center;">Inscripto</th>
-                                <th>Fecha inscripcion</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -206,23 +206,23 @@
                                         }
                                     </td>
                                     <td style="text-align:center;">
-                                        @if (c.HasRegistration)
+                                        @if (c.InvitedWebinarNames.Count > 0)
                                         {
-                                            <span class="status-badge status-active">Si</span>
+                                            <span class="status-badge status-active" title="@string.Join("&#10;", c.InvitedWebinarNames)" style="cursor:help;">Si (@c.InvitedWebinarNames.Count)</span>
                                         }
                                         else
                                         {
                                             <span class="status-badge status-inactive">No</span>
                                         }
                                     </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(c.WebinarDateDisplay))
+                                    <td style="text-align:center;">
+                                        @if (c.RegisteredWebinarNames.Count > 0)
                                         {
-                                            @c.WebinarDateDisplay
+                                            <span class="status-badge status-active" title="@string.Join("&#10;", c.RegisteredWebinarNames)" style="cursor:help;">Si (@c.RegisteredWebinarNames.Count)</span>
                                         }
                                         else
                                         {
-                                            <span class="text-muted">-</span>
+                                            <span class="status-badge status-inactive">No</span>
                                         }
                                     </td>
                                     <td>
@@ -745,8 +745,8 @@ Variables disponibles: {{nombre}}, {{email}}, {{link}}, {{webinar}}, {{fecha}}">
     private List<WebinarContactDto>? filteredContacts => contacts?
         .Where(c => string.IsNullOrEmpty(filterTag) || c.Tag == filterTag)
         .Where(c => string.IsNullOrEmpty(filterInscripto)
-            || (filterInscripto == "si" && c.HasRegistration)
-            || (filterInscripto == "no" && !c.HasRegistration))
+            || (filterInscripto == "si" && c.RegisteredWebinarNames.Count > 0)
+            || (filterInscripto == "no" && c.RegisteredWebinarNames.Count == 0))
         .OrderByDescending(c => c.CreatedAt)
         .ToList();
 
