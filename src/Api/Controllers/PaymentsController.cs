@@ -543,15 +543,42 @@ public class PaymentsController : ControllerBase
                 p.Id,
                 planName = p.PaymentPlan != null ? p.PaymentPlan.Name : "",
                 classes = p.PaymentPlan != null ? p.PaymentPlan.Classes : 0,
+                planId = p.PaymentPlanId,
                 p.Amount,
                 p.Currency,
                 p.Status,
+                p.PaymentProvider,
                 p.CreatedAt,
                 p.ApprovedAt
             })
             .ToListAsync();
 
         return Ok(payments);
+    }
+
+    /// <summary>
+    /// Delete a pending payment (user can only delete their own pending payments)
+    /// </summary>
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeletePayment(int id)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(p => p.Id == id && p.UserId == userId.Value);
+        if (payment is null) return NotFound(new { message = "Pago no encontrado" });
+
+        if (payment.Status == "approved")
+            return BadRequest(new { message = "No se puede eliminar un pago aprobado" });
+
+        _db.Payments.Remove(payment);
+        await _db.SaveChangesAsync();
+
+        await _auditLogService.LogAsync("Payment", id.ToString(), "delete",
+            $"User deleted pending payment", GetUsername());
+
+        return Ok(new { message = "Pago eliminado" });
     }
 
     /// <summary>

@@ -442,6 +442,9 @@ public class ApiClient
     public async Task<bool> DeletePaymentPlanAsync(int id)
         => await DeleteAsync($"/api/payments/plans/{id}");
 
+    public async Task<bool> DeletePaymentAsync(int id)
+        => await DeleteAsync($"/api/payments/{id}");
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {

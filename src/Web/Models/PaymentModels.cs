@@ -26,8 +26,11 @@ public class PaymentDto
     public int Id { get; set; }
     public string PlanName { get; set; } = string.Empty;
     public int Classes { get; set; }
+    public int PlanId { get; set; }
     public decimal Amount { get; set; }
+    public string? Currency { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? PaymentProvider { get; set; }
     public DateTime CreatedAt { get; set; }
 }
 

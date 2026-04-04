@@ -80,25 +80,72 @@ else
                                 <th style="text-align:right;">Monto</th>
                                 <th style="text-align:center;">Estado</th>
                                 <th>Fecha</th>
+                                <th style="text-align:center;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var payment in payments)
                             {
+                                var isPending = payment.Status?.ToLower() is "pending" or "pendiente";
+                                var currencySymbol = payment.Currency == "USD" ? "US$" : "$";
+                                var isUsd = payment.Currency == "USD";
                                 <tr>
                                     <td><strong>@payment.PlanName</strong></td>
                                     <td style="text-align:center;">@payment.Classes</td>
-                                    <td style="text-align:right;">$@FormatPrice(payment.Amount, false)</td>
+                                    <td style="text-align:right;">@currencySymbol@FormatPrice(payment.Amount, isUsd)</td>
                                     <td style="text-align:center;">
                                         <span class="status-badge @GetStatusClass(payment.Status)">
                                             @GetStatusLabel(payment.Status)
                                         </span>
                                     </td>
                                     <td>@payment.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td style="text-align:center;">
+                                        @if (isPending)
+                                        {
+                                            <div style="display:flex;gap:0.4rem;justify-content:center;">
+                                                <button class="btn btn-sm btn-primary" title="Reintentar pago"
+                                                        disabled="@(processingPlanId is not null)"
+                                                        @onclick="() => RetryPayment(payment)">
+                                                    <i class="fa-solid fa-rotate-right"></i> Pagar
+                                                </button>
+                                                <button class="btn btn-sm btn-danger" title="Eliminar"
+                                                        disabled="@(deletingPaymentId == payment.Id)"
+                                                        @onclick="() => ConfirmDeletePayment(payment)">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--text-muted);">—</span>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         </tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showDeleteConfirm && paymentToDelete is not null)
+    {
+        <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
+            <div class="modal-card modal-small" @onclick:stopPropagation="true">
+                <div class="modal-header">
+                    <h3>Eliminar pago pendiente</h3>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estas seguro que queres eliminar el pago pendiente de <strong>@paymentToDelete.PlanName</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showDeleteConfirm = false">
+                        <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                    </button>
+                    <button class="btn btn-danger" disabled="@(deletingPaymentId is not null)" @onclick="DeletePayment">
+                        <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>@(deletingPaymentId is not null ? "Eliminando..." : "Eliminar")
+                    </button>
                 </div>
             </div>
         </div>
@@ -112,6 +159,9 @@ else
     private int? processingPlanId;
     private bool isPayPal;
     private string detectedProvider = "mercadopago";
+    private bool showDeleteConfirm;
+    private PaymentDto? paymentToDelete;
+    private int? deletingPaymentId;
 
     [SupplyParameterFromQuery(Name = "U")]
     public string? CountryOverride { get; set; }
@@ -197,4 +247,73 @@ else
         "rejected" or "rechazado" => "Rechazado",
         _ => status ?? "—"
     };
+
+    private async Task RetryPayment(PaymentDto payment)
+    {
+        var provider = payment.PaymentProvider ?? detectedProvider;
+        processingPlanId = payment.PlanId;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Api.CreatePaymentAsync(payment.PlanId, provider);
+            if (result is not null && !string.IsNullOrEmpty(result.CheckoutUrl))
+            {
+                await JS.InvokeVoidAsync("eval", $"window.location.href = '{result.CheckoutUrl}'");
+                return;
+            }
+            else
+            {
+                ToastService.Error("No se pudo crear el pago. Intenta de nuevo.");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al procesar el pago. Intenta de nuevo.");
+        }
+        finally
+        {
+            processingPlanId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmDeletePayment(PaymentDto payment)
+    {
+        paymentToDelete = payment;
+        showDeleteConfirm = true;
+    }
+
+    private async Task DeletePayment()
+    {
+        if (paymentToDelete is null) return;
+
+        deletingPaymentId = paymentToDelete.Id;
+        StateHasChanged();
+
+        try
+        {
+            var success = await Api.DeletePaymentAsync(paymentToDelete.Id);
+            if (success)
+            {
+                payments?.RemoveAll(p => p.Id == paymentToDelete.Id);
+                ToastService.Success("Pago pendiente eliminado");
+            }
+            else
+            {
+                ToastService.Error("No se pudo eliminar el pago");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al eliminar el pago");
+        }
+        finally
+        {
+            deletingPaymentId = null;
+            showDeleteConfirm = false;
+            paymentToDelete = null;
+            StateHasChanged();
+        }
+    }
 }
