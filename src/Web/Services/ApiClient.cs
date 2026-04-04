@@ -581,6 +581,54 @@ public class ApiClient
         catch { return null; }
     }
 
+    public async Task<BackupDto?> UploadBackupAsync(Stream fileStream, string fileName)
+    {
+        await SetAuthHeaderAsync();
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            using var streamContent = new StreamContent(fileStream);
+            content.Add(streamContent, "file", fileName);
+            var response = await _http.PostAsync("/api/backup/upload", content);
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                return System.Text.Json.JsonSerializer.Deserialize<BackupDto>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                await HandleUnauthorizedAsync();
+            return null;
+        }
+        catch { return null; }
+    }
+
+    public async Task<BackupInfoDto?> GetBackupInfoAsync(int id)
+    {
+        return await GetAsync<BackupInfoDto>($"/api/backup/{id}/info");
+    }
+
+    public async Task<(bool Success, string Message)> RestoreBackupAsync(int id)
+    {
+        await SetAuthHeaderAsync();
+        try
+        {
+            var response = await _http.PostAsync($"/api/backup/{id}/restore", null);
+            var json = await response.Content.ReadAsStringAsync();
+            if (response.IsSuccessStatusCode)
+            {
+                return (true, "Base de datos restaurada correctamente");
+            }
+            // Try to parse error message
+            try
+            {
+                var error = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                return (false, error?.GetValueOrDefault("error") ?? "Error desconocido");
+            }
+            catch { return (false, "Error al restaurar la base de datos"); }
+        }
+        catch (Exception ex) { return (false, $"Error: {ex.Message}"); }
+    }
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {
