@@ -166,6 +166,7 @@ public class WebinarController : ControllerBase
     [HttpGet("contacts/export")]
     public async Task<IActionResult> ExportContacts()
     {
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
         var contacts = await _db.WebinarContacts
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
@@ -174,14 +175,16 @@ public class WebinarController : ControllerBase
         var ws = workbook.Worksheets.Add("Contactos");
 
         // Headers
-        ws.Cell(1, 1).Value = "Nombre y Apellido";
-        ws.Cell(1, 2).Value = "Email";
-        ws.Cell(1, 3).Value = "Telefono";
-        ws.Cell(1, 4).Value = "Empresa";
-        ws.Cell(1, 5).Value = "Inscripto";
-        ws.Cell(1, 6).Value = "Fecha inscripcion";
+        ws.Cell(1, 1).Value = "ID";
+        ws.Cell(1, 2).Value = "Nombre y Apellido";
+        ws.Cell(1, 3).Value = "Email";
+        ws.Cell(1, 4).Value = "Telefono";
+        ws.Cell(1, 5).Value = "Empresa";
+        ws.Cell(1, 6).Value = "Link";
+        ws.Cell(1, 7).Value = "Inscripto";
+        ws.Cell(1, 8).Value = "Fecha inscripcion";
 
-        var headerRange = ws.Range(1, 1, 1, 6);
+        var headerRange = ws.Range(1, 1, 1, 8);
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
 
@@ -196,12 +199,14 @@ public class WebinarController : ControllerBase
                 if (wd != null) dateDisplay = wd.Date.ToString("dd/MM/yyyy HH:mm");
             }
 
-            ws.Cell(row, 1).Value = c.FullName;
-            ws.Cell(row, 2).Value = c.Email;
-            ws.Cell(row, 3).Value = c.Phone ?? "";
-            ws.Cell(row, 4).Value = c.Company ?? "";
-            ws.Cell(row, 5).Value = hasReg ? "Si" : "No";
-            ws.Cell(row, 6).Value = dateDisplay ?? "";
+            ws.Cell(row, 1).Value = c.Id;
+            ws.Cell(row, 2).Value = c.FullName;
+            ws.Cell(row, 3).Value = c.Email;
+            ws.Cell(row, 4).Value = c.Phone ?? "";
+            ws.Cell(row, 5).Value = c.Company ?? "";
+            ws.Cell(row, 6).Value = $"{baseUrl}/webinar/{c.UUID}";
+            ws.Cell(row, 7).Value = hasReg ? "Si" : "No";
+            ws.Cell(row, 8).Value = dateDisplay ?? "";
             row++;
         }
 
@@ -225,6 +230,7 @@ public class WebinarController : ControllerBase
             return BadRequest(new { message = "No se recibio un archivo" });
 
         var imported = 0;
+        var updated = 0;
         var skipped = 0;
 
         try
@@ -238,10 +244,11 @@ public class WebinarController : ControllerBase
             // Skip header row (row 1)
             for (int r = 2; r <= lastRow; r++)
             {
-                var fullName = ws.Cell(r, 1).GetString().Trim();
-                var email = ws.Cell(r, 2).GetString().Trim();
-                var phone = ws.Cell(r, 3).GetString().Trim();
-                var company = ws.Cell(r, 4).GetString().Trim();
+                var idStr = ws.Cell(r, 1).GetString().Trim();
+                var fullName = ws.Cell(r, 2).GetString().Trim();
+                var email = ws.Cell(r, 3).GetString().Trim();
+                var phone = ws.Cell(r, 4).GetString().Trim();
+                var company = ws.Cell(r, 5).GetString().Trim();
 
                 if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(fullName))
                 {
@@ -249,8 +256,24 @@ public class WebinarController : ControllerBase
                     continue;
                 }
 
-                var exists = await _db.WebinarContacts.AnyAsync(c => c.Email == email);
-                if (exists)
+                // Si viene un ID, buscar contacto existente para actualizar
+                if (int.TryParse(idStr, out var id) && id > 0)
+                {
+                    var existing = await _db.WebinarContacts.FindAsync(id);
+                    if (existing != null)
+                    {
+                        existing.FullName = fullName;
+                        existing.Email = email;
+                        existing.Phone = string.IsNullOrWhiteSpace(phone) ? null : phone;
+                        existing.Company = string.IsNullOrWhiteSpace(company) ? null : company;
+                        updated++;
+                        continue;
+                    }
+                }
+
+                // Sin ID o ID no encontrado: verificar duplicado por email
+                var existsByEmail = await _db.WebinarContacts.AnyAsync(c => c.Email == email);
+                if (existsByEmail)
                 {
                     skipped++;
                     continue;
@@ -275,7 +298,7 @@ public class WebinarController : ControllerBase
             return BadRequest(new { message = "Error al leer el archivo. Asegurate de que sea un Excel valido (.xlsx)" });
         }
 
-        return Ok(new { imported, skipped, message = $"{imported} contactos importados, {skipped} omitidos" });
+        return Ok(new { imported, updated, skipped, message = $"{imported} importados, {updated} actualizados, {skipped} omitidos" });
     }
 
     // DELETE /api/webinar/contacts/{id}
