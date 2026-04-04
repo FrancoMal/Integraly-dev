@@ -140,9 +140,8 @@
                                 <th>Email</th>
                                 <th>Telefono</th>
                                 <th>Empresa</th>
-                                <th>Inscripto</th>
+                                <th style="text-align:center;">Inscripto</th>
                                 <th>Fecha inscripcion</th>
-                                <th>Link</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -154,7 +153,7 @@
                                     <td>@c.Email</td>
                                     <td>@(!string.IsNullOrEmpty(c.Phone) ? c.Phone : "-")</td>
                                     <td>@(!string.IsNullOrEmpty(c.Company) ? c.Company : "-")</td>
-                                    <td>
+                                    <td style="text-align:center;">
                                         @if (c.HasRegistration)
                                         {
                                             <span class="status-badge status-active">Si</span>
@@ -174,15 +173,15 @@
                                             <span class="text-muted">-</span>
                                         }
                                     </td>
-                                    <td class="actions-cell">
-                                        <button class="btn btn-sm btn-secondary" @onclick="() => CopyContactLink(c.UUID)" title="Copiar link">
-                                            <i class="fa-solid fa-copy" style="margin-right:0.3rem;"></i>Copiar
-                                        </button>
-                                    </td>
-                                    <td class="actions-cell">
-                                        <button class="btn-icon btn-delete" @onclick="() => ConfirmDeleteContact(c)" title="Eliminar">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                    <td>
+                                        <div style="display:flex;gap:0.4rem;align-items:center;">
+                                            <button class="btn btn-sm btn-secondary" @onclick="() => CopyContactLink(c.UUID)" title="Copiar link">
+                                                <i class="fa-solid fa-copy"></i> Link
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDeleteContact(c)" title="Eliminar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
