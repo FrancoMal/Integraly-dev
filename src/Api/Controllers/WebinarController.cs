@@ -130,7 +130,7 @@ public class WebinarController : ControllerBase
             result.Add(new WebinarContactDto
             {
                 Id = c.Id, Email = c.Email, FullName = c.FullName,
-                Phone = c.Phone, Company = c.Company, UUID = c.UUID, WebinarDateId = c.WebinarDateId,
+                Phone = c.Phone, Company = c.Company, Tag = c.Tag, UUID = c.UUID, WebinarDateId = c.WebinarDateId,
                 WebinarDateDisplay = dateDisplay, HasRegistration = hasReg, CreatedAt = c.CreatedAt
             });
         }
@@ -148,6 +148,7 @@ public class WebinarController : ControllerBase
             Email = request.Email,
             Phone = request.Phone,
             Company = request.Company,
+            Tag = string.IsNullOrWhiteSpace(request.Tag) ? null : request.Tag.Trim(),
             UUID = Guid.NewGuid().ToString("N"),
             CreatedAt = DateTime.UtcNow
         };
@@ -159,9 +160,83 @@ public class WebinarController : ControllerBase
             new WebinarContactDto
             {
                 Id = contact.Id, Email = contact.Email, FullName = contact.FullName,
-                Phone = contact.Phone, Company = contact.Company, UUID = contact.UUID,
+                Phone = contact.Phone, Company = contact.Company, Tag = contact.Tag, UUID = contact.UUID,
                 HasRegistration = false, CreatedAt = contact.CreatedAt
             });
+    }
+
+    // PUT /api/webinar/contacts/{id}
+    [HttpPut("contacts/{id}")]
+    public async Task<IActionResult> UpdateContact(int id, [FromBody] UpdateWebinarContactRequest request)
+    {
+        var contact = await _db.WebinarContacts.FindAsync(id);
+        if (contact is null) return NotFound();
+
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FullName))
+            return BadRequest(new { message = "Email y nombre son obligatorios" });
+
+        // Check email uniqueness if changed
+        if (contact.Email != request.Email.Trim())
+        {
+            var emailExists = await _db.WebinarContacts.AnyAsync(c => c.Email == request.Email.Trim() && c.Id != id);
+            if (emailExists)
+                return BadRequest(new { message = "Ya existe un contacto con ese email" });
+        }
+
+        contact.FullName = request.FullName.Trim();
+        contact.Email = request.Email.Trim();
+        contact.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
+        contact.Company = string.IsNullOrWhiteSpace(request.Company) ? null : request.Company.Trim();
+        contact.Tag = string.IsNullOrWhiteSpace(request.Tag) ? null : request.Tag.Trim();
+
+        await _db.SaveChangesAsync();
+
+        var hasReg = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == contact.Id);
+        string? dateDisplay = null;
+        if (contact.WebinarDateId != null)
+        {
+            var wd = await _db.WebinarDates.FindAsync(contact.WebinarDateId);
+            if (wd != null) dateDisplay = wd.Date.ToString("dd/MM/yyyy HH:mm");
+        }
+
+        return Ok(new WebinarContactDto
+        {
+            Id = contact.Id, Email = contact.Email, FullName = contact.FullName,
+            Phone = contact.Phone, Company = contact.Company, Tag = contact.Tag, UUID = contact.UUID,
+            WebinarDateId = contact.WebinarDateId, WebinarDateDisplay = dateDisplay,
+            HasRegistration = hasReg, CreatedAt = contact.CreatedAt
+        });
+    }
+
+    // POST /api/webinar/contacts/assign
+    [HttpPost("contacts/assign")]
+    public async Task<IActionResult> AssignContacts([FromBody] AssignWebinarRequest request)
+    {
+        if (request.ContactIds is null || request.ContactIds.Count == 0)
+            return BadRequest(new { message = "No se seleccionaron contactos" });
+
+        var dateExists = await _db.WebinarDates.AnyAsync(d => d.Id == request.WebinarDateId);
+        if (!dateExists)
+            return BadRequest(new { message = "Fecha de webinar no valida" });
+
+        var assigned = 0;
+        var skipped = 0;
+
+        foreach (var contactId in request.ContactIds)
+        {
+            var contact = await _db.WebinarContacts.FindAsync(contactId);
+            if (contact is null) { skipped++; continue; }
+
+            var alreadyRegistered = await _db.WebinarRegistrations.AnyAsync(r => r.ContactId == contactId);
+            if (alreadyRegistered) { skipped++; continue; }
+
+            contact.WebinarDateId = request.WebinarDateId;
+            assigned++;
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { assigned, skipped, message = $"{assigned} contactos asignados al webinar, {skipped} omitidos" });
     }
 
     // GET /api/webinar/contacts/export
@@ -182,11 +257,12 @@ public class WebinarController : ControllerBase
         ws.Cell(1, 3).Value = "Email";
         ws.Cell(1, 4).Value = "Telefono";
         ws.Cell(1, 5).Value = "Empresa";
-        ws.Cell(1, 6).Value = "Link";
-        ws.Cell(1, 7).Value = "Inscripto";
-        ws.Cell(1, 8).Value = "Fecha inscripcion";
+        ws.Cell(1, 6).Value = "Tag";
+        ws.Cell(1, 7).Value = "Link";
+        ws.Cell(1, 8).Value = "Inscripto";
+        ws.Cell(1, 9).Value = "Fecha inscripcion";
 
-        var headerRange = ws.Range(1, 1, 1, 8);
+        var headerRange = ws.Range(1, 1, 1, 9);
         headerRange.Style.Font.Bold = true;
         headerRange.Style.Fill.BackgroundColor = XLColor.LightGray;
 
@@ -206,9 +282,10 @@ public class WebinarController : ControllerBase
             ws.Cell(row, 3).Value = c.Email;
             ws.Cell(row, 4).Value = c.Phone ?? "";
             ws.Cell(row, 5).Value = c.Company ?? "";
-            ws.Cell(row, 6).Value = $"{baseUrl}/webinar/{c.UUID}";
-            ws.Cell(row, 7).Value = hasReg ? "Si" : "No";
-            ws.Cell(row, 8).Value = dateDisplay ?? "";
+            ws.Cell(row, 6).Value = c.Tag ?? "";
+            ws.Cell(row, 7).Value = $"{baseUrl}/webinar/{c.UUID}";
+            ws.Cell(row, 8).Value = hasReg ? "Si" : "No";
+            ws.Cell(row, 9).Value = dateDisplay ?? "";
             row++;
         }
 
@@ -251,6 +328,7 @@ public class WebinarController : ControllerBase
                 var email = ws.Cell(r, 3).GetString().Trim();
                 var phone = ws.Cell(r, 4).GetString().Trim();
                 var company = ws.Cell(r, 5).GetString().Trim();
+                var tag = ws.Cell(r, 6).GetString().Trim();
 
                 if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(fullName))
                 {
@@ -268,6 +346,7 @@ public class WebinarController : ControllerBase
                         existing.Email = email;
                         existing.Phone = string.IsNullOrWhiteSpace(phone) ? null : phone;
                         existing.Company = string.IsNullOrWhiteSpace(company) ? null : company;
+                        existing.Tag = string.IsNullOrWhiteSpace(tag) ? null : tag;
                         updated++;
                         continue;
                     }
@@ -287,6 +366,7 @@ public class WebinarController : ControllerBase
                     Email = email,
                     Phone = string.IsNullOrWhiteSpace(phone) ? null : phone,
                     Company = string.IsNullOrWhiteSpace(company) ? null : company,
+                    Tag = string.IsNullOrWhiteSpace(tag) ? null : tag,
                     UUID = Guid.NewGuid().ToString("N"),
                     CreatedAt = DateTime.UtcNow
                 });

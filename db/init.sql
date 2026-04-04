@@ -427,6 +427,7 @@ BEGIN
         FullName NVARCHAR(200) NOT NULL,
         Phone NVARCHAR(50) NULL,
         Company NVARCHAR(200) NULL,
+        Tag NVARCHAR(100) NULL,
         UUID NVARCHAR(100) NOT NULL UNIQUE,
         WebinarDateId INT NULL,
         CreatedAt DATETIME2 DEFAULT GETDATE(),
@@ -450,6 +451,13 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'Company')
 BEGIN
     ALTER TABLE WebinarContacts ADD Company NVARCHAR(200) NULL;
+END
+GO
+
+-- Add Tag column to WebinarContacts if it doesn't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarContacts') AND name = 'Tag')
+BEGIN
+    ALTER TABLE WebinarContacts ADD Tag NVARCHAR(100) NULL;
 END
 GO
 

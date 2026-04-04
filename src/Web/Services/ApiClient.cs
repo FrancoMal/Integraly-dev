@@ -386,9 +386,19 @@ public class ApiClient
         return await PostAsync<WebinarContactDto>("/api/webinar/contacts", request);
     }
 
+    public async Task<WebinarContactDto?> UpdateWebinarContactAsync(int id, UpdateWebinarContactRequest request)
+    {
+        return await PutAsync<WebinarContactDto>($"/api/webinar/contacts/{id}", request);
+    }
+
     public async Task<bool> DeleteWebinarContactAsync(int id)
     {
         return await DeleteAsync($"/api/webinar/contacts/{id}");
+    }
+
+    public async Task<AssignWebinarResult?> AssignContactsToWebinarAsync(AssignWebinarRequest request)
+    {
+        return await PostAsync<AssignWebinarResult>("/api/webinar/contacts/assign", request);
     }
 
     public async Task<byte[]?> ExportWebinarContactsAsync()

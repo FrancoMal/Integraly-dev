@@ -24,6 +24,7 @@ public class WebinarContactDto
     public string FullName { get; set; } = "";
     public string? Phone { get; set; }
     public string? Company { get; set; }
+    public string? Tag { get; set; }
     public string UUID { get; set; } = "";
     public int? WebinarDateId { get; set; }
     public string? WebinarDateDisplay { get; set; }
@@ -37,6 +38,22 @@ public class CreateWebinarContactRequest
     public string FullName { get; set; } = "";
     public string? Phone { get; set; }
     public string? Company { get; set; }
+    public string? Tag { get; set; }
+}
+
+public class UpdateWebinarContactRequest
+{
+    public string Email { get; set; } = "";
+    public string FullName { get; set; } = "";
+    public string? Phone { get; set; }
+    public string? Company { get; set; }
+    public string? Tag { get; set; }
+}
+
+public class AssignWebinarRequest
+{
+    public List<int> ContactIds { get; set; } = new();
+    public int WebinarDateId { get; set; }
 }
 
 public class WebinarRegistrationDto
@@ -51,6 +68,13 @@ public class WebinarRegistrationDto
 public class ImportContactsResult
 {
     public int Imported { get; set; }
+    public int Skipped { get; set; }
+    public string Message { get; set; } = "";
+}
+
+public class AssignWebinarResult
+{
+    public int Assigned { get; set; }
     public int Skipped { get; set; }
     public string Message { get; set; } = "";
 }

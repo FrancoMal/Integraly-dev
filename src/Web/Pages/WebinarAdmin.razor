@@ -109,8 +109,14 @@
 {
     <div class="card">
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap:wrap; gap:0.5rem;">
-            <h3>Contactos (@(contacts?.Count ?? 0))</h3>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+            <h3>Contactos (@(filteredContacts?.Count ?? 0)@(contacts != null && filteredContacts != null && filteredContacts.Count != contacts.Count ? $" de {contacts.Count}" : ""))</h3>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                @if (selectedContactIds.Count > 0)
+                {
+                    <button class="btn btn-primary btn-sm" @onclick="ShowAssignModal">
+                        <i class="fa-solid fa-paper-plane" style="margin-right:0.3rem;"></i>Invitar (@selectedContactIds.Count)
+                    </button>
+                }
                 <button class="btn btn-secondary btn-sm" @onclick="ExportContacts" disabled="@(contacts is null || contacts.Count == 0)">
                     <i class="fa-solid fa-file-export" style="margin-right:0.3rem;"></i>Exportar Excel
                 </button>
@@ -123,6 +129,29 @@
                 </button>
             </div>
         </div>
+        @* Filter bar *@
+        @if (contacts != null && contacts.Any())
+        {
+            <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--border-color, #e5e7eb); display:flex; gap:0.75rem; flex-wrap:wrap; align-items:center;">
+                <div style="display:flex;align-items:center;gap:0.4rem;">
+                    <i class="fa-solid fa-filter" style="color:var(--text-secondary);font-size:0.8rem;"></i>
+                    <select class="form-input" style="width:auto;min-width:140px;padding:0.3rem 0.5rem;font-size:0.85rem;" @bind="filterTag">
+                        <option value="">Todos los tags</option>
+                        @foreach (var tag in availableTags)
+                        {
+                            <option value="@tag">@tag</option>
+                        }
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;gap:0.4rem;">
+                    <select class="form-input" style="width:auto;min-width:140px;padding:0.3rem 0.5rem;font-size:0.85rem;" @bind="filterInscripto">
+                        <option value="">Inscripto: Todos</option>
+                        <option value="si">Inscripto: Si</option>
+                        <option value="no">Inscripto: No</option>
+                    </select>
+                </div>
+            </div>
+        }
         <div class="card-body" style="padding: 0;">
             @if (isLoadingContacts)
             {
@@ -132,29 +161,50 @@
             {
                 <p class="text-muted" style="padding: 1.5rem;">No hay contactos</p>
             }
+            else if (filteredContacts != null && !filteredContacts.Any())
+            {
+                <p class="text-muted" style="padding: 1.5rem;">No hay contactos con ese filtro</p>
+            }
             else
             {
                 <div class="table-responsive">
                     <table class="data-table">
                         <thead>
                             <tr>
+                                <th style="width:40px;text-align:center;">
+                                    <input type="checkbox" @bind="selectAll" @bind:after="ToggleSelectAll" title="Seleccionar todos" />
+                                </th>
                                 <th>Nombre y Apellido</th>
                                 <th>Email</th>
                                 <th>Telefono</th>
                                 <th>Empresa</th>
+                                <th>Tag</th>
                                 <th style="text-align:center;">Inscripto</th>
                                 <th>Fecha inscripcion</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var c in contacts.OrderByDescending(x => x.CreatedAt))
+                            @foreach (var c in filteredContacts!)
                             {
                                 <tr>
+                                    <td style="text-align:center;">
+                                        <input type="checkbox" checked="@selectedContactIds.Contains(c.Id)" @onchange="() => ToggleContactSelection(c.Id)" />
+                                    </td>
                                     <td><strong>@c.FullName</strong></td>
                                     <td>@c.Email</td>
                                     <td>@(!string.IsNullOrEmpty(c.Phone) ? c.Phone : "-")</td>
                                     <td>@(!string.IsNullOrEmpty(c.Company) ? c.Company : "-")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(c.Tag))
+                                        {
+                                            <span style="background:var(--primary-light, #eef2ff);color:var(--primary, #4f46e5);padding:0.15rem 0.5rem;border-radius:12px;font-size:0.8rem;font-weight:600;">@c.Tag</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">-</span>
+                                        }
+                                    </td>
                                     <td style="text-align:center;">
                                         @if (c.HasRegistration)
                                         {
@@ -177,8 +227,11 @@
                                     </td>
                                     <td>
                                         <div style="display:flex;gap:0.4rem;align-items:center;">
+                                            <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditContact(c)" title="Editar">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
                                             <button class="btn btn-sm btn-secondary" @onclick="() => CopyContactLink(c.UUID)" title="Copiar link">
-                                                <i class="fa-solid fa-copy"></i> Link
+                                                <i class="fa-solid fa-copy"></i>
                                             </button>
                                             <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDeleteContact(c)" title="Eliminar">
                                                 <i class="fa-solid fa-trash"></i>
@@ -374,13 +427,13 @@
     </div>
 }
 
-@* ==================== MODAL: NUEVO CONTACTO ==================== *@
+@* ==================== MODAL: NUEVO/EDITAR CONTACTO ==================== *@
 @if (showContactModal)
 {
     <div class="modal-overlay" @onclick="CloseContactForm">
         <div class="modal-card" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h3>Nuevo Contacto</h3>
+                <h3>@(editingContact is not null ? "Editar Contacto" : "Nuevo Contacto")</h3>
                 <button class="btn-close" @onclick="CloseContactForm">&times;</button>
             </div>
             <div class="modal-body">
@@ -404,13 +457,64 @@
                     <label class="form-label">Empresa (opcional)</label>
                     <input class="form-input" type="text" @bind="formCompany" placeholder="Nombre de la empresa" />
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Tag (opcional)</label>
+                    <input class="form-input" type="text" @bind="formTag" placeholder="Ej: VIP, Evento2024, Partner" list="tag-suggestions" />
+                    <datalist id="tag-suggestions">
+                        @foreach (var tag in availableTags)
+                        {
+                            <option value="@tag" />
+                        }
+                    </datalist>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="CloseContactForm">
                     <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
                 </button>
-                <button class="btn btn-primary" @onclick="CreateContact" disabled="@isSaving">
-                    <i class="fa-solid fa-user-plus" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Contacto")
+                <button class="btn btn-primary" @onclick="SaveContact" disabled="@isSaving">
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSaving ? "Guardando..." : "Guardar")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ==================== MODAL: ASIGNAR WEBINAR ==================== *@
+@if (showAssignModal)
+{
+    <div class="modal-overlay" @onclick="() => showAssignModal = false">
+        <div class="modal-card modal-small" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-paper-plane" style="margin-right:0.5rem;"></i>Invitar a Webinar</h3>
+                <button class="btn-close" @onclick="() => showAssignModal = false">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom:1rem;">Se asignaran <strong>@selectedContactIds.Count contactos</strong> al webinar seleccionado.</p>
+                @if (!string.IsNullOrEmpty(assignError))
+                {
+                    <div class="form-error">@assignError</div>
+                }
+                <div class="form-group">
+                    <label class="form-label">Seleccionar webinar</label>
+                    <select class="form-input" @bind="assignWebinarDateId">
+                        <option value="0" disabled>Elegir webinar...</option>
+                        @if (dates != null)
+                        {
+                            @foreach (var d in dates.OrderBy(x => x.Date))
+                            {
+                                <option value="@d.Id">@(string.IsNullOrEmpty(d.Name) ? d.Date.ToString("dd/MM/yyyy HH:mm") : $"{d.Name} - {d.Date.ToString("dd/MM/yyyy HH:mm")}")</option>
+                            }
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showAssignModal = false">
+                    <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
+                </button>
+                <button class="btn btn-primary" @onclick="AssignContacts" disabled="@(isSaving || assignWebinarDateId == 0)">
+                    <i class="fa-solid fa-paper-plane" style="margin-right:0.3rem;"></i>@(isSaving ? "Asignando..." : "Asignar")
                 </button>
             </div>
         </div>
@@ -487,13 +591,43 @@
     private List<WebinarContactDto>? contacts;
     private bool isLoadingContacts = true;
     private bool showContactModal;
+    private WebinarContactDto? editingContact;
     private string formEmail = "";
     private string formFullName = "";
     private string formPhone = "";
     private string formCompany = "";
+    private string formTag = "";
     private string? contactFormError;
     private WebinarContactDto? contactToDelete;
     private bool showDeleteContactConfirm;
+
+    // Selection & assign
+    private HashSet<int> selectedContactIds = new();
+    private bool selectAll;
+    private bool showAssignModal;
+    private int assignWebinarDateId;
+    private string? assignError;
+
+    // Filters
+    private string _filterTag = "";
+    private string filterTag { get => _filterTag; set { _filterTag = value; selectedContactIds.Clear(); selectAll = false; } }
+    private string _filterInscripto = "";
+    private string filterInscripto { get => _filterInscripto; set { _filterInscripto = value; selectedContactIds.Clear(); selectAll = false; } }
+
+    private List<string> availableTags => contacts?
+        .Where(c => !string.IsNullOrEmpty(c.Tag))
+        .Select(c => c.Tag!)
+        .Distinct()
+        .OrderBy(t => t)
+        .ToList() ?? new();
+
+    private List<WebinarContactDto>? filteredContacts => contacts?
+        .Where(c => string.IsNullOrEmpty(filterTag) || c.Tag == filterTag)
+        .Where(c => string.IsNullOrEmpty(filterInscripto)
+            || (filterInscripto == "si" && c.HasRegistration)
+            || (filterInscripto == "no" && !c.HasRegistration))
+        .OrderByDescending(c => c.CreatedAt)
+        .ToList();
 
     // Stats
     private WebinarStatsDto? stats;
@@ -657,9 +791,13 @@
     private async Task LoadContacts()
     {
         isLoadingContacts = true;
+        selectedContactIds.Clear();
+        selectAll = false;
         try
         {
             contacts = await Api.GetWebinarContactsAsync();
+            if (dates is null)
+                dates = await Api.GetWebinarDatesAsync();
         }
         catch
         {
@@ -670,10 +808,24 @@
 
     private void ShowContactForm()
     {
+        editingContact = null;
         formEmail = "";
         formFullName = "";
         formPhone = "";
         formCompany = "";
+        formTag = "";
+        contactFormError = null;
+        showContactModal = true;
+    }
+
+    private void ShowEditContact(WebinarContactDto c)
+    {
+        editingContact = c;
+        formEmail = c.Email;
+        formFullName = c.FullName;
+        formPhone = c.Phone ?? "";
+        formCompany = c.Company ?? "";
+        formTag = c.Tag ?? "";
         contactFormError = null;
         showContactModal = true;
     }
@@ -681,10 +833,11 @@
     private void CloseContactForm()
     {
         showContactModal = false;
+        editingContact = null;
         contactFormError = null;
     }
 
-    private async Task CreateContact()
+    private async Task SaveContact()
     {
         contactFormError = null;
         if (string.IsNullOrWhiteSpace(formEmail))
@@ -701,28 +854,125 @@
         isSaving = true;
         try
         {
-            var request = new CreateWebinarContactRequest
+            if (editingContact is not null)
             {
-                Email = formEmail.Trim(),
-                FullName = formFullName.Trim(),
-                Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone.Trim(),
-                Company = string.IsNullOrWhiteSpace(formCompany) ? null : formCompany.Trim()
-            };
-            var result = await Api.CreateWebinarContactAsync(request);
-            if (result is not null)
-            {
-                Toast.Success("Contacto creado exitosamente");
-                showContactModal = false;
-                await LoadContacts();
+                var request = new UpdateWebinarContactRequest
+                {
+                    Email = formEmail.Trim(),
+                    FullName = formFullName.Trim(),
+                    Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone.Trim(),
+                    Company = string.IsNullOrWhiteSpace(formCompany) ? null : formCompany.Trim(),
+                    Tag = string.IsNullOrWhiteSpace(formTag) ? null : formTag.Trim()
+                };
+                var result = await Api.UpdateWebinarContactAsync(editingContact.Id, request);
+                if (result is not null)
+                {
+                    Toast.Success("Contacto actualizado");
+                    showContactModal = false;
+                    editingContact = null;
+                    await LoadContacts();
+                }
+                else
+                {
+                    contactFormError = "Error al actualizar el contacto";
+                }
             }
             else
             {
-                contactFormError = "Error al crear el contacto. Puede que el email ya exista.";
+                var request = new CreateWebinarContactRequest
+                {
+                    Email = formEmail.Trim(),
+                    FullName = formFullName.Trim(),
+                    Phone = string.IsNullOrWhiteSpace(formPhone) ? null : formPhone.Trim(),
+                    Company = string.IsNullOrWhiteSpace(formCompany) ? null : formCompany.Trim(),
+                    Tag = string.IsNullOrWhiteSpace(formTag) ? null : formTag.Trim()
+                };
+                var result = await Api.CreateWebinarContactAsync(request);
+                if (result is not null)
+                {
+                    Toast.Success("Contacto creado exitosamente");
+                    showContactModal = false;
+                    await LoadContacts();
+                }
+                else
+                {
+                    contactFormError = "Error al crear el contacto. Puede que el email ya exista.";
+                }
             }
         }
         catch
         {
-            contactFormError = "Error al crear el contacto";
+            contactFormError = "Error al guardar el contacto";
+        }
+        isSaving = false;
+    }
+
+    // ==================== SELECTION & ASSIGN ====================
+
+    private void ToggleContactSelection(int id)
+    {
+        if (!selectedContactIds.Remove(id))
+            selectedContactIds.Add(id);
+        selectAll = filteredContacts != null && filteredContacts.All(c => selectedContactIds.Contains(c.Id));
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (filteredContacts is null) return;
+        if (selectAll)
+        {
+            foreach (var c in filteredContacts)
+                selectedContactIds.Add(c.Id);
+        }
+        else
+        {
+            foreach (var c in filteredContacts)
+                selectedContactIds.Remove(c.Id);
+        }
+    }
+
+    private async Task ShowAssignModal()
+    {
+        assignError = null;
+        assignWebinarDateId = 0;
+        if (dates is null)
+            dates = await Api.GetWebinarDatesAsync();
+        showAssignModal = true;
+    }
+
+    private async Task AssignContacts()
+    {
+        if (assignWebinarDateId == 0)
+        {
+            assignError = "Selecciona un webinar";
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var request = new AssignWebinarRequest
+            {
+                ContactIds = selectedContactIds.ToList(),
+                WebinarDateId = assignWebinarDateId
+            };
+            var result = await Api.AssignContactsToWebinarAsync(request);
+            if (result is not null)
+            {
+                Toast.Success(result.Message);
+                showAssignModal = false;
+                selectedContactIds.Clear();
+                selectAll = false;
+                await LoadContacts();
+            }
+            else
+            {
+                assignError = "Error al asignar contactos";
+            }
+        }
+        catch
+        {
+            assignError = "Error al asignar contactos";
         }
         isSaving = false;
     }

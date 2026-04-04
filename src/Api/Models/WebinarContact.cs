@@ -24,6 +24,9 @@ public class WebinarContact
     [MaxLength(200)]
     public string? Company { get; set; }
 
+    [MaxLength(100)]
+    public string? Tag { get; set; }
+
     [Required]
     [MaxLength(100)]
     public string UUID { get; set; } = string.Empty;
