@@ -406,6 +406,10 @@ BEGIN
         Name NVARCHAR(200) NOT NULL DEFAULT '',
         Date DATETIME2 NOT NULL,
         MeetingLink NVARCHAR(500) NULL,
+        InviteSubject NVARCHAR(500) NULL,
+        InviteMessage NVARCHAR(MAX) NULL,
+        SendByEmail BIT NOT NULL DEFAULT 0,
+        SendByWhatsapp BIT NOT NULL DEFAULT 0,
         CreatedAt DATETIME2 DEFAULT GETDATE()
     );
 END
@@ -415,6 +419,16 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarDates') AND name = 'Name')
 BEGIN
     ALTER TABLE WebinarDates ADD Name NVARCHAR(200) NOT NULL DEFAULT '';
+END
+GO
+
+-- Add invite fields to WebinarDates if they don't exist
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('WebinarDates') AND name = 'InviteSubject')
+BEGIN
+    ALTER TABLE WebinarDates ADD InviteSubject NVARCHAR(500) NULL;
+    ALTER TABLE WebinarDates ADD InviteMessage NVARCHAR(MAX) NULL;
+    ALTER TABLE WebinarDates ADD SendByEmail BIT NOT NULL DEFAULT 0;
+    ALTER TABLE WebinarDates ADD SendByWhatsapp BIT NOT NULL DEFAULT 0;
 END
 GO
 

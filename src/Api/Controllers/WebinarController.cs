@@ -1,6 +1,7 @@
 using Api.Data;
 using Api.DTOs;
 using Api.Models;
+using Api.Services;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,10 +15,12 @@ namespace Api.Controllers;
 public class WebinarController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly EmailService _email;
 
-    public WebinarController(AppDbContext db)
+    public WebinarController(AppDbContext db, EmailService email)
     {
         _db = db;
+        _email = email;
     }
 
     // GET /api/webinar/dates
@@ -32,7 +35,13 @@ public class WebinarController : ControllerBase
         foreach (var d in dates)
         {
             var count = await _db.WebinarRegistrations.CountAsync(r => r.WebinarDateId == d.Id);
-            result.Add(new WebinarDateDto { Id = d.Id, Name = d.Name, Date = d.Date, MeetingLink = d.MeetingLink, RegistrationCount = count, CreatedAt = d.CreatedAt });
+            result.Add(new WebinarDateDto
+            {
+                Id = d.Id, Name = d.Name, Date = d.Date, MeetingLink = d.MeetingLink,
+                InviteSubject = d.InviteSubject, InviteMessage = d.InviteMessage,
+                SendByEmail = d.SendByEmail, SendByWhatsapp = d.SendByWhatsapp,
+                RegistrationCount = count, CreatedAt = d.CreatedAt
+            });
         }
 
         return Ok(result);
@@ -46,14 +55,24 @@ public class WebinarController : ControllerBase
         {
             Name = request.Name?.Trim() ?? "",
             Date = request.Date,
-            MeetingLink = request.MeetingLink
+            MeetingLink = request.MeetingLink,
+            InviteSubject = request.InviteSubject,
+            InviteMessage = request.InviteMessage,
+            SendByEmail = request.SendByEmail,
+            SendByWhatsapp = request.SendByWhatsapp
         };
 
         _db.WebinarDates.Add(date);
         await _db.SaveChangesAsync();
 
         return Created($"/api/webinar/dates/{date.Id}",
-            new WebinarDateDto { Id = date.Id, Name = date.Name, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = 0, CreatedAt = date.CreatedAt });
+            new WebinarDateDto
+            {
+                Id = date.Id, Name = date.Name, Date = date.Date, MeetingLink = date.MeetingLink,
+                InviteSubject = date.InviteSubject, InviteMessage = date.InviteMessage,
+                SendByEmail = date.SendByEmail, SendByWhatsapp = date.SendByWhatsapp,
+                RegistrationCount = 0, CreatedAt = date.CreatedAt
+            });
     }
 
     // PUT /api/webinar/dates/{id}
@@ -66,10 +85,20 @@ public class WebinarController : ControllerBase
         date.Name = request.Name?.Trim() ?? "";
         date.Date = request.Date;
         date.MeetingLink = request.MeetingLink;
+        date.InviteSubject = request.InviteSubject;
+        date.InviteMessage = request.InviteMessage;
+        date.SendByEmail = request.SendByEmail;
+        date.SendByWhatsapp = request.SendByWhatsapp;
         await _db.SaveChangesAsync();
 
         var count = await _db.WebinarRegistrations.CountAsync(r => r.WebinarDateId == id);
-        return Ok(new WebinarDateDto { Id = date.Id, Name = date.Name, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = count, CreatedAt = date.CreatedAt });
+        return Ok(new WebinarDateDto
+        {
+            Id = date.Id, Name = date.Name, Date = date.Date, MeetingLink = date.MeetingLink,
+            InviteSubject = date.InviteSubject, InviteMessage = date.InviteMessage,
+            SendByEmail = date.SendByEmail, SendByWhatsapp = date.SendByWhatsapp,
+            RegistrationCount = count, CreatedAt = date.CreatedAt
+        });
     }
 
     // GET /api/webinar/dates/{id}/registrations
@@ -215,12 +244,15 @@ public class WebinarController : ControllerBase
         if (request.ContactIds is null || request.ContactIds.Count == 0)
             return BadRequest(new { message = "No se seleccionaron contactos" });
 
-        var dateExists = await _db.WebinarDates.AnyAsync(d => d.Id == request.WebinarDateId);
-        if (!dateExists)
+        var webinarDate = await _db.WebinarDates.FindAsync(request.WebinarDateId);
+        if (webinarDate is null)
             return BadRequest(new { message = "Fecha de webinar no valida" });
 
+        var baseUrl = $"{Request.Scheme}://{Request.Host}";
         var assigned = 0;
         var skipped = 0;
+        var emailsSent = 0;
+        var emailsFailed = 0;
 
         foreach (var contactId in request.ContactIds)
         {
@@ -232,11 +264,37 @@ public class WebinarController : ControllerBase
 
             contact.WebinarDateId = request.WebinarDateId;
             assigned++;
+
+            // Send email if configured
+            if (webinarDate.SendByEmail && !string.IsNullOrWhiteSpace(webinarDate.InviteMessage))
+            {
+                var contactLink = $"{baseUrl}/webinar/{contact.UUID}";
+                var body = webinarDate.InviteMessage
+                    .Replace("{{nombre}}", contact.FullName)
+                    .Replace("{{email}}", contact.Email)
+                    .Replace("{{link}}", contactLink)
+                    .Replace("{{webinar}}", webinarDate.Name)
+                    .Replace("{{fecha}}", webinarDate.Date.ToString("dddd dd/MM/yyyy HH:mm"));
+
+                var subject = (webinarDate.InviteSubject ?? "Invitacion a Webinar")
+                    .Replace("{{nombre}}", contact.FullName)
+                    .Replace("{{webinar}}", webinarDate.Name);
+
+                var sent = await _email.SendEmailAsync(contact.Email, subject, body);
+                if (sent) emailsSent++;
+                else emailsFailed++;
+            }
         }
 
         await _db.SaveChangesAsync();
 
-        return Ok(new { assigned, skipped, message = $"{assigned} contactos asignados al webinar, {skipped} omitidos" });
+        var msg = $"{assigned} contactos asignados, {skipped} omitidos";
+        if (webinarDate.SendByEmail)
+            msg += $", {emailsSent} emails enviados" + (emailsFailed > 0 ? $", {emailsFailed} emails fallidos" : "");
+        if (webinarDate.SendByWhatsapp)
+            msg += " (WhatsApp pendiente de implementar)";
+
+        return Ok(new { assigned, skipped, emailsSent, emailsFailed, message = msg });
     }
 
     // GET /api/webinar/contacts/export

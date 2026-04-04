@@ -6,6 +6,10 @@ public class WebinarDateDto
     public string Name { get; set; } = "";
     public DateTime Date { get; set; }
     public string? MeetingLink { get; set; }
+    public string? InviteSubject { get; set; }
+    public string? InviteMessage { get; set; }
+    public bool SendByEmail { get; set; }
+    public bool SendByWhatsapp { get; set; }
     public int RegistrationCount { get; set; }
     public DateTime CreatedAt { get; set; }
 }
@@ -15,6 +19,10 @@ public class CreateWebinarDateRequest
     public string Name { get; set; } = "";
     public DateTime Date { get; set; }
     public string? MeetingLink { get; set; }
+    public string? InviteSubject { get; set; }
+    public string? InviteMessage { get; set; }
+    public bool SendByEmail { get; set; }
+    public bool SendByWhatsapp { get; set; }
 }
 
 public class WebinarContactDto

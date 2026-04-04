@@ -19,5 +19,14 @@ public class WebinarDate
     [MaxLength(500)]
     public string? MeetingLink { get; set; }
 
+    [MaxLength(500)]
+    public string? InviteSubject { get; set; }
+
+    public string? InviteMessage { get; set; }
+
+    public bool SendByEmail { get; set; }
+
+    public bool SendByWhatsapp { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

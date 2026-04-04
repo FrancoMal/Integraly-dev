@@ -343,7 +343,7 @@
                 <h3>@(editingDate is not null ? "Editar Fecha" : "Nueva Fecha de Webinar")</h3>
                 <button class="btn-close" @onclick="CloseDateForm">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body" style="max-height:70vh;overflow-y:auto;">
                 @if (!string.IsNullOrEmpty(dateFormError))
                 {
                     <div class="form-error">@dateFormError</div>
@@ -360,6 +360,36 @@
                     <label class="form-label">Link de reunion (opcional)</label>
                     <input class="form-input" type="url" @bind="formMeetingLink" placeholder="https://meet.google.com/..." />
                 </div>
+
+                <hr style="margin:1rem 0;border-color:var(--border-color, #e5e7eb);" />
+                <h4 style="margin-bottom:0.75rem;font-size:0.95rem;color:var(--text-secondary);">
+                    <i class="fa-solid fa-envelope" style="margin-right:0.3rem;"></i>Configuracion de invitacion
+                </h4>
+
+                <div class="form-group">
+                    <label class="form-label">Asunto del email</label>
+                    <input class="form-input" type="text" @bind="formInviteSubject" placeholder="Ej: Te invitamos al webinar {{webinar}}" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mensaje de invitacion (HTML para email / texto para WhatsApp)</label>
+                    <textarea class="form-input" rows="8" @bind="formInviteMessage" placeholder="Hola {{nombre}}, te invitamos a participar...
+
+Variables disponibles: {{nombre}}, {{email}}, {{link}}, {{webinar}}, {{fecha}}"></textarea>
+                </div>
+                <div style="display:flex;gap:1.5rem;margin-top:0.5rem;">
+                    <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+                        <input type="checkbox" @bind="formSendByEmail" />
+                        <i class="fa-solid fa-envelope" style="color:var(--primary);"></i> Enviar por Email
+                    </label>
+                    <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;">
+                        <input type="checkbox" @bind="formSendByWhatsapp" />
+                        <i class="fa-brands fa-whatsapp" style="color:#25D366;"></i> Enviar por WhatsApp
+                    </label>
+                </div>
+                @if (formSendByWhatsapp)
+                {
+                    <p style="margin-top:0.5rem;font-size:0.8rem;color:var(--text-secondary);"><i class="fa-solid fa-info-circle"></i> WhatsApp se va a implementar proximamente</p>
+                }
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="CloseDateForm">
@@ -490,7 +520,7 @@
                 <button class="btn-close" @onclick="() => showAssignModal = false">&times;</button>
             </div>
             <div class="modal-body">
-                <p style="margin-bottom:1rem;">Se asignaran <strong>@selectedContactIds.Count contactos</strong> al webinar seleccionado.</p>
+                <p style="margin-bottom:1rem;">Se invitaran <strong>@selectedContactIds.Count contactos</strong> al webinar seleccionado.</p>
                 @if (!string.IsNullOrEmpty(assignError))
                 {
                     <div class="form-error">@assignError</div>
@@ -508,13 +538,43 @@
                         }
                     </select>
                 </div>
+                @if (assignWebinarDateId > 0)
+                {
+                    var selectedWebinar = dates?.FirstOrDefault(d => d.Id == assignWebinarDateId);
+                    if (selectedWebinar != null)
+                    {
+                        <div style="background:var(--bg-secondary, #f3f4f6);border-radius:8px;padding:0.75rem;margin-top:0.5rem;font-size:0.85rem;">
+                            <div style="margin-bottom:0.4rem;"><strong>Se enviara por:</strong></div>
+                            <div style="display:flex;gap:1rem;">
+                                @if (selectedWebinar.SendByEmail)
+                                {
+                                    <span><i class="fa-solid fa-envelope" style="color:var(--primary);margin-right:0.25rem;"></i>Email</span>
+                                }
+                                @if (selectedWebinar.SendByWhatsapp)
+                                {
+                                    <span><i class="fa-brands fa-whatsapp" style="color:#25D366;margin-right:0.25rem;"></i>WhatsApp</span>
+                                }
+                                @if (!selectedWebinar.SendByEmail && !selectedWebinar.SendByWhatsapp)
+                                {
+                                    <span class="text-muted">Solo asignacion (sin notificacion)</span>
+                                }
+                            </div>
+                            @if (string.IsNullOrWhiteSpace(selectedWebinar.InviteMessage) && (selectedWebinar.SendByEmail || selectedWebinar.SendByWhatsapp))
+                            {
+                                <div style="color:var(--danger, #dc2626);margin-top:0.4rem;">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> No hay mensaje configurado. Edita el webinar para agregar el mensaje de invitacion.
+                                </div>
+                            }
+                        </div>
+                    }
+                }
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" @onclick="() => showAssignModal = false">
                     <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
                 </button>
                 <button class="btn btn-primary" @onclick="AssignContacts" disabled="@(isSaving || assignWebinarDateId == 0)">
-                    <i class="fa-solid fa-paper-plane" style="margin-right:0.3rem;"></i>@(isSaving ? "Asignando..." : "Asignar")
+                    <i class="fa-solid fa-paper-plane" style="margin-right:0.3rem;"></i>@(isSaving ? "Enviando..." : "Enviar invitacion")
                 </button>
             </div>
         </div>
@@ -578,6 +638,10 @@
     private string formDateName = "";
     private DateTime formDate = DateTime.Now;
     private string formMeetingLink = "";
+    private string formInviteSubject = "";
+    private string formInviteMessage = "";
+    private bool formSendByEmail;
+    private bool formSendByWhatsapp;
     private string? dateFormError;
     private WebinarDateDto? dateToDelete;
     private bool showDeleteDateConfirm;
@@ -674,6 +738,10 @@
         formDateName = "";
         formDate = DateTime.Now.AddDays(7).Date.AddHours(10);
         formMeetingLink = "";
+        formInviteSubject = "";
+        formInviteMessage = "";
+        formSendByEmail = false;
+        formSendByWhatsapp = false;
         dateFormError = null;
         showDateModal = true;
     }
@@ -684,6 +752,10 @@
         formDateName = d.Name ?? "";
         formDate = d.Date;
         formMeetingLink = d.MeetingLink ?? "";
+        formInviteSubject = d.InviteSubject ?? "";
+        formInviteMessage = d.InviteMessage ?? "";
+        formSendByEmail = d.SendByEmail;
+        formSendByWhatsapp = d.SendByWhatsapp;
         dateFormError = null;
         showDateModal = true;
     }
@@ -705,7 +777,11 @@
             {
                 Name = formDateName?.Trim() ?? "",
                 Date = formDate,
-                MeetingLink = string.IsNullOrWhiteSpace(formMeetingLink) ? null : formMeetingLink.Trim()
+                MeetingLink = string.IsNullOrWhiteSpace(formMeetingLink) ? null : formMeetingLink.Trim(),
+                InviteSubject = string.IsNullOrWhiteSpace(formInviteSubject) ? null : formInviteSubject.Trim(),
+                InviteMessage = string.IsNullOrWhiteSpace(formInviteMessage) ? null : formInviteMessage,
+                SendByEmail = formSendByEmail,
+                SendByWhatsapp = formSendByWhatsapp
             };
 
             if (editingDate is not null)
