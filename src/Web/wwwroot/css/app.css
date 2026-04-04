@@ -4732,3 +4732,43 @@ td.calendar-slot-unavailable {
     outline: 2px solid var(--text-primary);
     outline-offset: 1px;
 }
+
+/* Custom tooltip */
+.custom-tooltip {
+    position: relative;
+}
+.custom-tooltip .custom-tooltip-text {
+    visibility: hidden;
+    opacity: 0;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e1e2e;
+    color: #fff;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 100;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.custom-tooltip .custom-tooltip-text::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #1e1e2e;
+}
+.custom-tooltip:hover .custom-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}

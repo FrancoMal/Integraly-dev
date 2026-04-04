@@ -208,7 +208,9 @@
                                     <td style="text-align:center;">
                                         @if (c.InvitedWebinarNames.Count > 0)
                                         {
-                                            <span class="status-badge status-active" title="@string.Join("&#10;", c.InvitedWebinarNames)" style="cursor:help;">Si (@c.InvitedWebinarNames.Count)</span>
+                                            <span class="custom-tooltip status-badge status-active" style="cursor:help;">Si (@c.InvitedWebinarNames.Count)
+                                                <span class="custom-tooltip-text">@foreach (var n in c.InvitedWebinarNames) {<span>@n</span>}</span>
+                                            </span>
                                         }
                                         else
                                         {
@@ -218,7 +220,9 @@
                                     <td style="text-align:center;">
                                         @if (c.RegisteredWebinarNames.Count > 0)
                                         {
-                                            <span class="status-badge status-active" title="@string.Join("&#10;", c.RegisteredWebinarNames)" style="cursor:help;">Si (@c.RegisteredWebinarNames.Count)</span>
+                                            <span class="custom-tooltip status-badge status-active" style="cursor:help;">Si (@c.RegisteredWebinarNames.Count)
+                                                <span class="custom-tooltip-text">@foreach (var n in c.RegisteredWebinarNames) {<span>@n</span>}</span>
+                                            </span>
                                         }
                                         else
                                         {
