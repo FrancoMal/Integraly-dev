@@ -770,29 +770,31 @@ public class PaymentsController : ControllerBase
     {
         if (!IsAdmin()) return Forbid();
 
-        var payments = await _db.Payments
+        var rawPayments = await _db.Payments
             .Include(p => p.User)
             .Include(p => p.PaymentPlan)
             .OrderByDescending(p => p.CreatedAt)
-            .Select(p => new
-            {
-                p.Id,
-                userId = p.UserId,
-                userName = p.User != null ? p.User.Username : "",
-                userEmail = p.User != null ? p.User.Email : "",
-                planName = p.PaymentPlan != null ? p.PaymentPlan.Name : "",
-                classes = p.PaymentPlan != null ? p.PaymentPlan.Classes : 0,
-                p.Amount,
-                p.Currency,
-                p.Status,
-                p.PaymentProvider,
-                p.MercadoPagoPaymentId,
-                p.PayPalOrderId,
-                p.TokenPackId,
-                p.CreatedAt,
-                p.ApprovedAt
-            })
             .ToListAsync();
+
+        var payments = rawPayments.Select(p => new
+        {
+            p.Id,
+            userId = p.UserId,
+            userName = p.User?.Username ?? "",
+            userEmail = p.User?.Email ?? "",
+            planName = p.PaymentPlan?.Name ?? "",
+            classes = p.PaymentPlan?.Classes ?? 0,
+            p.Amount,
+            p.Currency,
+            p.Status,
+            p.PaymentProvider,
+            p.TransferReceiptUrl,
+            p.MercadoPagoPaymentId,
+            p.PayPalOrderId,
+            p.TokenPackId,
+            p.CreatedAt,
+            p.ApprovedAt
+        });
 
         return Ok(payments);
     }
