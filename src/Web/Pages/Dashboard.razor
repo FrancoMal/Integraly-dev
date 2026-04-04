@@ -3,6 +3,7 @@
 @attribute [Authorize]
 @inject ApiClient Api
 @inject AuthService AuthService
+@inject NavigationManager Navigation
 
 @if (isLoading)
 {
@@ -296,6 +297,13 @@ else
 
                 userStats = statsTask.Result;
                 var allBookings = bookingsTask.Result ?? new();
+
+                // Si no tiene clases disponibles ni reservas, redirigir a comprar
+                if ((userStats?.RemainingTokens ?? 0) == 0 && allBookings.Count == 0)
+                {
+                    Navigation.NavigateTo("comprar");
+                    return;
+                }
 
                 nextClass = allBookings
                     .Where(b => b.Status == "confirmed" && b.ScheduledDate.Date >= DateTime.Today)
