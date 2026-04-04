@@ -561,6 +561,21 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
+    /// Get transfer bank details
+    /// </summary>
+    [HttpGet("transfer-info")]
+    [Authorize]
+    public IActionResult GetTransferInfo()
+    {
+        return Ok(new
+        {
+            cvu = _configuration["Transfer:CVU"] ?? Environment.GetEnvironmentVariable("TRANSFER_CVU") ?? "",
+            alias = _configuration["Transfer:Alias"] ?? Environment.GetEnvironmentVariable("TRANSFER_ALIAS") ?? "",
+            titular = _configuration["Transfer:Titular"] ?? Environment.GetEnvironmentVariable("TRANSFER_TITULAR") ?? ""
+        });
+    }
+
+    /// <summary>
     /// Upload transfer receipt for a pending transfer payment
     /// </summary>
     [HttpPost("{id}/receipt")]

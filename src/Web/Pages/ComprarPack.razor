@@ -95,6 +95,7 @@ else
                                 <th>Plan</th>
                                 <th style="text-align:center;">Clases</th>
                                 <th style="text-align:right;">Monto</th>
+                                <th>Medio de pago</th>
                                 <th style="text-align:center;">Estado</th>
                                 <th>Fecha</th>
                                 <th style="text-align:center;">Acciones</th>
@@ -106,10 +107,13 @@ else
                                 var isPending = payment.Status?.ToLower() is "pending" or "pendiente";
                                 var currencySymbol = payment.Currency == "USD" ? "US$" : "$";
                                 var isUsd = payment.Currency == "USD";
+                                var isTransfer = payment.PaymentProvider == "transferencia";
+                                var isPendingReview = payment.Status?.ToLower() == "pending_review";
                                 <tr>
                                     <td><strong>@payment.PlanName</strong></td>
                                     <td style="text-align:center;">@payment.Classes</td>
                                     <td style="text-align:right;">@currencySymbol@FormatPrice(payment.Amount, isUsd)</td>
+                                    <td>@GetProviderLabel(payment.PaymentProvider)</td>
                                     <td style="text-align:center;">
                                         <span class="status-badge @GetStatusClass(payment.Status)">
                                             @GetStatusLabel(payment.Status)
@@ -117,13 +121,13 @@ else
                                     </td>
                                     <td>@payment.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td style="text-align:center;">
-                                        @{
-                                            var isTransfer = payment.PaymentProvider == "transferencia";
-                                            var isPendingReview = payment.Status?.ToLower() == "pending_review";
-                                        }
                                         @if (isPending && isTransfer)
                                         {
                                             <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
+                                                <button class="btn btn-sm btn-secondary" title="Ver datos de transferencia"
+                                                        @onclick="() => ShowTransferInfo(payment)">
+                                                    <i class="fa-solid fa-eye"></i> Ver datos
+                                                </button>
                                                 <label class="btn btn-sm btn-primary" style="cursor:pointer;margin:0;" title="Adjuntar comprobante">
                                                     <i class="fa-solid fa-paperclip"></i> Comprobante
                                                     <InputFile OnChange="e => UploadReceipt(e, payment)" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" />
@@ -413,6 +417,14 @@ else
         _ => status ?? "—"
     };
 
+    private string GetProviderLabel(string? provider) => provider?.ToLower() switch
+    {
+        "mercadopago" => "MercadoPago",
+        "paypal" => "PayPal",
+        "transferencia" => "Transferencia",
+        _ => provider ?? "—"
+    };
+
     private async Task RetryPayment(PaymentDto payment)
     {
         var provider = payment.PaymentProvider ?? detectedProvider;
@@ -516,6 +528,28 @@ else
         {
             processingPlanId = null;
             StateHasChanged();
+        }
+    }
+
+    private async Task ShowTransferInfo(PaymentDto payment)
+    {
+        try
+        {
+            var info = await Api.GetTransferInfoAsync();
+            if (info is not null)
+            {
+                transferCvu = info.Cvu;
+                transferAlias = info.Alias;
+                transferTitular = info.Titular;
+                transferAmount = payment.Amount;
+                transferPlanName = payment.PlanName;
+                showTransferModal = true;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            ToastService.Error("No se pudieron obtener los datos de transferencia");
         }
     }
 

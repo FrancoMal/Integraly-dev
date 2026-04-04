@@ -445,6 +445,9 @@ public class ApiClient
     public async Task<bool> DeletePaymentAsync(int id)
         => await DeleteAsync($"/api/payments/{id}");
 
+    public async Task<TransferPaymentResponse?> GetTransferInfoAsync()
+        => await GetAsync<TransferPaymentResponse>("/api/payments/transfer-info");
+
     public async Task<TransferPaymentResponse?> CreateTransferPaymentAsync(int planId)
     {
         await SetAuthHeaderAsync();
