@@ -1,5 +1,6 @@
 @page "/backups"
 @attribute [Authorize]
+@implements IDisposable
 @inject ApiClient Api
 @inject ToastService ToastService
 @inject IJSRuntime JS
@@ -22,11 +23,10 @@
             </div>
 
             @* --- Drop zone para subir .bak --- *@
-            <div style="border:2px dashed rgba(255,255,255,0.2); border-radius:12px; padding:2rem; text-align:center; margin-bottom:1.5rem; position:relative; transition:border-color 0.2s; @(isDragging ? "border-color:#6366f1; background:rgba(99,102,241,0.05);" : "")"
+            <div id="backupDropZone" style="border:2px dashed rgba(255,255,255,0.2); border-radius:12px; padding:2rem; text-align:center; margin-bottom:1.5rem; position:relative; transition:border-color 0.2s; @(isDragging ? "border-color:#6366f1; background:rgba(99,102,241,0.05);" : "")"
                  @ondragenter="HandleDragEnter" @ondragenter:preventDefault
                  @ondragleave="HandleDragLeave" @ondragleave:preventDefault
-                 @ondragover:preventDefault
-                 @ondrop:preventDefault>
+                 @ondragover:preventDefault>
                 @if (isUploading)
                 {
                     <p style="color:rgba(255,255,255,0.7); margin:0;">
@@ -39,10 +39,10 @@
                         <i class="fa-solid fa-cloud-arrow-up" style="margin-right:0.3rem; font-size:1.2rem;"></i>
                         Arrastra un archivo <strong>.bak</strong> aqui o
                     </p>
-                    <label class="btn btn-secondary" style="cursor:pointer; display:inline-block;">
+                    <label class="btn btn-secondary" style="cursor:pointer; display:inline-block;" @onclick="TriggerFileSelect" @onclick:preventDefault>
                         <i class="fa-solid fa-folder-open" style="margin-right:0.3rem;"></i>Seleccionar archivo
-                        <InputFile OnChange="HandleFileUpload" accept=".bak" style="display:none;" />
                     </label>
+                    <input type="file" id="backupFileInput" accept=".bak" style="display:none;" @onchange="HandleNativeFileChange" />
                 }
             </div>
 
@@ -358,9 +358,26 @@
     private bool restoreSuccess;
     private string restoreResultMessage = "";
 
+    private bool _jsInitialized;
+    private DotNetObjectReference<Backups>? _dotnetRef;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_jsInitialized && !isLoading)
+        {
+            try
+            {
+                _dotnetRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("backupUpload.handleDrop", _dotnetRef, "backupDropZone");
+                _jsInitialized = true;
+            }
+            catch { /* JS not ready yet */ }
+        }
     }
 
     private async Task LoadData()
@@ -412,40 +429,43 @@
     private void HandleDragEnter() => isDragging = true;
     private void HandleDragLeave() => isDragging = false;
 
-    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    private async Task TriggerFileSelect()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('backupFileInput').click()");
+    }
+
+    private async Task HandleNativeFileChange()
+    {
+        if (_dotnetRef == null)
+            _dotnetRef = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("backupUpload.uploadFile", _dotnetRef, "backupFileInput");
+    }
+
+    [JSInvokable]
+    public async Task JsUploadStarted()
     {
         isDragging = false;
-        var file = e.File;
-
-        if (!file.Name.EndsWith(".bak", StringComparison.OrdinalIgnoreCase))
-        {
-            ToastService.Error("Solo se aceptan archivos .bak");
-            return;
-        }
-
         isUploading = true;
         StateHasChanged();
+        await Task.CompletedTask;
+    }
 
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: 500 * 1024 * 1024); // 500 MB
-            var result = await Api.UploadBackupAsync(stream, file.Name);
-            if (result != null)
-            {
-                ToastService.Success($"Archivo subido: {result.FileName}");
-                await LoadData();
-            }
-            else
-            {
-                ToastService.Error("Error al subir el archivo");
-            }
-        }
-        catch (Exception ex)
-        {
-            ToastService.Error($"Error al subir: {(ex.Message.Contains("maximum") ? "El archivo excede el limite de 500 MB" : ex.Message)}");
-        }
-
+    [JSInvokable]
+    public async Task JsUploadSuccess(string fileName)
+    {
         isUploading = false;
+        ToastService.Success($"Archivo subido: {fileName}");
+        await LoadData();
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public Task JsUploadError(string message)
+    {
+        isUploading = false;
+        ToastService.Error(message);
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 
     // --- Download ---
@@ -603,5 +623,10 @@
             ToastService.Error("Error al guardar la programacion");
         }
         isSavingSchedule = false;
+    }
+
+    public void Dispose()
+    {
+        _dotnetRef?.Dispose();
     }
 }

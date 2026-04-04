@@ -586,8 +586,14 @@ public class ApiClient
         await SetAuthHeaderAsync();
         try
         {
+            // Read stream into memory first (Blazor WASM streams can fail with MultipartFormDataContent)
+            using var ms = new System.IO.MemoryStream();
+            await fileStream.CopyToAsync(ms);
+            ms.Position = 0;
+
             using var content = new MultipartFormDataContent();
-            using var streamContent = new StreamContent(fileStream);
+            var streamContent = new ByteArrayContent(ms.ToArray());
+            streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
             content.Add(streamContent, "file", fileName);
             var response = await _http.PostAsync("/api/backup/upload", content);
             if (response.IsSuccessStatusCode)
@@ -597,9 +603,15 @@ public class ApiClient
             }
             if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                 await HandleUnauthorizedAsync();
+            var errorBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"Upload failed: {response.StatusCode} - {errorBody}");
             return null;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Upload exception: {ex.GetType().Name}: {ex.Message}");
+            return null;
+        }
     }
 
     public async Task<BackupInfoDto?> GetBackupInfoAsync(int id)

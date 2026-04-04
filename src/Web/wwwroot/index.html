@@ -115,6 +115,62 @@
                 window.calendarSelect.handleMouseUp(e);
             }
         });
+
+        // Backup file upload via JS (bypasses Blazor InputFile stream issues)
+        window.backupUpload = {
+            uploadFile: async function(dotnetRef, inputId) {
+                var input = document.getElementById(inputId);
+                if (!input || !input.files || input.files.length === 0) return;
+                var file = input.files[0];
+                if (!file.name.toLowerCase().endsWith('.bak')) {
+                    await dotnetRef.invokeMethodAsync('JsUploadError', 'Solo se aceptan archivos .bak');
+                    return;
+                }
+                await this._doUpload(dotnetRef, file);
+                input.value = '';
+            },
+            handleDrop: async function(dotnetRef, dropZoneId) {
+                var self = this;
+                var dropZone = document.getElementById(dropZoneId);
+                if (!dropZone || dropZone._backupBound) return;
+                dropZone._backupBound = true;
+                dropZone.addEventListener('drop', async function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (e.dataTransfer.files.length === 0) return;
+                    var file = e.dataTransfer.files[0];
+                    if (!file.name.toLowerCase().endsWith('.bak')) {
+                        await dotnetRef.invokeMethodAsync('JsUploadError', 'Solo se aceptan archivos .bak');
+                        return;
+                    }
+                    await self._doUpload(dotnetRef, file);
+                });
+                dropZone.addEventListener('dragover', function(e) { e.preventDefault(); });
+            },
+            _doUpload: async function(dotnetRef, file) {
+                await dotnetRef.invokeMethodAsync('JsUploadStarted');
+                try {
+                    var token = localStorage.getItem('tm_token');
+                    var formData = new FormData();
+                    formData.append('file', file);
+                    var resp = await fetch('/api/backup/upload', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+                    if (resp.ok) {
+                        var data = await resp.json();
+                        await dotnetRef.invokeMethodAsync('JsUploadSuccess', data.fileName || file.name);
+                    } else {
+                        var errText = '';
+                        try { var err = await resp.json(); errText = err.error || ''; } catch(_) {}
+                        await dotnetRef.invokeMethodAsync('JsUploadError', errText || ('Error HTTP ' + resp.status));
+                    }
+                } catch (ex) {
+                    await dotnetRef.invokeMethodAsync('JsUploadError', ex.message || 'Error de red');
+                }
+            }
+        };
     </script>
 </body>
 </html>
