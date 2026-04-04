@@ -48,8 +48,12 @@ services:
       - PAYPAL_CLIENT_ID=${PAYPAL_CLIENT_ID:-}
       - PAYPAL_CLIENT_SECRET=${PAYPAL_CLIENT_SECRET:-}
       - PAYPAL_MODE=${PAYPAL_MODE:-live}
+      - TRANSFER_CVU=${TRANSFER_CVU:-}
+      - TRANSFER_ALIAS=${TRANSFER_ALIAS:-}
+      - TRANSFER_TITULAR=${TRANSFER_TITULAR:-}
       - APP_BASE_URL=https://integraly.dev
     volumes:
+      - api-uploads-prod:/app/uploads
       - /proc:/host_proc:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -83,3 +87,4 @@ networks:
 
 volumes:
   sqlserver_prod_data:
+  api-uploads-prod:

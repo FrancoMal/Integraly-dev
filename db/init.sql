@@ -539,6 +539,12 @@ BEGIN
 END
 GO
 
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('Payments') AND name = 'TransferReceiptUrl')
+BEGIN
+    ALTER TABLE Payments ADD TransferReceiptUrl NVARCHAR(500) NULL;
+END
+GO
+
 -- Seed payment plans
 IF NOT EXISTS (SELECT * FROM PaymentPlans WHERE Name = 'Clase individual')
 BEGIN

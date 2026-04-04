@@ -445,6 +445,26 @@ public class ApiClient
     public async Task<bool> DeletePaymentAsync(int id)
         => await DeleteAsync($"/api/payments/{id}");
 
+    public async Task<TransferPaymentResponse?> CreateTransferPaymentAsync(int planId)
+    {
+        await SetAuthHeaderAsync();
+        var response = await _http.PostAsJsonAsync("/api/payments/create", new { planId, provider = "transferencia" });
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync();
+        return System.Text.Json.JsonSerializer.Deserialize<TransferPaymentResponse>(json,
+            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    public async Task<bool> UploadTransferReceiptAsync(int paymentId, Stream fileStream, string fileName)
+    {
+        await SetAuthHeaderAsync();
+        using var content = new MultipartFormDataContent();
+        var streamContent = new StreamContent(fileStream);
+        content.Add(streamContent, "file", fileName);
+        var response = await _http.PostAsync($"/api/payments/{paymentId}/receipt", content);
+        return response.IsSuccessStatusCode;
+    }
+
     // --- HTTP helpers ---
     private bool IsOnLoginPage()
     {

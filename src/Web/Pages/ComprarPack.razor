@@ -59,18 +59,45 @@ else
                     }
                 </div>
                 <div class="pricing-footer">
-                    <button class="btn btn-primary pricing-btn @(plan.IsPopular ? "pricing-btn-popular" : "")"
-                            disabled="@(processingPlanId == plan.Id)"
-                            @onclick="() => ComprarPlan(plan)">
-                        @if (processingPlanId == plan.Id)
-                        {
-                            <span>Procesando...</span>
-                        }
-                        else
-                        {
-                            <span>Pagar con @(isPayPal ? "PayPal" : "MercadoPago")</span>
-                        }
-                    </button>
+                    @if (isPayPal)
+                    {
+                        <button class="btn btn-primary pricing-btn @(plan.IsPopular ? "pricing-btn-popular" : "")"
+                                disabled="@(processingPlanId == plan.Id)"
+                                @onclick="() => ComprarPlan(plan)">
+                            @if (processingPlanId == plan.Id)
+                            {
+                                <span>Procesando...</span>
+                            }
+                            else
+                            {
+                                <span><i class="fa-brands fa-paypal" style="margin-right:0.3rem;"></i>Pagar con PayPal</span>
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        var transferPrice = Math.Round(totalPrice * 0.95m, 2);
+                        <div style="display:flex;flex-direction:column;gap:0.5rem;width:100%;">
+                            <button class="btn btn-primary pricing-btn @(plan.IsPopular ? "pricing-btn-popular" : "")"
+                                    disabled="@(processingPlanId == plan.Id)"
+                                    @onclick="() => ComprarPlan(plan)">
+                                @if (processingPlanId == plan.Id)
+                                {
+                                    <span>Procesando...</span>
+                                }
+                                else
+                                {
+                                    <span><i class="fa-solid fa-credit-card" style="margin-right:0.3rem;"></i>MercadoPago</span>
+                                }
+                            </button>
+                            <button class="btn btn-secondary pricing-btn"
+                                    disabled="@(processingPlanId == plan.Id)"
+                                    @onclick="() => PagarTransferencia(plan, transferPrice)"
+                                    style="font-size:0.8rem;">
+                                <span><i class="fa-solid fa-building-columns" style="margin-right:0.3rem;"></i>Transferencia $@FormatPrice(transferPrice, false) <span style="color:var(--primary);font-weight:700;">(-5%)</span></span>
+                            </button>
+                        </div>
+                    }
                 </div>
             </div>
         }
@@ -110,7 +137,31 @@ else
                                     </td>
                                     <td>@payment.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td style="text-align:center;">
-                                        @if (isPending)
+                                        @{
+                                            var isTransfer = payment.PaymentProvider == "transferencia";
+                                            var isPendingReview = payment.Status?.ToLower() == "pending_review";
+                                        }
+                                        @if (isPending && isTransfer)
+                                        {
+                                            <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
+                                                <label class="btn btn-sm btn-primary" style="cursor:pointer;margin:0;" title="Adjuntar comprobante">
+                                                    <i class="fa-solid fa-paperclip"></i> Comprobante
+                                                    <InputFile OnChange="e => UploadReceipt(e, payment)" style="display:none;" accept=".jpg,.jpeg,.png,.pdf" />
+                                                </label>
+                                                <button class="btn btn-sm btn-danger" title="Eliminar"
+                                                        disabled="@(deletingPaymentId == payment.Id)"
+                                                        @onclick="() => ConfirmDeletePayment(payment)">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                        else if (isPendingReview && isTransfer)
+                                        {
+                                            <span class="status-badge" style="background:rgba(59,130,246,0.1);color:#3b82f6;">
+                                                <i class="fa-solid fa-clock"></i> En revision
+                                            </span>
+                                        }
+                                        else if (isPending)
                                         {
                                             <div style="display:flex;gap:0.4rem;justify-content:center;">
                                                 <button class="btn btn-sm btn-primary" title="Reintentar pago"
@@ -160,6 +211,60 @@ else
             </div>
         </div>
     }
+
+    @if (showTransferModal)
+    {
+        <div class="modal-overlay" @onclick="() => showTransferModal = false">
+            <div class="modal-card" @onclick:stopPropagation="true" style="max-width:480px;">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-building-columns" style="margin-right:0.5rem;"></i>Pago por Transferencia</h3>
+                    <button class="btn-close" @onclick="() => showTransferModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:1rem;margin-bottom:1rem;">
+                        <div style="font-size:0.8rem;color:var(--primary);font-weight:600;margin-bottom:0.25rem;">
+                            <i class="fa-solid fa-tag"></i> 5% de descuento aplicado
+                        </div>
+                        <div style="font-size:1.5rem;font-weight:700;">$@FormatPrice(transferAmount, false)</div>
+                        <div style="font-size:0.8rem;color:var(--text-secondary);">@transferPlanName - IVA incluido</div>
+                    </div>
+
+                    <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:1rem;">
+                        Realiza la transferencia con los datos que se indican abajo y luego subi el comprobante desde el historial de pagos.
+                    </p>
+
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                        @if (!string.IsNullOrEmpty(transferCvu))
+                        {
+                            <div style="background:var(--bg);border-radius:8px;padding:0.75rem 1rem;">
+                                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;">CVU</div>
+                                <div style="font-family:monospace;font-size:0.95rem;font-weight:600;word-break:break-all;">@transferCvu</div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(transferAlias))
+                        {
+                            <div style="background:var(--bg);border-radius:8px;padding:0.75rem 1rem;">
+                                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;">Alias</div>
+                                <div style="font-size:0.95rem;font-weight:600;">@transferAlias</div>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(transferTitular))
+                        {
+                            <div style="background:var(--bg);border-radius:8px;padding:0.75rem 1rem;">
+                                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);font-weight:600;">Titular</div>
+                                <div style="font-size:0.95rem;font-weight:600;">@transferTitular</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @onclick="CloseTransferModal">
+                        <i class="fa-solid fa-check" style="margin-right:0.3rem;"></i>Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -172,6 +277,12 @@ else
     private bool showDeleteConfirm;
     private PaymentDto? paymentToDelete;
     private int? deletingPaymentId;
+    private bool showTransferModal;
+    private string transferCvu = "";
+    private string transferAlias = "";
+    private string transferTitular = "";
+    private decimal transferAmount;
+    private string transferPlanName = "";
 
     [SupplyParameterFromQuery(Name = "U")]
     public string? CountryOverride { get; set; }
@@ -246,6 +357,7 @@ else
     {
         "approved" or "aprobado" => "status-success",
         "pending" or "pendiente" => "status-warning",
+        "pending_review" => "status-info",
         "rejected" or "rechazado" => "status-danger",
         _ => "status-muted"
     };
@@ -254,6 +366,7 @@ else
     {
         "approved" or "aprobado" => "Aprobado",
         "pending" or "pendiente" => "Pendiente",
+        "pending_review" => "En revision",
         "rejected" or "rechazado" => "Rechazado",
         _ => status ?? "—"
     };
@@ -324,6 +437,79 @@ else
             showDeleteConfirm = false;
             paymentToDelete = null;
             StateHasChanged();
+        }
+    }
+
+    private async Task PagarTransferencia(PaymentPlanDto plan, decimal amount)
+    {
+        processingPlanId = plan.Id;
+        StateHasChanged();
+
+        try
+        {
+            var result = await Api.CreateTransferPaymentAsync(plan.Id);
+            if (result is not null && result.Transfer)
+            {
+                transferCvu = result.Cvu;
+                transferAlias = result.Alias;
+                transferTitular = result.Titular;
+                transferAmount = result.Amount;
+                transferPlanName = plan.Name;
+                showTransferModal = true;
+
+                // Refresh payments list
+                payments = await Api.GetMyPaymentsAsync();
+            }
+            else
+            {
+                ToastService.Error("No se pudo crear el pago por transferencia.");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al procesar el pago.");
+        }
+        finally
+        {
+            processingPlanId = null;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseTransferModal()
+    {
+        showTransferModal = false;
+    }
+
+    private async Task UploadReceipt(InputFileChangeEventArgs e, PaymentDto payment)
+    {
+        var file = e.File;
+        if (file is null) return;
+
+        if (file.Size > 5 * 1024 * 1024)
+        {
+            ToastService.Error("El archivo no puede superar 5 MB");
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(5 * 1024 * 1024);
+            var success = await Api.UploadTransferReceiptAsync(payment.Id, stream, file.Name);
+            if (success)
+            {
+                ToastService.Success("Comprobante subido. Tu pago sera revisado.");
+                payments = await Api.GetMyPaymentsAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                ToastService.Error("No se pudo subir el comprobante");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al subir el comprobante");
         }
     }
 }

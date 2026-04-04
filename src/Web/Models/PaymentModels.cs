@@ -31,7 +31,19 @@ public class PaymentDto
     public string? Currency { get; set; }
     public string Status { get; set; } = string.Empty;
     public string? PaymentProvider { get; set; }
+    public string? TransferReceiptUrl { get; set; }
     public DateTime CreatedAt { get; set; }
+}
+
+public class TransferPaymentResponse
+{
+    public string? CheckoutUrl { get; set; }
+    public int PaymentId { get; set; }
+    public bool Transfer { get; set; }
+    public decimal Amount { get; set; }
+    public string Cvu { get; set; } = string.Empty;
+    public string Alias { get; set; } = string.Empty;
+    public string Titular { get; set; } = string.Empty;
 }
 
 public class CountryDetectResult

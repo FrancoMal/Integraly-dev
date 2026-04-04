@@ -4570,6 +4570,11 @@ td.calendar-slot-unavailable {
   color: #dc2626;
 }
 
+.status-info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
 .status-muted {
   background: rgba(148, 163, 184, 0.1);
   color: #64748b;

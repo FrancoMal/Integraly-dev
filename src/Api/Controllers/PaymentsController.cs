@@ -19,6 +19,7 @@ public class PaymentsController : ControllerBase
     private readonly EmailService _emailService;
     private readonly AuditLogService _auditLogService;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<PaymentsController> _logger;
 
     public PaymentsController(
@@ -28,6 +29,7 @@ public class PaymentsController : ControllerBase
         EmailService emailService,
         AuditLogService auditLogService,
         IHttpClientFactory httpClientFactory,
+        IConfiguration configuration,
         ILogger<PaymentsController> logger)
     {
         _db = db;
@@ -36,6 +38,7 @@ public class PaymentsController : ControllerBase
         _emailService = emailService;
         _auditLogService = auditLogService;
         _httpClientFactory = httpClientFactory;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -246,8 +249,8 @@ public class PaymentsController : ControllerBase
         if (userId is null) return Unauthorized();
 
         var provider = (request.Provider ?? "mercadopago").ToLower();
-        if (provider != "mercadopago" && provider != "paypal")
-            return BadRequest(new { message = "Proveedor de pago no soportado. Usa 'mercadopago' o 'paypal'." });
+        if (provider != "mercadopago" && provider != "paypal" && provider != "transferencia")
+            return BadRequest(new { message = "Proveedor de pago no soportado." });
 
         var plan = await _db.PaymentPlans.FirstOrDefaultAsync(p => p.Id == request.PlanId && p.Active);
         if (plan is null) return BadRequest(new { message = "Plan no encontrado o inactivo" });
@@ -255,9 +258,24 @@ public class PaymentsController : ControllerBase
         var user = await _db.Users.FindAsync(userId.Value);
         if (user is null) return Unauthorized();
 
-        // Use USD price for PayPal, ARS + IVA 21% for MercadoPago
-        var amount = provider == "paypal" ? plan.PriceUSD : Math.Round(plan.Price * 1.21m, 2);
-        var currency = provider == "paypal" ? "USD" : plan.Currency;
+        // USD for PayPal, ARS + IVA 21% for MercadoPago, ARS + IVA 21% - 5% discount for transferencia
+        decimal amount;
+        string currency;
+        if (provider == "paypal")
+        {
+            amount = plan.PriceUSD;
+            currency = "USD";
+        }
+        else if (provider == "transferencia")
+        {
+            amount = Math.Round(plan.Price * 1.21m * 0.95m, 2);
+            currency = plan.Currency;
+        }
+        else
+        {
+            amount = Math.Round(plan.Price * 1.21m, 2);
+            currency = plan.Currency;
+        }
 
         // Create payment record
         var payment = new Payment
@@ -273,6 +291,24 @@ public class PaymentsController : ControllerBase
 
         _db.Payments.Add(payment);
         await _db.SaveChangesAsync();
+
+        if (provider == "transferencia")
+        {
+            // Transferencia: queda pendiente, el usuario debe subir comprobante
+            await _auditLogService.LogAsync("Payment", payment.Id.ToString(), "create",
+                $"Provider: transferencia, Plan: {plan.Name} - ${amount} ARS (con 5% dto)", GetUsername());
+
+            return Ok(new
+            {
+                checkoutUrl = (string?)null,
+                paymentId = payment.Id,
+                transfer = true,
+                amount = payment.Amount,
+                cvu = _configuration["Transfer:CVU"] ?? Environment.GetEnvironmentVariable("TRANSFER_CVU") ?? "",
+                alias = _configuration["Transfer:Alias"] ?? Environment.GetEnvironmentVariable("TRANSFER_ALIAS") ?? "",
+                titular = _configuration["Transfer:Titular"] ?? Environment.GetEnvironmentVariable("TRANSFER_TITULAR") ?? ""
+            });
+        }
 
         string? checkoutUrl = null;
 
@@ -525,6 +561,81 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
+    /// Upload transfer receipt for a pending transfer payment
+    /// </summary>
+    [HttpPost("{id}/receipt")]
+    [Authorize]
+    public async Task<IActionResult> UploadReceipt(int id, IFormFile file)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var payment = await _db.Payments.FirstOrDefaultAsync(
+            p => p.Id == id && p.UserId == userId.Value && p.PaymentProvider == "transferencia");
+        if (payment is null) return NotFound(new { message = "Pago no encontrado" });
+
+        if (payment.Status == "approved")
+            return BadRequest(new { message = "Este pago ya fue aprobado" });
+
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "Debe adjuntar un archivo" });
+
+        if (file.Length > 5 * 1024 * 1024)
+            return BadRequest(new { message = "El archivo no puede superar 5 MB" });
+
+        var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "receipts");
+        Directory.CreateDirectory(uploadsDir);
+
+        var ext = Path.GetExtension(file.FileName);
+        var fileName = $"receipt_{payment.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}{ext}";
+        var filePath = Path.Combine(uploadsDir, fileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        payment.TransferReceiptUrl = $"/api/payments/{payment.Id}/receipt-file/{fileName}";
+        payment.Status = "pending_review";
+        await _db.SaveChangesAsync();
+
+        await _auditLogService.LogAsync("Payment", payment.Id.ToString(), "receipt_uploaded",
+            $"File: {fileName}", GetUsername());
+
+        return Ok(new { message = "Comprobante subido correctamente", receiptUrl = payment.TransferReceiptUrl });
+    }
+
+    /// <summary>
+    /// Serve a receipt file
+    /// </summary>
+    [HttpGet("{id}/receipt-file/{fileName}")]
+    [Authorize]
+    public async Task<IActionResult> GetReceiptFile(int id, string fileName)
+    {
+        var userId = GetUserId();
+        var isAdmin = IsAdmin();
+
+        var payment = await _db.Payments.FindAsync(id);
+        if (payment is null) return NotFound();
+
+        // Only the owner or admin can see the receipt
+        if (!isAdmin && payment.UserId != userId) return Forbid();
+
+        var filePath = Path.Combine(Directory.GetCurrentDirectory(), "uploads", "receipts", fileName);
+        if (!System.IO.File.Exists(filePath)) return NotFound();
+
+        var contentType = Path.GetExtension(fileName).ToLower() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".pdf" => "application/pdf",
+            _ => "application/octet-stream"
+        };
+
+        return PhysicalFile(filePath, contentType);
+    }
+
+    /// <summary>
     /// Get current user's payment history
     /// </summary>
     [HttpGet("my")]
@@ -548,6 +659,7 @@ public class PaymentsController : ControllerBase
                 p.Currency,
                 p.Status,
                 p.PaymentProvider,
+                p.TransferReceiptUrl,
                 p.CreatedAt,
                 p.ApprovedAt
             })

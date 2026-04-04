@@ -40,6 +40,9 @@ public class Payment
 
     public int? TokenPackId { get; set; }
 
+    [MaxLength(500)]
+    public string? TransferReceiptUrl { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? ApprovedAt { get; set; }
