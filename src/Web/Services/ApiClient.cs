@@ -442,6 +442,16 @@ public class ApiClient
     public async Task<bool> DeletePaymentPlanAsync(int id)
         => await DeleteAsync($"/api/payments/plans/{id}");
 
+    public async Task<List<AdminPaymentDto>?> GetAllPaymentsAsync()
+        => await GetAsync<List<AdminPaymentDto>>("/api/payments");
+
+    public async Task<bool> ApprovePaymentAsync(int id)
+    {
+        await SetAuthHeaderAsync();
+        var response = await _http.PostAsync($"/api/payments/{id}/approve", null);
+        return response.IsSuccessStatusCode;
+    }
+
     public async Task<bool> DeletePaymentAsync(int id)
         => await DeleteAsync($"/api/payments/{id}");
 

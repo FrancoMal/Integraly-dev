@@ -34,6 +34,72 @@
     </div>
 </div>
 
+@* Pagos por transferencia pendientes *@
+@if (pendingPayments is not null && pendingPayments.Count > 0)
+{
+    <div class="card" style="margin-bottom:1rem;border-left:4px solid #f59e0b;">
+        <div class="card-body">
+            <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;">
+                <i class="fa-solid fa-clock" style="margin-right:0.4rem;color:#f59e0b;"></i>Pagos pendientes de aprobacion
+                <span class="status-badge status-warning" style="margin-left:0.5rem;">@pendingPayments.Count</span>
+            </h3>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Plan</th>
+                            <th style="text-align:right;">Monto</th>
+                            <th>Medio</th>
+                            <th style="text-align:center;">Estado</th>
+                            <th>Fecha</th>
+                            <th style="text-align:center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in pendingPayments)
+                        {
+                            var curr = p.Currency == "USD" ? "US$" : "$";
+                            var hasReceipt = !string.IsNullOrEmpty(p.TransferReceiptUrl);
+                            var provLabel = p.PaymentProvider switch { "mercadopago" => "MercadoPago", "paypal" => "PayPal", "transferencia" => "Transferencia", _ => p.PaymentProvider ?? "—" };
+                            var statusLabel = p.Status switch { "pending" => "Pendiente", "pending_review" => "Comprobante adjunto", _ => p.Status };
+                            var statusClass = p.Status switch { "pending_review" => "status-info", _ => "status-warning" };
+                            <tr>
+                                <td>
+                                    <div style="font-weight:600;">@p.UserName</div>
+                                    <div style="font-size:0.72rem;color:var(--text-secondary);">@p.UserEmail</div>
+                                </td>
+                                <td>@p.PlanName <span style="color:var(--text-muted);font-size:0.8rem;">(@p.Classes cl.)</span></td>
+                                <td style="text-align:right;font-weight:600;">@curr@FormatPrice(p.Amount, p.Currency == "USD")</td>
+                                <td style="font-size:0.82rem;">@provLabel</td>
+                                <td style="text-align:center;">
+                                    <span class="status-badge @statusClass">@statusLabel</span>
+                                </td>
+                                <td style="font-size:0.82rem;">@p.CreatedAt.ToString("dd/MM/yy HH:mm")</td>
+                                <td style="text-align:center;">
+                                    <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
+                                        @if (hasReceipt)
+                                        {
+                                            <a href="@p.TransferReceiptUrl" target="_blank" class="btn btn-sm btn-secondary" title="Ver comprobante">
+                                                <i class="fa-solid fa-file-arrow-down"></i> Comprobante
+                                            </a>
+                                        }
+                                        <button class="btn btn-sm btn-primary" title="Aprobar pago"
+                                                disabled="@approvingPaymentId.HasValue"
+                                                @onclick="() => ApprovePayment(p)">
+                                            <i class="fa-solid fa-check"></i> Aprobar
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
 @* Resumen *@
 <div class="dashboard-cards-row" style="margin-bottom:1rem;">
     <div class="stat-card">
@@ -231,6 +297,8 @@ else
 @code {
     private List<TokenPackDto>? packs;
     private List<UserManageDto>? users;
+    private List<AdminPaymentDto>? pendingPayments;
+    private int? approvingPaymentId;
     private bool isLoading = true;
     private bool saving = false;
 
@@ -279,9 +347,17 @@ else
         {
             var packsTask = Api.GetAllTokenPacksAsync();
             var usersTask = Api.GetUsersAsync();
-            await Task.WhenAll(packsTask, usersTask);
+            var paymentsTask = Api.GetAllPaymentsAsync();
+            await Task.WhenAll(packsTask, usersTask, paymentsTask);
             packs = packsTask.Result;
             users = usersTask.Result;
+
+            var allPayments = paymentsTask.Result;
+            pendingPayments = allPayments?
+                .Where(p => p.Status is "pending" or "pending_review")
+                .OrderByDescending(p => p.Status == "pending_review")
+                .ThenByDescending(p => p.CreatedAt)
+                .ToList() ?? new();
 
             uniqueUsers = new();
             if (packs is not null)
@@ -431,5 +507,37 @@ else
         }
         saving = false;
         StateHasChanged();
+    }
+
+    // Payments
+    private async Task ApprovePayment(AdminPaymentDto payment)
+    {
+        approvingPaymentId = payment.Id;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.ApprovePaymentAsync(payment.Id);
+            if (success)
+            {
+                ToastService.Success($"Pago aprobado. Clases acreditadas a {payment.UserName}");
+                await LoadData();
+            }
+            else
+            {
+                ToastService.Error("Error al aprobar el pago");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al aprobar el pago");
+        }
+        approvingPaymentId = null;
+        StateHasChanged();
+    }
+
+    private string FormatPrice(decimal price, bool usd = false)
+    {
+        if (usd) return price.ToString("N2", System.Globalization.CultureInfo.InvariantCulture);
+        return price.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("es-AR"));
     }
 }

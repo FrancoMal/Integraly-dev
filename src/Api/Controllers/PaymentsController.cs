@@ -684,6 +684,59 @@ public class PaymentsController : ControllerBase
     }
 
     /// <summary>
+    /// Approve a transfer payment (admin only) - creates token pack
+    /// </summary>
+    [HttpPost("{id}/approve")]
+    [Authorize]
+    public async Task<IActionResult> ApprovePayment(int id)
+    {
+        if (!IsAdmin()) return Forbid();
+
+        var payment = await _db.Payments
+            .Include(p => p.PaymentPlan)
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.Id == id);
+
+        if (payment is null) return NotFound(new { message = "Pago no encontrado" });
+
+        if (payment.Status == "approved")
+            return BadRequest(new { message = "Este pago ya fue aprobado" });
+
+        payment.Status = "approved";
+        payment.ApprovedAt = DateTime.UtcNow;
+
+        var plan = payment.PaymentPlan;
+        if (plan is not null)
+        {
+            var tokenPack = new TokenPack
+            {
+                UserId = payment.UserId,
+                TotalTokens = plan.Classes,
+                RemainingTokens = plan.Classes,
+                CreatedBy = GetUserId() ?? payment.UserId,
+                Description = $"Compra: {plan.Name} (Pago #{payment.Id})",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.TokenPacks.Add(tokenPack);
+            await _db.SaveChangesAsync();
+            payment.TokenPackId = tokenPack.Id;
+        }
+
+        await _db.SaveChangesAsync();
+
+        await _auditLogService.LogAsync("Payment", payment.Id.ToString(), "approved",
+            $"Admin approved transfer payment. Plan: {plan?.Name}", GetUsername());
+
+        if (payment.User is not null && plan is not null)
+        {
+            await SendPaymentConfirmationEmail(payment.User, plan, payment);
+        }
+
+        return Ok(new { message = "Pago aprobado y clases acreditadas" });
+    }
+
+    /// <summary>
     /// Delete a pending payment (user can only delete their own pending payments)
     /// </summary>
     [HttpDelete("{id}")]

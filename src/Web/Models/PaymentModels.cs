@@ -52,6 +52,24 @@ public class CountryDetectResult
     public string Provider { get; set; } = "mercadopago";
 }
 
+public class AdminPaymentDto
+{
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string UserEmail { get; set; } = string.Empty;
+    public string PlanName { get; set; } = string.Empty;
+    public int Classes { get; set; }
+    public decimal Amount { get; set; }
+    public string? Currency { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? PaymentProvider { get; set; }
+    public string? TransferReceiptUrl { get; set; }
+    public int? TokenPackId { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+}
+
 public class PlanRequestDto
 {
     public string Name { get; set; } = "";
