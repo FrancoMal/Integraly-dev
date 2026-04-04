@@ -22,14 +22,16 @@ else
     <div class="pricing-grid">
         @foreach (var plan in plans)
         {
-            var displayPrice = isPayPal ? plan.PriceUSD : plan.Price;
-            var pricePerClass = plan.Classes > 0 ? displayPrice / plan.Classes : 0;
-            var singlePrice = isPayPal
-                ? (plans.FirstOrDefault(p => p.Classes == 1)?.PriceUSD ?? displayPrice)
-                : (plans.FirstOrDefault(p => p.Classes == 1)?.Price ?? displayPrice);
-            var savingsPercent = singlePrice > 0 && plan.Classes > 1
-                ? (int)Math.Round((1 - (double)(pricePerClass / singlePrice)) * 100)
+            var basePrice = isPayPal ? plan.PriceUSD : plan.Price;
+            var totalPrice = isPayPal ? basePrice : Math.Round(basePrice * 1.21m, 2);
+            var pricePerClass = plan.Classes > 0 ? totalPrice / plan.Classes : 0;
+            var singleTotal = isPayPal
+                ? (plans.FirstOrDefault(p => p.Classes == 1)?.PriceUSD ?? totalPrice)
+                : Math.Round((plans.FirstOrDefault(p => p.Classes == 1)?.Price ?? basePrice) * 1.21m, 2);
+            var savingsPercent = singleTotal > 0 && plan.Classes > 1
+                ? (int)Math.Round((1 - (double)(pricePerClass / singleTotal)) * 100)
                 : 0;
+            var currSymbol = isPayPal ? "US$" : "$";
 
             <div class="pricing-card @(plan.IsPopular ? "pricing-card-popular" : "")">
                 @if (plan.IsPopular)
@@ -41,8 +43,16 @@ else
                     <div class="pricing-classes">@plan.Classes @(plan.Classes == 1 ? "clase" : "clases")</div>
                 </div>
                 <div class="pricing-body">
-                    <div class="pricing-price">@(isPayPal ? "US$" : "$")@FormatPrice(displayPrice, isPayPal)</div>
-                    <div class="pricing-per-class">@(isPayPal ? "US$" : "$")@FormatPrice(pricePerClass, isPayPal) por clase</div>
+                    @if (!isPayPal)
+                    {
+                        <div class="pricing-price">@currSymbol@FormatPrice(totalPrice, false)</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:-0.25rem;">IVA incluido</div>
+                    }
+                    else
+                    {
+                        <div class="pricing-price">@currSymbol@FormatPrice(totalPrice, true)</div>
+                    }
+                    <div class="pricing-per-class">@currSymbol@FormatPrice(pricePerClass, isPayPal) por clase</div>
                     @if (savingsPercent > 0)
                     {
                         <div class="pricing-savings">Ahorra @savingsPercent%</div>

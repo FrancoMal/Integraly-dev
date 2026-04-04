@@ -255,8 +255,8 @@ public class PaymentsController : ControllerBase
         var user = await _db.Users.FindAsync(userId.Value);
         if (user is null) return Unauthorized();
 
-        // Use USD price for PayPal, ARS for MercadoPago
-        var amount = provider == "paypal" ? plan.PriceUSD : plan.Price;
+        // Use USD price for PayPal, ARS + IVA 21% for MercadoPago
+        var amount = provider == "paypal" ? plan.PriceUSD : Math.Round(plan.Price * 1.21m, 2);
         var currency = provider == "paypal" ? "USD" : plan.Currency;
 
         // Create payment record

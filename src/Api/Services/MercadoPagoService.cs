@@ -48,8 +48,8 @@ public class MercadoPagoService
                     title = plan.Name,
                     description = plan.Description ?? $"{plan.Classes} clase(s) particular(es)",
                     quantity = 1,
-                    unit_price = plan.Price,
-                    currency_id = plan.Currency
+                    unit_price = payment.Amount,
+                    currency_id = payment.Currency
                 }
             },
             payer = new
