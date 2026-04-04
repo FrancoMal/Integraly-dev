@@ -23,13 +23,12 @@ else
         @foreach (var plan in plans)
         {
             var basePrice = isPayPal ? plan.PriceUSD : plan.Price;
-            var totalPrice = isPayPal ? basePrice : Math.Round(basePrice * 1.21m, 2);
-            var pricePerClass = plan.Classes > 0 ? totalPrice / plan.Classes : 0;
-            var singleTotal = isPayPal
-                ? (plans.FirstOrDefault(p => p.Classes == 1)?.PriceUSD ?? totalPrice)
-                : Math.Round((plans.FirstOrDefault(p => p.Classes == 1)?.Price ?? basePrice) * 1.21m, 2);
-            var savingsPercent = singleTotal > 0 && plan.Classes > 1
-                ? (int)Math.Round((1 - (double)(pricePerClass / singleTotal)) * 100)
+            var pricePerClass = plan.Classes > 0 ? basePrice / plan.Classes : 0;
+            var singleBase = isPayPal
+                ? (plans.FirstOrDefault(p => p.Classes == 1)?.PriceUSD ?? basePrice)
+                : (plans.FirstOrDefault(p => p.Classes == 1)?.Price ?? basePrice);
+            var savingsPercent = singleBase > 0 && plan.Classes > 1
+                ? (int)Math.Round((1 - (double)(pricePerClass / singleBase)) * 100)
                 : 0;
             var currSymbol = isPayPal ? "US$" : "$";
 
@@ -43,14 +42,12 @@ else
                     <div class="pricing-classes">@plan.Classes @(plan.Classes == 1 ? "clase" : "clases")</div>
                 </div>
                 <div class="pricing-body">
+                    <div class="pricing-price">@currSymbol@FormatPrice(basePrice, isPayPal)</div>
                     @if (!isPayPal)
                     {
-                        <div class="pricing-price">@currSymbol@FormatPrice(totalPrice, false)</div>
-                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:-0.25rem;">IVA incluido</div>
-                    }
-                    else
-                    {
-                        <div class="pricing-price">@currSymbol@FormatPrice(totalPrice, true)</div>
+                        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:-0.25rem;line-height:1.3;">
+                            Precio en pesos argentinos<br/>No incluye IVA
+                        </div>
                     }
                     <div class="pricing-per-class">@currSymbol@FormatPrice(pricePerClass, isPayPal) por clase</div>
                     @if (savingsPercent > 0)
@@ -76,27 +73,10 @@ else
                     }
                     else
                     {
-                        var transferPrice = Math.Round(totalPrice * 0.95m, 2);
-                        <div style="display:flex;flex-direction:column;gap:0.5rem;width:100%;">
-                            <button class="btn btn-primary pricing-btn @(plan.IsPopular ? "pricing-btn-popular" : "")"
-                                    disabled="@(processingPlanId == plan.Id)"
-                                    @onclick="() => ComprarPlan(plan)">
-                                @if (processingPlanId == plan.Id)
-                                {
-                                    <span>Procesando...</span>
-                                }
-                                else
-                                {
-                                    <span><i class="fa-solid fa-credit-card" style="margin-right:0.3rem;"></i>MercadoPago</span>
-                                }
-                            </button>
-                            <button class="btn btn-secondary pricing-btn"
-                                    disabled="@(processingPlanId == plan.Id)"
-                                    @onclick="() => PagarTransferencia(plan, transferPrice)"
-                                    style="font-size:0.8rem;">
-                                <span><i class="fa-solid fa-building-columns" style="margin-right:0.3rem;"></i>Transferencia $@FormatPrice(transferPrice, false) <span style="color:var(--primary);font-weight:700;">(-5%)</span></span>
-                            </button>
-                        </div>
+                        <button class="btn btn-primary pricing-btn @(plan.IsPopular ? "pricing-btn-popular" : "")"
+                                @onclick="() => OpenCheckoutModal(plan)">
+                            <i class="fa-solid fa-cart-shopping" style="margin-right:0.3rem;"></i>Comprar
+                        </button>
                     }
                 </div>
             </div>
@@ -190,6 +170,59 @@ else
         </div>
     }
 
+    @if (showCheckoutModal && checkoutPlan is not null)
+    {
+        var subTotal = checkoutPlan.Price;
+        var ivaAmount = Math.Round(subTotal * 0.21m, 2);
+        var totalConIva = Math.Round(subTotal * 1.21m, 2);
+        var totalTransferencia = Math.Round(totalConIva * 0.95m, 2);
+
+        <div class="modal-overlay" @onclick="() => showCheckoutModal = false">
+            <div class="modal-card" @onclick:stopPropagation="true" style="max-width:460px;">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-cart-shopping" style="margin-right:0.5rem;"></i>@checkoutPlan.Name</h3>
+                    <button class="btn-close" @onclick="() => showCheckoutModal = false">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;margin-bottom:1.25rem;">
+                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:var(--text-secondary);">
+                            <span>Subtotal (@checkoutPlan.Classes @(checkoutPlan.Classes == 1 ? "clase" : "clases"))</span>
+                            <span>$@FormatPrice(subTotal, false)</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-size:0.9rem;color:var(--text-secondary);">
+                            <span>IVA (21%)</span>
+                            <span>$@FormatPrice(ivaAmount, false)</span>
+                        </div>
+                        <div style="border-top:1px solid var(--border);padding-top:0.5rem;display:flex;justify-content:space-between;font-size:1.15rem;font-weight:700;">
+                            <span>Total</span>
+                            <span>$@FormatPrice(totalConIva, false)</span>
+                        </div>
+                    </div>
+
+                    <div style="display:flex;flex-direction:column;gap:0.6rem;">
+                        <button class="btn btn-primary" style="width:100%;justify-content:center;padding:0.7rem;"
+                                disabled="@(processingPlanId == checkoutPlan.Id)"
+                                @onclick="() => ComprarPlan(checkoutPlan)">
+                            @if (processingPlanId == checkoutPlan.Id)
+                            {
+                                <span>Procesando...</span>
+                            }
+                            else
+                            {
+                                <span><i class="fa-solid fa-credit-card" style="margin-right:0.4rem;"></i>Pagar con MercadoPago</span>
+                            }
+                        </button>
+                        <button class="btn btn-secondary" style="width:100%;justify-content:center;padding:0.7rem;"
+                                disabled="@(processingPlanId == checkoutPlan.Id)"
+                                @onclick="() => PagarTransferencia(checkoutPlan, totalTransferencia)">
+                            <span><i class="fa-solid fa-building-columns" style="margin-right:0.4rem;"></i>Transferencia $@FormatPrice(totalTransferencia, false) <span style="color:var(--primary);font-weight:700;">(-5%)</span></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     @if (showDeleteConfirm && paymentToDelete is not null)
     {
         <div class="modal-overlay" @onclick="() => showDeleteConfirm = false">
@@ -277,6 +310,8 @@ else
     private bool showDeleteConfirm;
     private PaymentDto? paymentToDelete;
     private int? deletingPaymentId;
+    private bool showCheckoutModal;
+    private PaymentPlanDto? checkoutPlan;
     private bool showTransferModal;
     private string transferCvu = "";
     private string transferAlias = "";
@@ -317,9 +352,16 @@ else
         }
     }
 
+    private void OpenCheckoutModal(PaymentPlanDto plan)
+    {
+        checkoutPlan = plan;
+        showCheckoutModal = true;
+    }
+
     private async Task ComprarPlan(PaymentPlanDto plan)
     {
         processingPlanId = plan.Id;
+        showCheckoutModal = false;
         StateHasChanged();
 
         try
@@ -443,6 +485,7 @@ else
     private async Task PagarTransferencia(PaymentPlanDto plan, decimal amount)
     {
         processingPlanId = plan.Id;
+        showCheckoutModal = false;
         StateHasChanged();
 
         try
