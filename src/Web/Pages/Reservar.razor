@@ -6,62 +6,59 @@
 
 @if (myPacks is not null && myPacks.Count > 0)
 {
-    @foreach (var pack in myPacks.Where(p => p.RemainingTokens > 0 || p.TotalTokens > 0))
-    {
-        var totalPack = pack.TotalTokens;
-        var completadas = usedClasses;
-        var reservadas = bookedClasses;
-        var disponibles = pack.RemainingTokens;
-        var pctCompletadas = totalPack > 0 ? (int)((double)completadas / totalPack * 100) : 0;
-        var pctReservadas = totalPack > 0 ? (int)((double)reservadas / totalPack * 100) : 0;
-        var pctDisponibles = totalPack > 0 ? (int)((double)disponibles / totalPack * 100) : 0;
+    var totalClases = myPacks.Sum(p => p.TotalTokens);
+    var disponibles = myPacks.Sum(p => p.RemainingTokens);
+    var completadas = usedClasses;
+    var reservadas = bookedClasses;
+    var pctCompletadas = totalClases > 0 ? (int)((double)completadas / totalClases * 100) : 0;
+    var pctReservadas = totalClases > 0 ? (int)((double)reservadas / totalClases * 100) : 0;
+    var pctDisponibles = totalClases > 0 ? (int)((double)disponibles / totalClases * 100) : 0;
 
-        <div class="card" style="margin-bottom:1rem;">
-            <div class="card-body" style="padding:1rem 1.25rem;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-                    <div>
-                        <span style="font-weight:600;font-size:0.95rem;">@(string.IsNullOrEmpty(pack.Description) ? "Pack de Clases" : pack.Description)</span>
-                        <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem;">(@totalPack clases)</span>
-                    </div>
+    <div class="card" style="margin-bottom:1rem;">
+        <div class="card-body" style="padding:1rem 1.25rem;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
+                <div>
+                    <span style="font-weight:600;font-size:0.95rem;">Mis Clases</span>
+                    <span style="font-size:0.8rem;color:var(--text-muted);margin-left:0.5rem;">(@totalClases contratadas)</span>
                 </div>
+            </div>
 
-                @* Barra de progreso *@
-                <div style="height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden;display:flex;margin-bottom:0.75rem;">
-                    @if (pctCompletadas > 0)
-                    {
-                        <div style="width:@(pctCompletadas)%;background:#3b82f6;transition:width 0.3s;" title="Completadas: @completadas"></div>
-                    }
-                    @if (pctReservadas > 0)
-                    {
-                        <div style="width:@(pctReservadas)%;background:#f59e0b;transition:width 0.3s;" title="Reservadas: @reservadas"></div>
-                    }
-                    @if (pctDisponibles > 0)
-                    {
-                        <div style="width:@(pctDisponibles)%;background:#10b981;transition:width 0.3s;" title="Disponibles: @disponibles"></div>
-                    }
+            @* Barra de progreso *@
+            <div style="height:12px;background:#e2e8f0;border-radius:6px;overflow:hidden;display:flex;margin-bottom:0.75rem;">
+                @if (pctCompletadas > 0)
+                {
+                    <div style="width:@(pctCompletadas)%;background:#3b82f6;transition:width 0.3s;" title="Completadas: @completadas"></div>
+                }
+                @if (pctReservadas > 0)
+                {
+                    <div style="width:@(pctReservadas)%;background:#f59e0b;transition:width 0.3s;" title="Reservadas: @reservadas"></div>
+                }
+                @if (pctDisponibles > 0)
+                {
+                    <div style="width:@(pctDisponibles)%;background:#10b981;transition:width 0.3s;" title="Disponibles: @disponibles"></div>
+                }
+            </div>
+
+            @* Detalle debajo de la barra *@
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;"></span>
+                    <span style="color:var(--text-secondary);">Completadas</span>
+                    <span style="font-weight:600;">@completadas</span>
                 </div>
-
-                @* Detalle debajo de la barra *@
-                <div style="display:flex;gap:1.5rem;flex-wrap:wrap;font-size:0.8rem;">
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#3b82f6;"></span>
-                        <span style="color:var(--text-secondary);">Completadas</span>
-                        <span style="font-weight:600;">@completadas</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;"></span>
-                        <span style="color:var(--text-secondary);">Reservadas</span>
-                        <span style="font-weight:600;">@reservadas</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:6px;">
-                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#10b981;"></span>
-                        <span style="color:var(--text-secondary);">Disponibles</span>
-                        <span style="font-weight:600;">@disponibles</span>
-                    </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#f59e0b;"></span>
+                    <span style="color:var(--text-secondary);">Reservadas</span>
+                    <span style="font-weight:600;">@reservadas</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#10b981;"></span>
+                    <span style="color:var(--text-secondary);">Disponibles</span>
+                    <span style="font-weight:600;">@disponibles</span>
                 </div>
             </div>
         </div>
-    }
+    </div>
 }
 
 <div class="card" style="margin-bottom: 1rem;">
