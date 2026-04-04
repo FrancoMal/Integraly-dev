@@ -51,7 +51,7 @@
                             <tr>
                                 <th>Fecha</th>
                                 <th>Link de reunion</th>
-                                <th>Inscriptos</th>
+                                <th style="text-align:center;">Inscriptos</th>
                                 <th>Acciones</th>
                             </tr>
                         </thead>
@@ -63,18 +63,34 @@
                                     <td>
                                         @if (!string.IsNullOrEmpty(d.MeetingLink))
                                         {
-                                            <a href="@d.MeetingLink" target="_blank" style="word-break:break-all;">@d.MeetingLink</a>
+                                            <a href="@d.MeetingLink" target="_blank" style="word-break:break-all;font-size:0.82rem;">@d.MeetingLink</a>
                                         }
                                         else
                                         {
                                             <span class="text-muted">-</span>
                                         }
                                     </td>
-                                    <td>@d.RegistrationCount</td>
-                                    <td class="actions-cell">
-                                        <button class="btn-icon btn-delete" @onclick="() => ConfirmDeleteDate(d)" title="Eliminar">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </button>
+                                    <td style="text-align:center;">
+                                        @if (d.RegistrationCount > 0)
+                                        {
+                                            <button class="btn btn-sm btn-ghost" style="font-weight:600;color:var(--primary);" @onclick="() => ShowRegistrations(d)" title="Ver inscriptos">
+                                                @d.RegistrationCount <i class="fa-solid fa-eye" style="margin-left:0.25rem;font-size:0.7rem;"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">0</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center;">
+                                            <button class="btn btn-sm btn-secondary" @onclick="() => ShowEditDate(d)" title="Editar">
+                                                <i class="fa-solid fa-pen"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => ConfirmDeleteDate(d)" title="Eliminar">
+                                                <i class="fa-solid fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             }
@@ -264,13 +280,13 @@
     }
 }
 
-@* ==================== MODAL: NUEVA FECHA ==================== *@
+@* ==================== MODAL: NUEVA/EDITAR FECHA ==================== *@
 @if (showDateModal)
 {
     <div class="modal-overlay" @onclick="CloseDateForm">
         <div class="modal-card" @onclick:stopPropagation="true">
             <div class="modal-header">
-                <h3>Nueva Fecha de Webinar</h3>
+                <h3>@(editingDate is not null ? "Editar Fecha" : "Nueva Fecha de Webinar")</h3>
                 <button class="btn-close" @onclick="CloseDateForm">&times;</button>
             </div>
             <div class="modal-body">
@@ -291,9 +307,63 @@
                 <button class="btn btn-secondary" @onclick="CloseDateForm">
                     <i class="fa-solid fa-xmark" style="margin-right:0.3rem;"></i>Cancelar
                 </button>
-                <button class="btn btn-primary" @onclick="CreateDate" disabled="@isSaving">
-                    <i class="fa-solid fa-check" style="margin-right:0.3rem;"></i>@(isSaving ? "Creando..." : "Crear Fecha")
+                <button class="btn btn-primary" @onclick="SaveDate" disabled="@isSaving">
+                    <i class="fa-solid fa-floppy-disk" style="margin-right:0.3rem;"></i>@(isSaving ? "Guardando..." : "Guardar")
                 </button>
+            </div>
+        </div>
+    </div>
+}
+
+@* ==================== MODAL: INSCRIPTOS ==================== *@
+@if (showRegistrationsModal && registrationsDate is not null)
+{
+    <div class="modal-overlay" @onclick="() => showRegistrationsModal = false">
+        <div class="modal-card" @onclick:stopPropagation="true" style="max-width:600px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-users" style="margin-right:0.5rem;"></i>Inscriptos - @registrationsDate.Date.ToString("dd/MM/yyyy HH:mm")</h3>
+                <button class="btn-close" @onclick="() => showRegistrationsModal = false">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:0;">
+                @if (dateRegistrations is null)
+                {
+                    <p class="text-muted" style="padding:1.5rem;">Cargando...</p>
+                }
+                else if (dateRegistrations.Count == 0)
+                {
+                    <p class="text-muted" style="padding:1.5rem;">No hay inscriptos</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Telefono</th>
+                                    <th>Empresa</th>
+                                    <th>Fecha registro</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in dateRegistrations)
+                                {
+                                    <tr>
+                                        <td><strong>@r.FullName</strong></td>
+                                        <td>@r.Email</td>
+                                        <td>@(!string.IsNullOrEmpty(r.Phone) ? r.Phone : "-")</td>
+                                        <td>@(!string.IsNullOrEmpty(r.Company) ? r.Company : "-")</td>
+                                        <td style="font-size:0.82rem;">@r.RegisteredAt.ToString("dd/MM/yy HH:mm")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" @onclick="() => showRegistrationsModal = false">Cerrar</button>
             </div>
         </div>
     </div>
@@ -395,11 +465,17 @@
     private List<WebinarDateDto>? dates;
     private bool isLoadingDates = true;
     private bool showDateModal;
+    private WebinarDateDto? editingDate;
     private DateTime formDate = DateTime.Now;
     private string formMeetingLink = "";
     private string? dateFormError;
     private WebinarDateDto? dateToDelete;
     private bool showDeleteDateConfirm;
+
+    // Registrations modal
+    private bool showRegistrationsModal;
+    private WebinarDateDto? registrationsDate;
+    private List<WebinarRegistrationDto>? dateRegistrations;
 
     // Contacts
     private List<WebinarContactDto>? contacts;
@@ -454,8 +530,18 @@
 
     private void ShowDateForm()
     {
+        editingDate = null;
         formDate = DateTime.Now.AddDays(7).Date.AddHours(10);
         formMeetingLink = "";
+        dateFormError = null;
+        showDateModal = true;
+    }
+
+    private void ShowEditDate(WebinarDateDto d)
+    {
+        editingDate = d;
+        formDate = d.Date;
+        formMeetingLink = d.MeetingLink ?? "";
         dateFormError = null;
         showDateModal = true;
     }
@@ -463,10 +549,11 @@
     private void CloseDateForm()
     {
         showDateModal = false;
+        editingDate = null;
         dateFormError = null;
     }
 
-    private async Task CreateDate()
+    private async Task SaveDate()
     {
         dateFormError = null;
         isSaving = true;
@@ -477,23 +564,60 @@
                 Date = formDate,
                 MeetingLink = string.IsNullOrWhiteSpace(formMeetingLink) ? null : formMeetingLink.Trim()
             };
-            var result = await Api.CreateWebinarDateAsync(request);
-            if (result is not null)
+
+            if (editingDate is not null)
             {
-                Toast.Success("Fecha creada exitosamente");
-                showDateModal = false;
-                await LoadDates();
+                var result = await Api.UpdateWebinarDateAsync(editingDate.Id, request);
+                if (result is not null)
+                {
+                    Toast.Success("Fecha actualizada");
+                    showDateModal = false;
+                    editingDate = null;
+                    await LoadDates();
+                }
+                else
+                {
+                    dateFormError = "Error al actualizar la fecha";
+                }
             }
             else
             {
-                dateFormError = "Error al crear la fecha";
+                var result = await Api.CreateWebinarDateAsync(request);
+                if (result is not null)
+                {
+                    Toast.Success("Fecha creada exitosamente");
+                    showDateModal = false;
+                    await LoadDates();
+                }
+                else
+                {
+                    dateFormError = "Error al crear la fecha";
+                }
             }
         }
         catch
         {
-            dateFormError = "Error al crear la fecha";
+            dateFormError = "Error al guardar la fecha";
         }
         isSaving = false;
+    }
+
+    private async Task ShowRegistrations(WebinarDateDto d)
+    {
+        registrationsDate = d;
+        dateRegistrations = null;
+        showRegistrationsModal = true;
+        StateHasChanged();
+
+        try
+        {
+            dateRegistrations = await Api.GetDateRegistrationsAsync(d.Id);
+        }
+        catch
+        {
+            Toast.Error("Error al cargar inscriptos");
+        }
+        StateHasChanged();
     }
 
     private void ConfirmDeleteDate(WebinarDateDto d)

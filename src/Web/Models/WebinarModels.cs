@@ -37,6 +37,15 @@ public class CreateWebinarContactRequest
     public string? Company { get; set; }
 }
 
+public class WebinarRegistrationDto
+{
+    public string FullName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string? Phone { get; set; }
+    public string? Company { get; set; }
+    public DateTime RegisteredAt { get; set; }
+}
+
 public class ImportContactsResult
 {
     public int Imported { get; set; }

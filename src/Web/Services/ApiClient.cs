@@ -361,9 +361,19 @@ public class ApiClient
         return await PostAsync<WebinarDateDto>("/api/webinar/dates", request);
     }
 
+    public async Task<WebinarDateDto?> UpdateWebinarDateAsync(int id, CreateWebinarDateRequest request)
+    {
+        return await PutAsync<WebinarDateDto>($"/api/webinar/dates/{id}", request);
+    }
+
     public async Task<bool> DeleteWebinarDateAsync(int id)
     {
         return await DeleteAsync($"/api/webinar/dates/{id}");
+    }
+
+    public async Task<List<WebinarRegistrationDto>?> GetDateRegistrationsAsync(int dateId)
+    {
+        return await GetAsync<List<WebinarRegistrationDto>>($"/api/webinar/dates/{dateId}/registrations");
     }
 
     public async Task<List<WebinarContactDto>?> GetWebinarContactsAsync()

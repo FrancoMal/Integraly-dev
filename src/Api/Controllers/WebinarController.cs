@@ -54,6 +54,41 @@ public class WebinarController : ControllerBase
             new WebinarDateDto { Id = date.Id, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = 0, CreatedAt = date.CreatedAt });
     }
 
+    // PUT /api/webinar/dates/{id}
+    [HttpPut("dates/{id}")]
+    public async Task<IActionResult> UpdateDate(int id, [FromBody] CreateWebinarDateRequest request)
+    {
+        var date = await _db.WebinarDates.FindAsync(id);
+        if (date is null) return NotFound();
+
+        date.Date = request.Date;
+        date.MeetingLink = request.MeetingLink;
+        await _db.SaveChangesAsync();
+
+        var count = await _db.WebinarRegistrations.CountAsync(r => r.WebinarDateId == id);
+        return Ok(new WebinarDateDto { Id = date.Id, Date = date.Date, MeetingLink = date.MeetingLink, RegistrationCount = count, CreatedAt = date.CreatedAt });
+    }
+
+    // GET /api/webinar/dates/{id}/registrations
+    [HttpGet("dates/{id}/registrations")]
+    public async Task<IActionResult> GetDateRegistrations(int id)
+    {
+        var registrations = await _db.WebinarRegistrations
+            .Where(r => r.WebinarDateId == id)
+            .Join(_db.WebinarContacts, r => r.ContactId, c => c.Id, (r, c) => new
+            {
+                c.FullName,
+                c.Email,
+                c.Phone,
+                c.Company,
+                r.RegisteredAt
+            })
+            .OrderByDescending(x => x.RegisteredAt)
+            .ToListAsync();
+
+        return Ok(registrations);
+    }
+
     // DELETE /api/webinar/dates/{id}
     [HttpDelete("dates/{id}")]
     public async Task<IActionResult> DeleteDate(int id)
