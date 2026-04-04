@@ -20,10 +20,11 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:0.5rem;">
                     <label style="font-size:0.8rem;font-weight:600;">Estado:</label>
-                    <select class="form-input" style="width:auto;min-width:140px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterState" @onchange="OnStateFilterChanged">
+                    <select class="form-input" style="width:auto;min-width:180px;padding:0.3rem 0.5rem;font-size:0.8rem;" value="@filterState" @onchange="OnStateFilterChanged">
                         <option value="">Todos</option>
-                        <option value="active">Con clases</option>
-                        <option value="empty">Sin clases</option>
+                        <option value="pending">Pendiente</option>
+                        <option value="pending_review">Comprobante adjunto</option>
+                        <option value="approved">Aprobado</option>
                     </select>
                 </div>
             </div>
@@ -34,92 +35,33 @@
     </div>
 </div>
 
-@* Pagos por transferencia pendientes *@
-@if (pendingPayments is not null && pendingPayments.Count > 0)
-{
-    <div class="card" style="margin-bottom:1rem;border-left:4px solid #f59e0b;">
-        <div class="card-body">
-            <h3 style="font-size:1rem;font-weight:600;margin-bottom:0.75rem;">
-                <i class="fa-solid fa-clock" style="margin-right:0.4rem;color:#f59e0b;"></i>Pagos pendientes de aprobacion
-                <span class="status-badge status-warning" style="margin-left:0.5rem;">@pendingPayments.Count</span>
-            </h3>
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Usuario</th>
-                            <th>Plan</th>
-                            <th style="text-align:right;">Monto</th>
-                            <th>Medio</th>
-                            <th style="text-align:center;">Estado</th>
-                            <th>Fecha</th>
-                            <th style="text-align:center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var p in pendingPayments)
-                        {
-                            var curr = p.Currency == "USD" ? "US$" : "$";
-                            var hasReceipt = !string.IsNullOrEmpty(p.TransferReceiptUrl);
-                            var provLabel = p.PaymentProvider switch { "mercadopago" => "MercadoPago", "paypal" => "PayPal", "transferencia" => "Transferencia", _ => p.PaymentProvider ?? "—" };
-                            var statusLabel = p.Status switch { "pending" => "Pendiente", "pending_review" => "Comprobante adjunto", _ => p.Status };
-                            var statusClass = p.Status switch { "pending_review" => "status-info", _ => "status-warning" };
-                            <tr>
-                                <td>
-                                    <div style="font-weight:600;">@p.UserName</div>
-                                    <div style="font-size:0.72rem;color:var(--text-secondary);">@p.UserEmail</div>
-                                </td>
-                                <td>@p.PlanName <span style="color:var(--text-muted);font-size:0.8rem;">(@p.Classes cl.)</span></td>
-                                <td style="text-align:right;font-weight:600;">@curr@FormatPrice(p.Amount, p.Currency == "USD")</td>
-                                <td style="font-size:0.82rem;">@provLabel</td>
-                                <td style="text-align:center;">
-                                    <span class="status-badge @statusClass">@statusLabel</span>
-                                </td>
-                                <td style="font-size:0.82rem;">@p.CreatedAt.ToString("dd/MM/yy HH:mm")</td>
-                                <td style="text-align:center;">
-                                    <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
-                                        @if (hasReceipt)
-                                        {
-                                            <a href="@p.TransferReceiptUrl" target="_blank" class="btn btn-sm btn-secondary" title="Ver comprobante">
-                                                <i class="fa-solid fa-file-arrow-down"></i> Comprobante
-                                            </a>
-                                        }
-                                        <button class="btn btn-sm btn-primary" title="Aprobar pago"
-                                                disabled="@approvingPaymentId.HasValue"
-                                                @onclick="() => ApprovePayment(p)">
-                                            <i class="fa-solid fa-check"></i> Aprobar
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-}
-
 @* Resumen *@
 <div class="dashboard-cards-row" style="margin-bottom:1rem;">
     <div class="stat-card">
+        <div class="stat-card-icon warning"><i class="fa-solid fa-clock" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-info">
+            <span class="stat-card-value">@(allPayments?.Count(p => p.Status is "pending" or "pending_review") ?? 0)</span>
+            <span class="stat-card-label">Pagos pendientes</span>
+        </div>
+    </div>
+    <div class="stat-card">
         <div class="stat-card-icon primary"><i class="fa-solid fa-box" style="font-size:1.2rem;"></i></div>
         <div class="stat-card-info">
-            <span class="stat-card-value">@(filteredPacks.Count)</span>
-            <span class="stat-card-label">Packs</span>
+            <span class="stat-card-value">@(packs?.Count ?? 0)</span>
+            <span class="stat-card-label">Packs activos</span>
         </div>
     </div>
     <div class="stat-card">
         <div class="stat-card-icon success"><i class="fa-solid fa-graduation-cap" style="font-size:1.2rem;"></i></div>
         <div class="stat-card-info">
-            <span class="stat-card-value">@filteredPacks.Sum(p => p.TotalTokens)</span>
+            <span class="stat-card-value">@(packs?.Sum(p => p.TotalTokens) ?? 0)</span>
             <span class="stat-card-label">Clases totales</span>
         </div>
     </div>
     <div class="stat-card">
-        <div class="stat-card-icon warning"><i class="fa-solid fa-ticket" style="font-size:1.2rem;"></i></div>
+        <div class="stat-card-icon info"><i class="fa-solid fa-ticket" style="font-size:1.2rem;"></i></div>
         <div class="stat-card-info">
-            <span class="stat-card-value">@filteredPacks.Sum(p => p.RemainingTokens)</span>
+            <span class="stat-card-value">@(packs?.Sum(p => p.RemainingTokens) ?? 0)</span>
             <span class="stat-card-label">Clases restantes</span>
         </div>
     </div>
@@ -138,57 +80,103 @@ else
                     <thead>
                         <tr>
                             <th>Usuario</th>
-                            <th>Descripcion</th>
-                            <th style="text-align:center;">Totales</th>
-                            <th style="text-align:center;">Restantes</th>
-                            <th style="text-align:center;">Usadas</th>
-                            <th>Creado por</th>
+                            <th>Plan / Descripcion</th>
+                            <th style="text-align:center;">Clases</th>
+                            <th style="text-align:right;">Monto</th>
+                            <th>Medio de pago</th>
+                            <th style="text-align:center;">Estado</th>
                             <th>Fecha</th>
-                            <th style="min-width:160px;">Acciones</th>
+                            <th style="min-width:200px;text-align:center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (filteredPacks.Count == 0)
+                        @if (filteredRows.Count == 0)
                         {
                             <tr>
-                                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay packs para mostrar</td>
+                                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay registros para mostrar</td>
                             </tr>
                         }
                         else
                         {
-                            @foreach (var pack in filteredPacks)
+                            @foreach (var row in filteredRows)
                             {
-                                var used = pack.TotalTokens - pack.RemainingTokens;
-                                var pct = pack.TotalTokens > 0 ? (int)((double)pack.RemainingTokens / pack.TotalTokens * 100) : 0;
                                 <tr>
-                                    <td><strong>@pack.UserName</strong></td>
-                                    <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@(string.IsNullOrEmpty(pack.Description) ? "—" : pack.Description)</td>
-                                    <td style="text-align:center;font-weight:600;">@pack.TotalTokens</td>
-                                    <td style="text-align:center;">
-                                        <span style="font-weight:600;color:@(pack.RemainingTokens > 0 ? "#10b981" : "#ef4444");">@pack.RemainingTokens</span>
-                                    </td>
-                                    <td style="text-align:center;">
-                                        <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center;">
-                                            <span style="font-size:0.8rem;">@used</span>
-                                            <div style="width:50px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
-                                                <div style="width:@(100-pct)%;height:100%;background:@(pct > 30 ? "#10b981" : pct > 0 ? "#f59e0b" : "#ef4444");border-radius:3px;"></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td style="font-size:0.8rem;color:var(--text-secondary);">@pack.CreatedByName</td>
-                                    <td style="font-size:0.8rem;">@pack.CreatedAt.ToString("dd/MM/yyyy")</td>
                                     <td>
-                                        <div style="display:flex;gap:0.4rem;align-items:center;">
-                                            <button class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
-                                                    disabled="@saving"
-                                                    @onclick="() => OpenEditModal(pack)">
-                                                <i class="fa-solid fa-pen" style="margin-right:0.3rem;"></i>Editar
-                                            </button>
-                                            <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
-                                                    disabled="@saving"
-                                                    @onclick="() => OpenDeleteConfirm(pack)">
-                                                <i class="fa-solid fa-trash" style="margin-right:0.3rem;"></i>Eliminar
-                                            </button>
+                                        <div style="font-weight:600;">@row.UserName</div>
+                                        @if (!string.IsNullOrEmpty(row.UserEmail) && row.UserEmail != row.UserName)
+                                        {
+                                            <div style="font-size:0.72rem;color:var(--text-secondary);">@row.UserEmail</div>
+                                        }
+                                    </td>
+                                    <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@row.Description</td>
+                                    <td style="text-align:center;">
+                                        @if (row.Status == "approved" && row.Pack is not null)
+                                        {
+                                            var pack = row.Pack;
+                                            var used = pack.TotalTokens - pack.RemainingTokens;
+                                            var pct = pack.TotalTokens > 0 ? (int)((double)pack.RemainingTokens / pack.TotalTokens * 100) : 0;
+                                            <div style="display:flex;align-items:center;gap:0.4rem;justify-content:center;">
+                                                <span style="font-weight:600;color:@(pack.RemainingTokens > 0 ? "#10b981" : "#ef4444");">@pack.RemainingTokens</span>
+                                                <span style="color:var(--text-muted);font-size:0.78rem;">/ @pack.TotalTokens</span>
+                                                <div style="width:40px;height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                                                    <div style="width:@(100-pct)%;height:100%;background:@(pct > 30 ? "#10b981" : pct > 0 ? "#f59e0b" : "#ef4444");border-radius:3px;"></div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span>@row.Classes</span>
+                                        }
+                                    </td>
+                                    <td style="text-align:right;font-weight:600;">
+                                        @if (row.Amount > 0)
+                                        {
+                                            var curr = row.Currency == "USD" ? "US$" : "$";
+                                            @($"{curr}{FormatPrice(row.Amount, row.Currency == "USD")}")
+                                        }
+                                        else
+                                        {
+                                            <span style="color:var(--text-muted);">Manual</span>
+                                        }
+                                    </td>
+                                    <td style="font-size:0.82rem;">@row.ProviderLabel</td>
+                                    <td style="text-align:center;">
+                                        <span class="status-badge @row.StatusClass">@row.StatusLabel</span>
+                                    </td>
+                                    <td style="font-size:0.82rem;">@row.Date.ToString("dd/MM/yy HH:mm")</td>
+                                    <td style="text-align:center;">
+                                        <div style="display:flex;gap:0.4rem;justify-content:center;flex-wrap:wrap;">
+                                            @if (row.Status is "pending" or "pending_review")
+                                            {
+                                                @if (!string.IsNullOrEmpty(row.ReceiptUrl))
+                                                {
+                                                    <a href="@row.ReceiptUrl" target="_blank" class="btn btn-sm btn-secondary" title="Ver comprobante">
+                                                        <i class="fa-solid fa-file-arrow-down"></i>
+                                                    </a>
+                                                }
+                                                <button class="btn btn-sm btn-primary" title="Aprobar pago"
+                                                        disabled="@approvingPaymentId.HasValue"
+                                                        @onclick="() => ApprovePayment(row.Payment!)">
+                                                    <i class="fa-solid fa-check"></i> Aprobar
+                                                </button>
+                                            }
+                                            @if (row.Pack is not null)
+                                            {
+                                                <button class="btn btn-sm" style="background:var(--info);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                        disabled="@saving"
+                                                        @onclick="() => OpenEditModal(row.Pack)">
+                                                    <i class="fa-solid fa-pen"></i>
+                                                </button>
+                                                <button class="btn btn-sm" style="background:var(--danger);color:white;padding:0.3rem 0.6rem;font-size:0.78rem;"
+                                                        disabled="@saving"
+                                                        @onclick="() => OpenDeleteConfirm(row.Pack)">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                </button>
+                                            }
+                                            @if (row.Status is "approved" && row.Pack is null)
+                                            {
+                                                <span style="color:var(--text-muted);font-size:0.78rem;">—</span>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -297,7 +285,7 @@ else
 @code {
     private List<TokenPackDto>? packs;
     private List<UserManageDto>? users;
-    private List<AdminPaymentDto>? pendingPayments;
+    private List<AdminPaymentDto>? allPayments;
     private int? approvingPaymentId;
     private bool isLoading = true;
     private bool saving = false;
@@ -319,19 +307,101 @@ else
     private bool showDeleteConfirm = false;
     private TokenPackDto? deletingPack;
 
-    private List<TokenPackDto> filteredPacks
+    // Unified row model
+    private class GridRow
+    {
+        public string UserName { get; set; } = "";
+        public string UserEmail { get; set; } = "";
+        public int UserId { get; set; }
+        public string Description { get; set; } = "";
+        public int Classes { get; set; }
+        public decimal Amount { get; set; }
+        public string? Currency { get; set; }
+        public string Status { get; set; } = "";
+        public string StatusLabel { get; set; } = "";
+        public string StatusClass { get; set; } = "";
+        public string ProviderLabel { get; set; } = "";
+        public string? ReceiptUrl { get; set; }
+        public DateTime Date { get; set; }
+        public AdminPaymentDto? Payment { get; set; }
+        public TokenPackDto? Pack { get; set; }
+    }
+
+    private List<GridRow> filteredRows
     {
         get
         {
-            if (packs is null) return new();
-            var result = packs.AsEnumerable();
+            var rows = new List<GridRow>();
+
+            // Build a set of pack IDs that are linked to payments
+            var linkedPackIds = new HashSet<int>();
+            if (allPayments is not null)
+            {
+                foreach (var p in allPayments)
+                {
+                    if (p.TokenPackId.HasValue) linkedPackIds.Add(p.TokenPackId.Value);
+
+                    var pack = p.TokenPackId.HasValue
+                        ? packs?.FirstOrDefault(pk => pk.Id == p.TokenPackId.Value)
+                        : null;
+
+                    rows.Add(new GridRow
+                    {
+                        UserName = p.UserName,
+                        UserEmail = p.UserEmail,
+                        UserId = p.UserId,
+                        Description = p.PlanName + (p.Classes > 0 ? $" ({p.Classes} cl.)" : ""),
+                        Classes = pack?.TotalTokens ?? p.Classes,
+                        Amount = p.Amount,
+                        Currency = p.Currency,
+                        Status = p.Status,
+                        StatusLabel = GetStatusLabel(p.Status),
+                        StatusClass = GetStatusClass(p.Status),
+                        ProviderLabel = GetProviderLabel(p.PaymentProvider),
+                        ReceiptUrl = p.TransferReceiptUrl,
+                        Date = p.CreatedAt,
+                        Payment = p,
+                        Pack = pack
+                    });
+                }
+            }
+
+            // Add manually created packs (not linked to any payment)
+            if (packs is not null)
+            {
+                foreach (var pk in packs.Where(pk => !linkedPackIds.Contains(pk.Id)))
+                {
+                    rows.Add(new GridRow
+                    {
+                        UserName = pk.UserName,
+                        UserEmail = "",
+                        UserId = pk.UserId,
+                        Description = string.IsNullOrEmpty(pk.Description) ? "Pack manual" : pk.Description,
+                        Classes = pk.TotalTokens,
+                        Amount = 0,
+                        Currency = null,
+                        Status = "approved",
+                        StatusLabel = "Aprobado",
+                        StatusClass = "status-success",
+                        ProviderLabel = "Manual",
+                        Date = pk.CreatedAt,
+                        Pack = pk
+                    });
+                }
+            }
+
+            // Apply filters
+            var result = rows.AsEnumerable();
             if (filterUserId > 0)
-                result = result.Where(p => p.UserId == filterUserId);
-            if (filterState == "active")
-                result = result.Where(p => p.RemainingTokens > 0);
-            else if (filterState == "empty")
-                result = result.Where(p => p.RemainingTokens == 0);
-            return result.OrderByDescending(p => p.CreatedAt).ToList();
+                result = result.Where(r => r.UserId == filterUserId);
+            if (!string.IsNullOrEmpty(filterState))
+                result = result.Where(r => r.Status == filterState);
+
+            // Sort: pending_review first, then pending, then by date desc
+            return result
+                .OrderBy(r => r.Status switch { "pending_review" => 0, "pending" => 1, _ => 2 })
+                .ThenByDescending(r => r.Date)
+                .ToList();
         }
     }
 
@@ -351,15 +421,17 @@ else
             await Task.WhenAll(packsTask, usersTask, paymentsTask);
             packs = packsTask.Result;
             users = usersTask.Result;
-
-            var allPayments = paymentsTask.Result;
-            pendingPayments = allPayments?
-                .Where(p => p.Status is "pending" or "pending_review")
-                .OrderByDescending(p => p.Status == "pending_review")
-                .ThenByDescending(p => p.CreatedAt)
-                .ToList() ?? new();
+            allPayments = paymentsTask.Result;
 
             uniqueUsers = new();
+            if (allPayments is not null)
+            {
+                foreach (var p in allPayments)
+                {
+                    if (!uniqueUsers.ContainsKey(p.UserId))
+                        uniqueUsers[p.UserId] = p.UserName;
+                }
+            }
             if (packs is not null)
             {
                 foreach (var p in packs)
@@ -375,6 +447,33 @@ else
         }
         isLoading = false;
     }
+
+    private string GetStatusLabel(string status) => status switch
+    {
+        "pending" => "Pendiente",
+        "pending_review" => "Comprobante adjunto",
+        "approved" => "Aprobado",
+        "rejected" => "Rechazado",
+        "error" => "Error",
+        _ => status
+    };
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "pending" => "status-warning",
+        "pending_review" => "status-info",
+        "approved" => "status-success",
+        "rejected" or "error" => "status-danger",
+        _ => "status-muted"
+    };
+
+    private string GetProviderLabel(string? provider) => provider switch
+    {
+        "mercadopago" => "MercadoPago",
+        "paypal" => "PayPal",
+        "transferencia" => "Transferencia",
+        _ => provider ?? "—"
+    };
 
     private void OnUserFilterChanged(ChangeEventArgs e)
     {
