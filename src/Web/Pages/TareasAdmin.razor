@@ -54,6 +54,12 @@
 </div>
 
 <div style="display:flex;justify-content:flex-end;gap:0.5rem;margin-bottom:0.5rem;">
+    @if (selectedTaskIds.Count > 0)
+    {
+        <button class="btn btn-sm" style="background:var(--danger);color:white;" disabled="@saving" @onclick="BulkDeleteTasks">
+            <i class="fa-solid fa-trash" style="margin-right:0.35rem;"></i>Eliminar (@selectedTaskIds.Count)
+        </button>
+    }
     <button class="btn btn-sm" style="background:#7c3aed;color:white;" disabled>
         <i class="fa-solid fa-wand-magic-sparkles" style="margin-right:0.35rem;"></i>Obtener tareas de Git
     </button>
@@ -73,6 +79,9 @@ else if (viewMode == "list")
                 <table class="data-table">
                     <thead>
                         <tr>
+                            <th style="width:36px;text-align:center;">
+                                <input type="checkbox" checked="@allSelected" @onchange="ToggleSelectAll" style="cursor:pointer;" />
+                            </th>
                             <th>Fecha</th>
                             <th>Horario</th>
                             <th>Instructor</th>
@@ -87,7 +96,7 @@ else if (viewMode == "list")
                         @if (filteredTasks.Count == 0)
                         {
                             <tr>
-                                <td colspan="8" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay tareas para mostrar</td>
+                                <td colspan="9" style="text-align:center;color:var(--text-muted);padding:2rem;">No hay tareas para mostrar</td>
                             </tr>
                         }
                         else
@@ -95,6 +104,9 @@ else if (viewMode == "list")
                             @foreach (var task in filteredTasks)
                             {
                                 <tr>
+                                    <td style="text-align:center;">
+                                        <input type="checkbox" checked="@selectedTaskIds.Contains(task.Id)" @onchange="() => ToggleTaskSelection(task.Id)" style="cursor:pointer;" />
+                                    </td>
                                     <td>@task.TaskDate.ToString("dd/MM/yyyy")</td>
                                     <td style="white-space:nowrap;">@(task.Status == "asignada" ? "—" : $"{task.StartHour}:00 - {task.EndHour}:00")</td>
                                     <td>@task.InstructorName</td>
@@ -332,6 +344,9 @@ else
     // State
     private bool loading = true;
     private bool saving = false;
+
+    // Selection
+    private HashSet<int> selectedTaskIds = new();
 
     // Modal
     private bool showModal = false;
@@ -670,6 +685,51 @@ else
         catch
         {
             ToastService.Error("Error al eliminar la tarea");
+        }
+        saving = false;
+        StateHasChanged();
+    }
+
+    // Selection
+    private bool allSelected => filteredTasks.Count > 0 && filteredTasks.All(t => selectedTaskIds.Contains(t.Id));
+
+    private void ToggleTaskSelection(int id)
+    {
+        if (!selectedTaskIds.Remove(id))
+            selectedTaskIds.Add(id);
+    }
+
+    private void ToggleSelectAll()
+    {
+        if (allSelected)
+            selectedTaskIds.Clear();
+        else
+            selectedTaskIds = filteredTasks.Select(t => t.Id).ToHashSet();
+    }
+
+    private async Task BulkDeleteTasks()
+    {
+        if (selectedTaskIds.Count == 0) return;
+
+        saving = true;
+        StateHasChanged();
+        try
+        {
+            var success = await Api.BulkDeleteInstructorTasksAsync(selectedTaskIds.ToList());
+            if (success)
+            {
+                ToastService.Success($"{selectedTaskIds.Count} tareas eliminadas");
+                selectedTaskIds.Clear();
+                await LoadTasks();
+            }
+            else
+            {
+                ToastService.Error("Error al eliminar las tareas");
+            }
+        }
+        catch
+        {
+            ToastService.Error("Error al eliminar las tareas");
         }
         saving = false;
         StateHasChanged();

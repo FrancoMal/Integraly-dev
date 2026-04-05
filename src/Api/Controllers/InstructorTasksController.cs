@@ -208,6 +208,36 @@ public class InstructorTasksController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("bulk")]
+    public async Task<IActionResult> BulkDelete([FromBody] List<int> ids)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        if (ids is null || ids.Count == 0)
+            return BadRequest(new { message = "No se enviaron IDs" });
+
+        var tasks = await _db.InstructorTasks
+            .Where(t => ids.Contains(t.Id))
+            .ToListAsync();
+
+        // Non-admin can only delete own tasks
+        if (!IsAdmin())
+            tasks = tasks.Where(t => t.InstructorId == userId.Value).ToList();
+
+        if (tasks.Count == 0)
+            return NotFound(new { message = "No se encontraron tareas para eliminar" });
+
+        _db.InstructorTasks.RemoveRange(tasks);
+        await _db.SaveChangesAsync();
+
+        var username = GetUsername();
+        await _auditLogService.LogAsync("InstructorTask", string.Join(",", tasks.Select(t => t.Id)), "bulk-delete",
+            $"{tasks.Count} tareas eliminadas", username);
+
+        return Ok(new { deleted = tasks.Count });
+    }
+
     private static InstructorTaskDto ToDto(InstructorTask t) => new(
         t.Id,
         t.InstructorId,

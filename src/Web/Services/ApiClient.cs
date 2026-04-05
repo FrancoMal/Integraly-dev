@@ -350,6 +350,16 @@ public class ApiClient
     public async Task<bool> DeleteInstructorTaskAsync(int id)
         => await DeleteAsync($"/api/instructor-tasks/{id}");
 
+    public async Task<bool> BulkDeleteInstructorTasksAsync(List<int> ids)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Delete, "/api/instructor-tasks/bulk")
+        {
+            Content = JsonContent.Create(ids)
+        };
+        var response = await _http.SendAsync(request);
+        return response.IsSuccessStatusCode;
+    }
+
     // --- Webinar ---
     public async Task<List<WebinarDateDto>?> GetWebinarDatesAsync()
     {
